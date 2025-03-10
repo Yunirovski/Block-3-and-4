@@ -64,6 +64,7 @@
     <Compile Include="Assets\Script\Health.cs" />
     <Compile Include="Assets\Script\Stats Bar.cs" />
     <Compile Include="Assets\Script\Generator.cs" />
+    <Compile Include="Assets\Script\spawner1.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\Script\spawner.cs" />
     <Compile Include="Assets\Script\Free cam.cs" />
