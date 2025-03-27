@@ -4,31 +4,31 @@ using TMPro;
 
 public class PhotoCapture : MonoBehaviour
 {
-    [SerializeField] private TMP_Text debugText; // 用于显示调试信息
-    [SerializeField] public RenderTexture textureSource; // 截图源
+    [SerializeField] private TMP_Text debugText; // Show debug message on screen
+    [SerializeField] public RenderTexture textureSource; // The image source for screenshot
 
-    private int photoCount = 0; // 用于给保存的图片命名
-    private bool isPhotoMode = false; // 是否处于拍照模式
+    private int photoCount = 0; // Number for photo file names
+    private bool isPhotoMode = false; // Is photo mode on or off
 
     private void Update()
     {
-        // 按 F 键切换拍照模式
+        // Press F to turn photo mode on or off
         if (Input.GetKeyDown(KeyCode.F))
         {
             isPhotoMode = !isPhotoMode;
             if (isPhotoMode)
             {
-                debugText.text = "Enable photo mode, press space to take a photo";
+                debugText.text = "Photo mode ON. Press Space to take a photo.";
                 Debug.Log("Photo mode activated.");
             }
             else
             {
-                debugText.text = "Disable photo mode, press F to enable photo mode";
+                debugText.text = "Photo mode OFF. Press F to turn it on.";
                 Debug.Log("Photo mode deactivated.");
             }
         }
 
-        // 当处于拍照模式时，按空格键进行拍照
+        // If photo mode is on, press Space to take a photo
         if (isPhotoMode && Input.GetKeyDown(KeyCode.Space))
         {
             TakePhoto();
@@ -36,34 +36,34 @@ public class PhotoCapture : MonoBehaviour
     }
 
     /// <summary>
-    /// 捕捉当前 RenderTexture 的内容并保存为 PNG 图片
+    /// Take a screenshot from the RenderTexture and save it as a PNG image
     /// </summary>
     private void TakePhoto()
     {
-        // 根据 RenderTexture 大小创建 Texture2D
+        // Create a new image with same size as the RenderTexture
         Texture2D photoTexture = new Texture2D(textureSource.width, textureSource.height, TextureFormat.RGB24, false);
 
-        // 保存当前 RenderTexture，并将目标设置为截图源
+        // Save the current screen, and use our texture as the screen
         RenderTexture previous = RenderTexture.active;
         RenderTexture.active = textureSource;
 
-        // 读取像素数据
+        // Read pixels from the texture
         photoTexture.ReadPixels(new Rect(0, 0, textureSource.width, textureSource.height), 0, 0);
         photoTexture.Apply();
 
-        // 恢复之前的 RenderTexture
+        // Go back to the previous screen
         RenderTexture.active = previous;
 
-        // 将图片编码为 PNG 格式的字节数组
+        // Change the image to PNG format
         byte[] photoData = photoTexture.EncodeToPNG();
 
-        // 构建保存路径，例如：persistentDataPath/photo_0000.png
+        // Create the file path to save the photo
         string photoFilePath = Path.Combine(Application.persistentDataPath, $"photo_{photoCount:D4}.png");
         File.WriteAllBytes(photoFilePath, photoData);
 
-        // 更新图片计数和调试信息
+        // Increase photo number and show success message
         photoCount++;
-        debugText.text = $"Sucess：{photoFilePath}";
+        debugText.text = $"Success: {photoFilePath}";
         Debug.Log($"Photo saved: {photoFilePath}");
     }
 }
