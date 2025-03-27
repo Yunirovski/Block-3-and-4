@@ -18,12 +18,12 @@ public class PhotoCapture : MonoBehaviour
             isPhotoMode = !isPhotoMode;
             if (isPhotoMode)
             {
-                debugText.text = "拍照模式已开启！按空格键拍照。";
+                debugText.text = "Enable photo mode, press space to take a photo";
                 Debug.Log("Photo mode activated.");
             }
             else
             {
-                debugText.text = "拍照模式已关闭！按 F 键开启拍照模式。";
+                debugText.text = "Disable photo mode, press F to enable photo mode";
                 Debug.Log("Photo mode deactivated.");
             }
         }
@@ -63,7 +63,7 @@ public class PhotoCapture : MonoBehaviour
 
         // 更新图片计数和调试信息
         photoCount++;
-        debugText.text = $"拍照成功：{photoFilePath}";
+        debugText.text = $"Sucess：{photoFilePath}";
         Debug.Log($"Photo saved: {photoFilePath}");
     }
 }
