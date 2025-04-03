@@ -1,0 +1,34 @@
+﻿using UnityEngine;
+
+public class Player : MonoBehaviour
+{
+    public float moveSpeed = 2f;               // How fast the player moves
+    public float mouseSensitivity = 1000f;      // How fast the mouse moves the view
+    public Transform cameraTransform;          // The camera we use
+
+    private float xRotation = 0f;              // The up and down view angle
+
+    void Start()
+    { }
+
+    void Update()
+    {
+        // Player movement
+        float moveInputX = Input.GetAxis("Horizontal");
+        float moveInputZ = Input.GetAxis("Vertical");
+        Vector3 move = transform.right * moveInputX + transform.forward * moveInputZ;
+        transform.position += move * moveSpeed * Time.deltaTime;
+
+        // Get mouse input
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+
+        // Turn player left or right
+        transform.Rotate(Vector3.up * mouseX);
+
+        // Look up and down with camera
+        xRotation -= mouseY; // Move view up when mouse moves up
+        xRotation = Mathf.Clamp(xRotation, -90f, 90f); // Limit the up and down angle
+        cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+    }
+}
