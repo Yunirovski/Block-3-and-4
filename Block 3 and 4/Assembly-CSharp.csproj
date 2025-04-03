@@ -63,13 +63,14 @@
   <ItemGroup>
     <Compile Include="Assets\Script\Health.cs" />
     <Compile Include="Assets\Script\Stats Bar.cs" />
+    <Compile Include="Assets\Script\player_movement.cs" />
     <Compile Include="Assets\Script\Generator.cs" />
     <Compile Include="Assets\Script\spawner1.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\AnimalEvent.cs" />
     <Compile Include="Assets\Script\spawner.cs" />
+    <Compile Include="Assets\Script\Cam_freecam_godmode.cs" />
     <Compile Include="Assets\Script\VideoRecorder.cs" />
-    <Compile Include="Assets\Script\Free cam.cs" />
     <Compile Include="Assets\Script\EnemyMover.cs" />
   </ItemGroup>
   <ItemGroup>
