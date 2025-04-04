@@ -22,12 +22,12 @@ public class PhotoCapture : MonoBehaviour
             isPhotoMode = !isPhotoMode;
             if (isPhotoMode)
             {
-                debugText.text = "Photo mode ON. Press Space to take a photo.";
+                debugText.text = "Photo mode ON. \nPress Space to take a photo. \nPress TAB to toggle mouse cursor.";
                 Debug.Log("Photo mode activated.");
             }
             else
             {
-                debugText.text = "Photo mode OFF. Press F to turn it on.";
+                debugText.text = "Photo mode OFF. \nPress F to turn it on. \nPress TAB to toggle mouse cursor.";
                 Debug.Log("Photo mode deactivated.");
             }
         }
