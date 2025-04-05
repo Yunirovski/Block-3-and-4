@@ -5,24 +5,24 @@ using TMPro;
 
 public class PhotoCapture : MonoBehaviour
 {
-    [SerializeField] private TMP_Text debugText;           // 显示调试信息（例如拍照成功、模式切换等）
-    [SerializeField] private TMP_Text detectionText;         // UI 中专门显示检测结果的文本
-    [SerializeField] public RenderTexture textureSource;     // 拍照的图像来源
-    [SerializeField] private Camera captureCamera;           // 用于射线检测的相机
-    [SerializeField] private List<GameObject> detectableObjects; // 待检测物体列表
+    [SerializeField] private TMP_Text debugText;           // Show debug info (e.g., photo success, mode change)
+    [SerializeField] private TMP_Text detectionText;       // UI text for detection results
+    [SerializeField] public RenderTexture textureSource;   // Image source for the photo
+    [SerializeField] private Camera captureCamera;         // Camera for raycasting
+    [SerializeField] private List<GameObject> detectableObjects; // List of objects to detect
 
-    private int photoCount = 0;         // 用于生成图片文件名的计数
-    private bool isPhotoMode = false;   // 标记是否处于拍照模式
+    private int photoCount = 0;         // Counter for photo filenames
+    private bool isPhotoMode = false;   // Is photo mode on or off
 
     private void Update()
     {
-        // 按 F 键切换拍照模式
+        // Press F to turn photo mode on/off
         if (Input.GetKeyDown(KeyCode.F))
         {
             isPhotoMode = !isPhotoMode;
             if (isPhotoMode)
             {
-                debugText.text = "Photo mode ON. \nPress Space to take a photo. \nPress TAB to toggle mouse cursor.";
+                debugText.text = "Photo mode ON. \nPress Left Mouse Button to take a photo. \nPress TAB to toggle mouse cursor.";
                 Debug.Log("Photo mode activated.");
             }
             else
@@ -32,8 +32,8 @@ public class PhotoCapture : MonoBehaviour
             }
         }
 
-        // 拍照模式下，按空格拍照并检测屏幕中心区域的物体
-        if (isPhotoMode && Input.GetKeyDown(KeyCode.Space))
+        // In photo mode, click left mouse to take a photo and check the center of the screen for objects
+        if (isPhotoMode && Input.GetMouseButtonDown(0)) // 0 is left mouse button
         {
             string photoFilePath = TakePhoto();
             DetectObjectAtCenter(photoFilePath);
@@ -41,9 +41,9 @@ public class PhotoCapture : MonoBehaviour
     }
 
     /// <summary>
-    /// 拍摄 RenderTexture 的截图并保存为 PNG 图片
+    /// Take a screenshot of the RenderTexture and save it as a PNG
     /// </summary>
-    /// <returns>返回图片的保存路径</returns>
+    /// <returns>Return the path where the photo is saved</returns>
     private string TakePhoto()
     {
         Texture2D photoTexture = new Texture2D(textureSource.width, textureSource.height, TextureFormat.RGB24, false);
@@ -64,36 +64,36 @@ public class PhotoCapture : MonoBehaviour
     }
 
     /// <summary>
-    /// 通过扩展检测区域检测屏幕中心附近的物体，并更新 UI 显示检测结果
+    /// Check the center of the screen for objects and detect them
     /// </summary>
-    /// <param name="photoFilePath">拍摄的图片路径，可用于传递给对应物体事件</param>
+    /// <param name="photoFilePath">Path of the photo, can be used for object events</param>
     private void DetectObjectAtCenter(string photoFilePath)
     {
-        // 从屏幕中心发射射线获取检测点
+        // Cast a ray from the center of the screen to detect objects
         Vector3 screenCenter = new Vector3(Screen.width / 2f, Screen.height / 2f, 0);
         Ray ray = captureCamera.ScreenPointToRay(screenCenter);
         float maxDistance = 100f;
         Vector3 detectionPoint = ray.origin + ray.direction * maxDistance;
 
-        // 如果射线碰撞到了物体，则以碰撞点作为检测中心
+        // If the ray hits something, set the detection point
         RaycastHit hit;
         if (Physics.Raycast(ray, out hit, maxDistance))
         {
             detectionPoint = hit.point;
         }
 
-        // 在检测中心周围使用 OverlapSphere 进行区域检测
-        float detectionRadius = 2.0f; // 根据需要调整检测半径
+        // Check nearby objects using a sphere
+        float detectionRadius = 2.0f; // Size of the detection area
         Collider[] colliders = Physics.OverlapSphere(detectionPoint, detectionRadius);
 
         bool detected = false;
         foreach (var col in colliders)
         {
             GameObject hitObject = col.gameObject;
-            // 判断是否在预设的待检测列表中
+            // Check if the object is in the list of detectable objects
             if (detectableObjects.Contains(hitObject))
             {
-                // 如果检测到物体，调用其 AnimalEvent 组件
+                // Trigger event if the object is detected
                 AnimalEvent animalEvent = hitObject.GetComponent<AnimalEvent>();
                 if (animalEvent != null)
                 {

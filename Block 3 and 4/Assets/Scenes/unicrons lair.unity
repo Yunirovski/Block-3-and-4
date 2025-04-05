@@ -178,7 +178,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Recording: no
 
-    Press space to record.'
+    Press F to enable photo mode.'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
@@ -654,6 +654,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -1461304994638716399, guid: 79cabd95709bc9642aa0abe16f67a632, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 821ef82a249c73149a0d7f0a4ae5dcf9, type: 2}
     - target: {fileID: 919132149155446097, guid: 79cabd95709bc9642aa0abe16f67a632, type: 3}
       propertyPath: m_Name
       value: camel2
@@ -842,6 +846,7 @@ GameObject:
   - component: {fileID: 832654083}
   - component: {fileID: 832654082}
   - component: {fileID: 832654081}
+  - component: {fileID: 832654086}
   - component: {fileID: 832654080}
   - component: {fileID: 832654085}
   - component: {fileID: 832654084}
@@ -896,7 +901,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: 3dc6a9ad378949a48a72bf66a8423b33, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -971,6 +976,33 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveSpeed: 2
   timeBetweenMoves: 5
+--- !u!54 &832654086
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 832654079}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &885431802
 GameObject:
   m_ObjectHideFlags: 0
@@ -1411,6 +1443,7 @@ MonoBehaviour:
   moveSpeed: 2
   mouseSensitivity: 1000
   cameraTransform: {fileID: 330585546}
+  jumpHeight: 2
 --- !u!114 &1473197924
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1624,7 +1657,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: 3dc6a9ad378949a48a72bf66a8423b33, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1763,7 +1796,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: a60d6251ab5604f4bb8f4375e8e5e70c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
