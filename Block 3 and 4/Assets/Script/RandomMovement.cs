@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class RandomMovement : MonoBehaviour
 {
-    public float moveSpeed = 2f;   // Movement speed
+    public float moveSpeed = 60f;   // Movement speed
     public float timeBetweenMoves = 5f;  // Time between random moves
 
     private Vector3 targetPosition;  // Target position
@@ -33,9 +33,9 @@ public class RandomMovement : MonoBehaviour
     void SetRandomTargetPosition()
     {
         targetPosition = new Vector3(
-            Random.Range(-10f, 10f),  // Random X position
+            Random.Range(-100f, 100f),  // Random X position
             transform.position.y,     // Keep Y position the same
-            Random.Range(-10f, 10f)   // Random Z position
+            Random.Range(-100f, 100f)   // Random Z position
         );
     }
 
