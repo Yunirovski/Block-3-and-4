@@ -69,31 +69,30 @@ public class PhotoCapture : MonoBehaviour
     /// <param name="photoFilePath">Path of the photo, can be used for object events</param>
     private void DetectObjectAtCenter(string photoFilePath)
     {
-        // Cast a ray from the center of the screen to detect objects
+        // 从屏幕中心发射射线获取检测点
         Vector3 screenCenter = new Vector3(Screen.width / 2f, Screen.height / 2f, 0);
         Ray ray = captureCamera.ScreenPointToRay(screenCenter);
         float maxDistance = 100f;
         Vector3 detectionPoint = ray.origin + ray.direction * maxDistance;
 
-        // If the ray hits something, set the detection point
+        // 如果射线碰撞到了物体，则以碰撞点作为检测中心
         RaycastHit hit;
         if (Physics.Raycast(ray, out hit, maxDistance))
         {
             detectionPoint = hit.point;
         }
 
-        // Check nearby objects using a sphere
-        float detectionRadius = 2.0f; // Size of the detection area
+        // 在检测中心周围使用 OverlapSphere 进行区域检测
+        float detectionRadius = 2.0f; // 根据实际需要调整检测半径
         Collider[] colliders = Physics.OverlapSphere(detectionPoint, detectionRadius);
 
         bool detected = false;
         foreach (var col in colliders)
         {
             GameObject hitObject = col.gameObject;
-            // Check if the object is in the list of detectable objects
+            // 判断该物体是否在预设的待检测列表中
             if (detectableObjects.Contains(hitObject))
             {
-                // Trigger event if the object is detected
                 AnimalEvent animalEvent = hitObject.GetComponent<AnimalEvent>();
                 if (animalEvent != null)
                 {
@@ -111,4 +110,5 @@ public class PhotoCapture : MonoBehaviour
             detectionText.text = "No detectable object in detection area.";
         }
     }
+
 }

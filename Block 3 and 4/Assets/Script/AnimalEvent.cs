@@ -3,33 +3,36 @@ using UnityEngine.Events;
 
 public class AnimalEvent : MonoBehaviour
 {
-    [Tooltip("为当前动物指定一个唯一名称，用于照片分类")]
+    [Tooltip("动物的名称，用于标识及分类")]
     public string animalName;
+
+    [Tooltip("该动物被拍到时获得的积分")]
+    public int scoreValue = 10;  // 可在 Inspector 中修改，不同动物设置不同的积分
 
     [System.Serializable]
     public class PhotoEvent : UnityEvent<string> { }
 
-    // 通过 Inspector 配置的额外事件（例如播放动画、声音等）
+    [Tooltip("可以在 Inspector 中增加其他响应事件，例如播放动画或声音")]
     public PhotoEvent onDetected;
 
     /// <summary>
     /// 当该动物被检测到时调用该方法
     /// </summary>
-    /// <param name="photoPath">照片的保存路径</param>
+    /// <param name="photoPath">拍摄的图片路径</param>
     public void TriggerEvent(string photoPath)
     {
-        // 调用额外事件
+        // 触发 Inspector 中配置的其他响应事件
         if (onDetected != null)
         {
             onDetected.Invoke(photoPath);
         }
 
-        // 将照片添加到照片集管理器中，归类到当前动物下
-        if (PhotoCollectionManager.Instance != null)
+        // 将对应积分添加到积分系统中
+        if (ScoreManager.Instance != null)
         {
-            PhotoCollectionManager.Instance.AddPhoto(animalName, photoPath);
+            ScoreManager.Instance.AddScore(scoreValue);
         }
 
-        Debug.Log($"{animalName} detected with photo: {photoPath}");
+        Debug.Log(animalName + " detected with photo: " + photoPath + ", earned score: " + scoreValue);
     }
 }
