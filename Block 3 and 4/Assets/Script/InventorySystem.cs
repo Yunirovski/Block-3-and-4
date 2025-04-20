@@ -1,29 +1,32 @@
-using System;
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using TMPro;
 
 public class InventorySystem : MonoBehaviour
 {
-    [Header("ÎïÆ·¸¸ÈİÆ÷ºÍUIÒıÓÃ")]
-    public Transform itemHolder;              // ´æ·ÅÉú³ÉµÄÎïÆ·Ä£ĞÍµÄ¸¸ÎïÌå
-    public InventoryUI inventoryUI;           // Inventory UI ¹ÜÀí½Å±¾ÒıÓÃ
+    [Header("ç‰©å“çˆ¶å®¹å™¨å’Œ UI å¼•ç”¨")]
+    public Transform itemHolder;              // ç”Ÿæˆçš„ç‰©å“æ¨¡å‹çˆ¶ç‰©ä½“
+    public InventoryUI inventoryUI;           // åº•éƒ¨æ  UI ç®¡ç†è„šæœ¬
 
-    [Header("ÇĞ»»¶¯»­ÉèÖÃ")]
-    public Animator itemAnimator;             // ¿ØÖÆÇĞ»»¶¯»­µÄ Animator
-    public string switchTrigger = "SwitchItem"; // Animator ÖĞ´¥·¢ÇĞ»»µÄ²ÎÊıÃû
+    [Header("åœºæ™¯ UI æ–‡æœ¬ (è°ƒè¯• / æ£€æµ‹)")]
+    public TMP_Text debugTextTMP;             // æ‹–å…¥ DebugText TMP
+    public TMP_Text detectTextTMP;            // æ‹–å…¥ DetectText TMP
 
-    [Header("¿ÉÓÃÎïÆ·ÁĞ±í")]
-    public List<BaseItem> availableItems;     // ËùÓĞÎïÆ· ScriptableObject µÄÁĞ±í
+    [Header("åˆ‡æ¢åŠ¨ç”»è®¾ç½®")]
+    public Animator itemAnimator;             // Animator æ§åˆ¶å™¨
+    public string switchTrigger = "SwitchItem"; // Trigger å
 
-    private BaseItem currentItem;             // µ±Ç°Ñ¡ÖĞµÄÎïÆ·
-    private GameObject currentModel;          // µ±Ç°Õ¹Ê¾µÄÄ£ĞÍ
-    private bool isReady = false;             // ÊÇ·ñ´¦ÓÚ×¼±¸Ê¹ÓÃ×´Ì¬
-    private int pendingIndex = -1;            // ´ıÇĞ»»µ½µÄÎïÆ·Ë÷Òı£¨µÈ´ı¶¯»­Íê³ÉºóÇĞ»»£©
+    [Header("å¯ç”¨ç‰©å“åˆ—è¡¨ (æŒ‰ç´¢å¼•å¯¹å·å…¥åº§)")]
+    public List<BaseItem> availableItems;     // 0=Camera 1=Log 2=Map 3=Food
+
+    private BaseItem currentItem;             // å½“å‰ç‰©å“
+    private GameObject currentModel;          // å½“å‰å±•ç¤ºæ¨¡å‹
+    private bool isReady = false;             // æ˜¯å¦å‡†å¤‡ä½¿ç”¨
+    private int pendingIndex = -1;            // ç­‰å¾…åˆ‡æ¢ç´¢å¼•
 
     private void Start()
     {
-        // Æô¶¯Ê±ÈôÓĞÎïÆ·£¬½øÈëµÚÒ»¸öÎïÆ·µÄÇĞ»»Á÷³Ì
         if (availableItems.Count > 0)
         {
             pendingIndex = 0;
@@ -34,7 +37,7 @@ public class InventorySystem : MonoBehaviour
 
     private void Update()
     {
-        // Êı×Ö¼ü 1-4 ÇĞ»»ÎïÆ·²Û
+        // æ•°å­—é”® 1â€‘4 åˆ‡æ¢
         for (int i = 0; i < availableItems.Count; i++)
         {
             if (Input.GetKeyDown(KeyCode.Alpha1 + i))
@@ -45,13 +48,13 @@ public class InventorySystem : MonoBehaviour
                     inventoryUI.HighlightSlot(i);
                     isReady = false;
                     inventoryUI.SetReadyState(false);
-                    PlaySwitchAnimation();  // ²¥·ÅÇĞ»»¶¯»­
+                    PlaySwitchAnimation();
                 }
                 return;
             }
         }
 
-        // ÓÒ¼ü£ºÇĞ»»×¼±¸/È¡Ïû×¼±¸×´Ì¬
+        // å³é”®å‡†å¤‡ / å–æ¶ˆ
         if (Input.GetMouseButtonDown(1) && currentItem != null)
         {
             isReady = !isReady;
@@ -59,56 +62,46 @@ public class InventorySystem : MonoBehaviour
             inventoryUI.SetReadyState(isReady);
         }
 
-        // ×ó¼ü£º½öÔÚ×¼±¸×´Ì¬ÏÂÊ¹ÓÃÎïÆ·
+        // å·¦é”®ä½¿ç”¨ï¼ˆéœ€å‡†å¤‡ï¼‰
         if (isReady && Input.GetMouseButtonDown(0) && currentItem != null)
         {
-            // ±ÜÃâµã»÷ UI Ê±´¥·¢
             if (!EventSystem.current.IsPointerOverGameObject())
-            {
                 currentItem.OnUse();
-            }
         }
     }
 
-    /// <summary>
-    /// ²¥·ÅÇĞ»»¶¯»­£»ÈôÎ´ÅäÖÃ Animator£¬ÔòÖ±½ÓÖ´ĞĞÇĞ»»Âß¼­
-    /// </summary>
     private void PlaySwitchAnimation()
     {
         if (itemAnimator != null)
-        {
             itemAnimator.SetTrigger(switchTrigger);
-        }
         else
-        {
             OnSwitchAnimationComplete();
-        }
     }
 
-    /// <summary>
-    /// ÔÚ¶¯»­Ä©Î²Í¨¹ı Animation Event µ÷ÓÃ£¬Ö´ĞĞÄ£ĞÍÇĞ»»
-    /// </summary>
+    // Animation Event è°ƒç”¨
     public void OnSwitchAnimationComplete()
     {
-        // ÇĞ»»Íê³Éºó¸üĞÂ UI ¸ßÁÁ
         inventoryUI.HighlightSlot(pendingIndex);
 
-        // Ïú»Ù¾ÉÄ£ĞÍ²¢µ÷ÓÃÎïÆ·µÄÈ¡ÏûÑ¡Ôñ»Øµ÷
-        // Ïú»Ù¾ÉÄ£ĞÍ²¢µ÷ÓÃÎïÆ·µÄÈ¡ÏûÑ¡Ôñ»Øµ÷
         if (currentItem != null) currentItem.OnDeselect();
         if (currentModel != null) Destroy(currentModel);
 
-        // ÇĞ»»µ½´ıÇĞ»»µÄÎïÆ·
         currentItem = availableItems[pendingIndex];
 
-        // Éú³ÉÕ¼Î»·½¿éÄ£ĞÍ£¨ºóĞøÌæ»»ÎªÕıÊ½Ô¤ÖÆ¼ş£©
+        // å ä½æ¨¡å‹ï¼ˆå¯æ›¿æ¢æ­£å¼é¢„åˆ¶ï¼‰
         currentModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
         currentModel.transform.SetParent(itemHolder, false);
         currentModel.transform.localPosition = Vector3.zero;
         currentModel.transform.localRotation = Quaternion.identity;
         currentModel.name = currentItem.itemName + "_Model";
 
-        // µ÷ÓÃÎïÆ·µÄÑ¡Ôñ»Øµ÷
         currentItem.OnSelect(currentModel);
+
+        // è‹¥æ˜¯ CameraItemï¼Œæ³¨å…¥ç›¸æœºä¸ UI
+        if (currentItem is CameraItem camItem)
+        {
+            camItem.Init(Camera.main);
+            camItem.InitUI(debugTextTMP, detectTextTMP);
+        }
     }
 }
