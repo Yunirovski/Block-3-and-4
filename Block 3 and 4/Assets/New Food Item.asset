@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: New Food Item
   m_EditorClassIdentifier: 
   itemName: 
-  foodPrefab: {fileID: 0}
+  foodPrefab: {fileID: 564612403454184441, guid: 1f77dba3cf5cb414a9ade1b1f80a743c, type: 3}
   spawnPoint: {fileID: 0}

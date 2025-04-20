@@ -13,8 +13,5 @@ MonoBehaviour:
   m_Name: New Camera Item
   m_EditorClassIdentifier: 
   itemName: 
-  textureSource: {fileID: 0}
-  captureCamera: {fileID: 0}
-  debugText: {fileID: 0}
-  detectionText: {fileID: 0}
+  textureSource: {fileID: 8400000, guid: 2816cd7bbcc70d3418cc4e24b2a7103e, type: 2}
   detectableObjects: []
