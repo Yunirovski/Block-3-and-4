@@ -46,15 +46,41 @@ public class CameraItem : BaseItem
 
     private IEnumerator CaptureFromBackBuffer()
     {
-        yield return new WaitForEndOfFrame();                               // 等整帧渲染
+        // --- 1) 暂存并关闭所有 UI ---
+        Canvas[] canvases =
+#if UNITY_2023_1_OR_NEWER
+            Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#else
+    Object.FindObjectsOfType<Canvas>();
+#endif
 
-        Texture2D tex = new Texture2D(Screen.width, Screen.height,          // 读取屏幕像素
-                                      TextureFormat.RGB24, false);
+        List<bool> states = new List<bool>(canvases.Length);
+        foreach (var c in canvases)
+        {
+            states.Add(c.enabled);
+            c.enabled = false;            // 逐个隐藏
+        }
+        foreach (var c in canvases)
+        {
+            states.Add(c.enabled);
+            c.enabled = false;
+        }
+
+        yield return new WaitForEndOfFrame();   // 等整帧(含后处理)渲染完
+
+        // --- 2) 抓屏 ---
+        Texture2D tex = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
         tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
         tex.Apply();
 
-        SaveAndDetect(tex);                                                 // ← 调用现有方法
+        // --- 3) 恢复 UI 原状态 ---
+        for (int i = 0; i < canvases.Length; i++)
+            canvases[i].enabled = states[i];
+
+        // --- 4) 保存 + 检测 ---
+        SaveAndDetect(tex);
     }
+
 
 
 
