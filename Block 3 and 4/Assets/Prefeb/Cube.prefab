@@ -13,8 +13,8 @@ GameObject:
   - component: {fileID: 8832295835555568064}
   - component: {fileID: 6308393790467102933}
   - component: {fileID: 5052074703744184247}
-  - component: {fileID: 521936910169439768}
   - component: {fileID: 2267306727964149306}
+  - component: {fileID: 8412247016472085660}
   m_Layer: 3
   m_Name: Cube
   m_TagString: AnimalDetectable
@@ -138,20 +138,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &521936910169439768
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6498719065466850296}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06de2f04942c79a45a90696887f98b73, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  moveSpeed: 2
-  timeBetweenMoves: 5
 --- !u!114 &2267306727964149306
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -169,3 +155,19 @@ MonoBehaviour:
   onDetected:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8412247016472085660
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6498719065466850296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47bdb7b3f80305d4cbf2b0f7aab3f1b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  PatrolPath: {fileID: 0}
+  RotationSpeed: 2
+  MoveSpeed: 20
+  WaitTimeAtEachNode: 2
