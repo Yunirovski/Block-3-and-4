@@ -6,24 +6,24 @@ using TMPro;
 public class InventorySystem : MonoBehaviour
 {
     [Header("物品父容器和 UI 引用")]
-    public Transform itemHolder;              // 生成的物品模型父物体
+    public Transform itemHolder;              // 生成物品模型的父物体
     public InventoryUI inventoryUI;           // 底部栏 UI 管理脚本
 
     [Header("场景 UI 文本 (调试 / 检测)")]
-    public TMP_Text debugTextTMP;             // 拖入 DebugText TMP
-    public TMP_Text detectTextTMP;            // 拖入 DetectText TMP
+    public TMP_Text debugTextTMP;             // 拖入调试文本
+    public TMP_Text detectTextTMP;            // 拖入检测结果文本
 
     [Header("切换动画设置")]
-    public Animator itemAnimator;             // Animator 控制器
-    public string switchTrigger = "SwitchItem"; // Trigger 名
+    public Animator itemAnimator;             // Animator
+    public string switchTrigger = "SwitchItem";
 
-    [Header("可用物品列表 (按索引对号入座)")]
-    public List<BaseItem> availableItems;     // 0=Camera 1=Log 2=Map 3=Food
+    [Header("可用物品列表 (0=Camera 1=Log 2=Map 3=Food)")]
+    public List<BaseItem> availableItems;
 
-    private BaseItem currentItem;             // 当前物品
-    private GameObject currentModel;          // 当前展示模型
-    private bool isReady = false;             // 是否准备使用
-    private int pendingIndex = -1;            // 等待切换索引
+    private BaseItem currentItem;
+    private GameObject currentModel;
+    private bool isReady;
+    private int pendingIndex = -1;
 
     private void Start()
     {
@@ -37,7 +37,7 @@ public class InventorySystem : MonoBehaviour
 
     private void Update()
     {
-        // 数字键 1‑4 切换
+        // 数字键 1‑4 切换物品
         for (int i = 0; i < availableItems.Count; i++)
         {
             if (Input.GetKeyDown(KeyCode.Alpha1 + i))
@@ -62,20 +62,17 @@ public class InventorySystem : MonoBehaviour
             inventoryUI.SetReadyState(isReady);
         }
 
-        // 左键使用（需准备）
+        // 左键使用（准备状态）
         if (isReady && Input.GetMouseButtonDown(0) && currentItem != null)
         {
-            if (!EventSystem.current.IsPointerOverGameObject())
-                currentItem.OnUse();
+            if (!EventSystem.current.IsPointerOverGameObject()) currentItem.OnUse();
         }
     }
 
     private void PlaySwitchAnimation()
     {
-        if (itemAnimator != null)
-            itemAnimator.SetTrigger(switchTrigger);
-        else
-            OnSwitchAnimationComplete();
+        if (itemAnimator) itemAnimator.SetTrigger(switchTrigger);
+        else OnSwitchAnimationComplete();
     }
 
     // Animation Event 调用
@@ -88,7 +85,7 @@ public class InventorySystem : MonoBehaviour
 
         currentItem = availableItems[pendingIndex];
 
-        // 占位模型（可替换正式预制）
+        // 生成占位模型
         currentModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
         currentModel.transform.SetParent(itemHolder, false);
         currentModel.transform.localPosition = Vector3.zero;
@@ -97,11 +94,11 @@ public class InventorySystem : MonoBehaviour
 
         currentItem.OnSelect(currentModel);
 
-        // 若是 CameraItem，注入相机与 UI
-        if (currentItem is CameraItem camItem)
+        // 切换到相机物品时注入引用
+        if (currentItem is CameraItem cam)
         {
-            camItem.Init(Camera.main);
-            camItem.InitUI(debugTextTMP, detectTextTMP);
+            cam.Init(Camera.main);
+            cam.InitUI(debugTextTMP, detectTextTMP);
         }
     }
 }
