@@ -61,31 +61,28 @@
     <Analyzer Include="E:\unity\6000.0.37f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\ScoreManager.cs" />
-    <Compile Include="Assets\Script\player\PhotoCollectionManager.cs" />
-    <Compile Include="Assets\Script\player\Cam_freecam_godmode.cs" />
-    <Compile Include="Assets\Script\BaseItem.cs" />
-    <Compile Include="Assets\Script\player\LogItem.cs" />
-    <Compile Include="Assets\Script\Health.cs" />
+    <Compile Include="Assets\Script\Animal\EnemyMover.cs" />
     <Compile Include="Assets\Script\RandomMovement.cs" />
-    <Compile Include="Assets\Script\FoodPickup.cs" />
-    <Compile Include="Assets\Script\Stats Bar.cs" />
     <Compile Include="Assets\Script\player\mousetoggle.cs" />
     <Compile Include="Assets\Script\MenuButtons.cs" />
-    <Compile Include="Assets\Script\Generator.cs" />
-    <Compile Include="Assets\ScreenshotHelper.cs" />
-    <Compile Include="Assets\Script\spawner1.cs" />
-    <Compile Include="Assets\Script\InventorySystem.cs" />
+    <Compile Include="Assets\Script\Animal\Generator.cs" />
+    <Compile Include="Assets\Script\Inventory System\InventoryUI.cs" />
+    <Compile Include="Assets\Script\Animal\spawner1.cs" />
+    <Compile Include="Assets\Script\Photo\ScreenshotHelper.cs" />
+    <Compile Include="Assets\Script\Inventory System\FoodPickup.cs" />
+    <Compile Include="Assets\Script\ScoreManager.cs" />
+    <Compile Include="Assets\Script\Inventory System\FoodItem.cs" />
+    <Compile Include="Assets\Script\Inventory System\BaseItem.cs" />
+    <Compile Include="Assets\Script\Animal\AnimalEvent.cs" />
+    <Compile Include="Assets\Script\Inventory System\MapItem.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\Script\player\player_move2.cs" />
-    <Compile Include="Assets\Script\player\CameraItem.cs" />
-    <Compile Include="Assets\Script\spawner.cs" />
-    <Compile Include="Assets\Script\AnimalEvent.cs" />
-    <Compile Include="Assets\Script\player\FoodItem.cs" />
-    <Compile Include="Assets\Script\player\MapItem.cs" />
+    <Compile Include="Assets\Script\Inventory System\InventorySystem.cs" />
+    <Compile Include="Assets\Script\Cam_freecam_godmode.cs" />
+    <Compile Include="Assets\Script\Inventory System\LogItem.cs" />
+    <Compile Include="Assets\Script\Photo\PhotoCollectionManager.cs" />
+    <Compile Include="Assets\Script\Inventory System\CameraItem.cs" />
     <Compile Include="Assets\Script\player\player_movement.cs" />
-    <Compile Include="Assets\Script\InventoryUI.cs" />
-    <Compile Include="Assets\Script\EnemyMover.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\TerrainSampleAssets\ThirdPartyNotices.txt" />
