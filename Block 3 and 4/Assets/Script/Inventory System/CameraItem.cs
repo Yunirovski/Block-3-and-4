@@ -4,51 +4,43 @@ using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// Camera‐based item that captures a screenshot of the game view,
-/// hides UI during capture, saves the image, and detects any tagged
-/// “AnimalDetectable” objects within a specified world‐space radius.
+/// ScriptableObject-based camera item that captures a screenshot of the game view,
+/// hides UI during capture, saves the image, evaluates it with PhotoScorer,
+/// triggers detection events on AnimalEvent components, and updates UI texts.
 /// </summary>
 [CreateAssetMenu(menuName = "Items/CameraItem_Tag")]
 public class CameraItem : BaseItem
 {
-    [Header("Capture Settings")]
-    [Tooltip("Optional RenderTexture for future use; not required for current capture flow.")]
-    public RenderTexture textureSource;
-
-    [Tooltip("World‐space radius around the raycast hit point to search for detectable objects.")]
+    [Header("Detection Settings")]
+    [Tooltip("World-space radius around the pivot point to search for detectable objects.")]
     public float detectRadius = 2f;
 
-    [Tooltip("LayerMask indicating which layers to include in detection.")]
+    [Tooltip("LayerMask specifying which layers to include in raycast and OverlapSphere.")]
     public LayerMask detectMask;
 
-    // Internal references (injected at runtime)
-    [System.NonSerialized] private Camera playerCam;
-    [System.NonSerialized] private TMP_Text debugTxt;
-    [System.NonSerialized] private TMP_Text detectTxt;
+    // Runtime-injected references
+    [System.NonSerialized] private Camera cam;
+    [System.NonSerialized] private TMP_Text debugText;
+    [System.NonSerialized] private TMP_Text resultText;
 
-    private int photoCount;    // Incremental counter for naming captures
-    private bool photoMode;    // Flag indicating whether capture mode is active
+    private int photoCount;    // Counter for naming saved photos
+    private bool photoMode;    // Whether photo mode is currently active
 
-    private const string TAG_ANIMAL = "AnimalDetectable";
-
-    #region Initialization
-    /// <summary>
-    /// Injects the main Camera reference for screen‐to‐world raycasting.
-    /// </summary>
-    /// <param name="cam">The player’s Camera component.</param>
-    public void Init(Camera cam) => playerCam = cam;
+    private const string TagAnimal = "AnimalDetectable";
 
     /// <summary>
-    /// Injects the on‐screen debug and detection text components.
+    /// Injects the Camera reference for screen-to-world projections.
     /// </summary>
-    /// <param name="dbg">Text for debug/status updates.</param>
-    /// <param name="det">Text for detection results.</param>
-    public void InitUI(TMP_Text dbg, TMP_Text det)
+    public void Init(Camera camera) => cam = camera;
+
+    /// <summary>
+    /// Injects the UI text components for debug and detection result messages.
+    /// </summary>
+    public void InitUI(TMP_Text debug, TMP_Text result)
     {
-        debugTxt = dbg;
-        detectTxt = det;
+        debugText = debug;
+        resultText = result;
     }
-    #endregion
 
     /// <summary>
     /// Called when the player readies (equips) this item.
@@ -57,40 +49,40 @@ public class CameraItem : BaseItem
     public override void OnReady()
     {
         photoMode = true;
-        if (debugTxt != null)
-            debugTxt.text = "Photo Mode: ON";
+        if (debugText != null)
+            debugText.text = "Photo Mode: ON";
     }
 
     /// <summary>
-    /// Called when the player un‑readies (holsters) this item.
+    /// Called when the player un-readies (holsters) this item.
     /// Disables photo mode and updates the debug UI.
     /// </summary>
     public override void OnUnready()
     {
         photoMode = false;
-        if (debugTxt != null)
-            debugTxt.text = "Photo Mode: OFF";
+        if (debugText != null)
+            debugText.text = "Photo Mode: OFF";
     }
 
     /// <summary>
-    /// Called when the player uses this item (left‐click).
-    /// If photo mode is active, begins the screenshot capture coroutine.
+    /// Called when the player uses this item (left-click while ready).
+    /// Starts the screenshot capture coroutine if photo mode is active.
     /// </summary>
     public override void OnUse()
     {
-        if (!photoMode || playerCam == null)
-            return;
-
-        ScreenshotHelper.Instance.StartCoroutine(CaptureCoroutine());
+        if (photoMode && cam != null)
+        {
+            ScreenshotHelper.Instance.StartCoroutine(CaptureCoroutine());
+        }
     }
 
     /// <summary>
     /// Coroutine that:
-    /// 1. Hides all UI canvases.
-    /// 2. Waits for end of frame (including post‑processing).
-    /// 3. Reads back the screen into a Texture2D.
-    /// 4. Restores UI canvases.
-    /// 5. Saves the PNG and performs object detection.
+    /// 1) Hides all UI canvases.
+    /// 2) Waits for end of frame (including post-processing).
+    /// 3) Reads back the screen into a Texture2D.
+    /// 4) Restores UI canvases.
+    /// 5) Processes the captured screenshot.
     /// </summary>
     private IEnumerator CaptureCoroutine()
     {
@@ -98,79 +90,79 @@ public class CameraItem : BaseItem
 #if UNITY_2023_1_OR_NEWER
         var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 #else
-            var canvases = Object.FindObjectsOfType<Canvas>();
+        var canvases = Object.FindObjectsOfType<Canvas>();
 #endif
-
-        bool[] previousStates = new bool[canvases.Length];
+        var previousStates = new bool[canvases.Length];
         for (int i = 0; i < canvases.Length; i++)
         {
             previousStates[i] = canvases[i].enabled;
             canvases[i].enabled = false;
         }
 
-        // 2) Wait for render to complete (lighting, post-processing, etc.)
+        // 2) Wait for frame rendering to complete
         yield return new WaitForEndOfFrame();
 
-        // 3) Read screen pixels into a Texture2D
+        // 3) Capture screen pixels into a Texture2D
         var screenshot = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
         screenshot.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
         screenshot.Apply();
 
-        // 4) Restore original UI visibility
+        // 4) Restore original canvas states
         for (int i = 0; i < canvases.Length; i++)
             canvases[i].enabled = previousStates[i];
 
-        // 5) Save file & detect objects
-        SaveAndDetect(screenshot);
+        // 5) Process the screenshot (save, detect, score, and update UI)
+        ProcessShot(screenshot);
     }
 
     /// <summary>
-    /// Saves the provided Texture2D as a PNG file and performs detection
-    /// of any colliders tagged "AnimalDetectable" within detectRadius.
-    /// Invokes the detected animal’s event if found.
+    /// Saves the captured Texture2D to disk, performs world-space detection using
+    /// a raycast and OverlapSphere, evaluates the photo score, triggers the animal event,
+    /// and updates the detection result UI.
     /// </summary>
-    /// <param name="tex">Captured screen Texture2D.</param>
-    private void SaveAndDetect(Texture2D tex)
+    /// <param name="tex">The captured screenshot as a Texture2D.</param>
+    private void ProcessShot(Texture2D tex)
     {
-        // Build filename & path
-        string filename = $"photo_{photoCount:D4}.png";
-        string path = Path.Combine(Application.persistentDataPath, filename);
-
-        // Save the PNG to disk
+        // --- 1) Save PNG file ---
+        string fileName = $"photo_{photoCount:D4}.png";
+        string path = Path.Combine(Application.persistentDataPath, fileName);
         File.WriteAllBytes(path, tex.EncodeToPNG());
         photoCount++;
+        if (debugText != null)
+            debugText.text = $"Saved {fileName}";
 
-        if (debugTxt != null)
-            debugTxt.text = $"Photo saved: {filename}";
-
-        // Compute world pivot via screen‐center raycast
-        Vector3 screenCenter = new(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
-        Ray ray = playerCam.ScreenPointToRay(screenCenter);
+        // --- 2) Determine world‐space pivot via screen‐center raycast ---
+        Vector3 screenCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
+        Ray ray = cam.ScreenPointToRay(screenCenter);
         Vector3 pivotPoint = ray.origin + ray.direction * 100f;
-
         if (Physics.Raycast(ray, out RaycastHit hit, 100f, detectMask))
             pivotPoint = hit.point;
 
-        // OverlapSphere detection around pivotPoint
+        // --- 3) Detect colliders in radius and process first valid animal ---
         Collider[] hits = Physics.OverlapSphere(pivotPoint, detectRadius, detectMask);
-        string resultText = "Nothing detected";
+        string uiMessage = "Nothing detected";
 
         foreach (var col in hits)
         {
-            if (!col.CompareTag(TAG_ANIMAL))
+            if (!col.CompareTag(TagAnimal))
                 continue;
 
-            var animal = col.GetComponent<AnimalEvent>();
-            if (animal == null)
+            var animalEvent = col.GetComponent<AnimalEvent>();
+            if (animalEvent == null)
                 continue;
 
-            // Trigger the animal’s detection event (adds score, etc.)
-            animal.TriggerEvent(path);
-            resultText = $"Detected: {animal.animalName}";
-            break;
+            // Evaluate photo score and get star rating
+            ScoreResult scoreResult = PhotoScorer.Evaluate(cam, col.bounds, animalEvent.rarityLevel);
+
+            // Trigger the animal's detection event (photoPath, starRating)
+            animalEvent.TriggerEvent(path, scoreResult.stars);
+
+            // Update result UI with animal name and stars
+            uiMessage = $"{animalEvent.animalName} Rating: {scoreResult.stars}★";
+            break; // Only process the first detected animal
         }
 
-        if (detectTxt != null)
-            detectTxt.text = resultText;
+        if (resultText != null)
+            resultText.text = uiMessage;
     }
 }

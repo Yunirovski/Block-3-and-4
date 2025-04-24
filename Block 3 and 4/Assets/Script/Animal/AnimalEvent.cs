@@ -2,54 +2,49 @@ using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
-/// Component for handling events when an animal is photographed/detected.
-/// Attach this to any animal GameObject and configure via the Inspector.
+/// Handles detection of an animal in a photo: invokes configured responses,
+/// awards score based on star rarity, and logs the event.
 /// </summary>
 public class AnimalEvent : MonoBehaviour
 {
-    [Tooltip("The name of this animal, used for identification and categorization")]
+    [Tooltip("The display name or identifier for this animal.")]
     public string animalName;
 
-    [Tooltip("Points awarded when this animal is successfully photographed")]
-    public int scoreValue = 10;  // Default points; can be customized per animal in Inspector
+    [Tooltip("Star rating (rarity level) used as the score value when detected.")]
+    public int rarityLevel = 1;
 
     /// <summary>
-    /// UnityEvent type that passes the photo path string to any listeners.
-    /// You can hook up additional responses (e.g. animations, sounds) in the Inspector.
+    /// UnityEvent that passes the photo path and star rating to any listeners.
+    /// Configure additional reactions (e.g. sounds, VFX) in the Inspector.
     /// </summary>
     [System.Serializable]
-    public class PhotoEvent : UnityEvent<string> { }
+    public class PhotoEvent : UnityEvent<string, int> { }
 
-    [Tooltip("Configure additional responses here (e.g. play sound or animation)")]
+    [Tooltip("Event invoked when this animal is detected; provides photoPath and star rating.")]
     public PhotoEvent onDetected;
 
     /// <summary>
-    /// Call this method when the animal is detected in a photo.
-    /// It will invoke any configured UnityEvents, update the score, and log details.
+    /// Call this to trigger the detection workflow for this animal.
+    /// Invokes any configured events, adds to the player's score, and logs details.
     /// </summary>
-    /// <param name="photoPath">Filesystem path or identifier of the captured photo</param>
-    public void TriggerEvent(string photoPath)
+    /// <param name="photoPath">File path or identifier of the captured photo.</param>
+    /// <param name="star">Number of stars awarded (also used as points).</param>
+    public void TriggerEvent(string photoPath, int star)
     {
-        // Invoke any additional handlers set up in the Inspector.
-        if (onDetected != null)
-        {
-            onDetected.Invoke(photoPath);
-        }
+        // Invoke any listeners set up in the Inspector
+        onDetected?.Invoke(photoPath, star);
 
-        // Add points to the player's score via the ScoreManager singleton.
+        // Award the star count as points to the player
         if (ScoreManager.Instance != null)
         {
-            ScoreManager.Instance.AddScore(scoreValue);
+            ScoreManager.Instance.AddScore(star);
         }
         else
         {
-            Debug.LogWarning("ScoreManager instance not found. Cannot add score.");
+            Debug.LogWarning("AnimalEvent: ScoreManager instance not found; score not added.");
         }
 
-        // Log detailed information for debugging and analytics.
-        Debug.LogFormat(
-            "{0} detected! Photo path: {1} | Points awarded: {2}",
-            animalName, photoPath, scoreValue
-        );
+        // Log formatted detection info for debugging and analytics
+        Debug.LogFormat("{0} бя{1} detected (photo: {2})", animalName, star, photoPath);
     }
 }
