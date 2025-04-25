@@ -53,5 +53,6 @@ public class ConsumableManager : MonoBehaviour
         food = Mathf.Clamp(food + amount, 0, foodCap);
         OnConsumableChanged?.Invoke();
     }
-    #endregion
+    #endregion 
+
 }

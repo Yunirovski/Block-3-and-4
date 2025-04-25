@@ -61,24 +61,28 @@
     <Analyzer Include="E:\unity\6000.0.37f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Script\Animal\AnimalFoodResponse.cs" />
     <Compile Include="Assets\Script\Ui\InventorySystemEvents.cs" />
-    <Compile Include="Assets\Script\Ui\GameUIHub.cs" />
     <Compile Include="Assets\Script\Inventory System\MagicWandItem.cs" />
     <Compile Include="Assets\Script\Animal\EnemyMover.cs" />
     <Compile Include="Assets\Script\RandomMovement.cs" />
     <Compile Include="Assets\Script\Inventory System\DartGunItem.cs" />
     <Compile Include="Assets\Script\Shop\ShopManager.cs" />
     <Compile Include="Assets\Script\player\mousetoggle.cs" />
+    <Compile Include="Assets\Script\Ui\ShopEntryUI.cs" />
     <Compile Include="Assets\Script\MenuButtons.cs" />
     <Compile Include="Assets\Script\Animal\Generator.cs" />
     <Compile Include="Assets\Script\Inventory System\InventoryUI.cs" />
+    <Compile Include="Assets\Script\Food\FoodType.cs" />
     <Compile Include="Assets\Script\Animal\spawner1.cs" />
+    <Compile Include="Assets\Script\System\IMoveController.cs" />
     <Compile Include="Assets\Script\Photo\PhotoScorer.cs" />
     <Compile Include="Assets\Script\Photo\ScreenshotHelper.cs" />
     <Compile Include="Assets\Script\Inventory System\FoodPickup.cs" />
     <Compile Include="Assets\Script\Ui\ResourceHUD.cs" />
     <Compile Include="Assets\Script\Animal\EnemyController.cs" />
     <Compile Include="Assets\Script\Inventory System\SkateboardItem.cs" />
+    <Compile Include="Assets\Script\Food\FoodWorld.cs" />
     <Compile Include="Assets\Script\Shop\ShopItemData.cs" />
     <Compile Include="Assets\Script\ScoreManager.cs" />
     <Compile Include="Assets\Script\Inventory System\FoodItem.cs" />
@@ -98,7 +102,6 @@
     <Compile Include="Assets\Script\InventoryCycler.cs" />
     <Compile Include="Assets\Script\player\player_movement.cs" />
     <Compile Include="Assets\Script\System\CurrencyManager.cs" />
-    <Compile Include="Assets\Script\Ui\UITextAutoLink.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\TerrainSampleAssets\ThirdPartyNotices.txt" />

@@ -3,83 +3,60 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using TMPro;
 
-/// <summary>
-/// Manages the player’s inventory with “locked” slot switching:
-/// prevents changing items while the current item is in its ready state.
-/// Handles selection/deselection, ready/unready toggling, and item usage.
-/// </summary>
 public class InventorySystem : MonoBehaviour
 {
-    [Header("Item Container & UI References")]
-    [Tooltip("Parent transform under which the selected item's model will be instantiated.")]
+    [Header("Item & UI References")]
     public Transform itemHolder;
-    [Tooltip("Controller for the bottom‑bar UI (slot highlighting, ready state icon).")]
     public InventoryUI inventoryUI;
-
-    [Header("On‑Screen Debug & Detection Text")]
-    [Tooltip("Text field for displaying debug or status messages (e.g. errors, hints).")]
-    public TMP_Text debugTextTMP;
-    [Tooltip("Text field for displaying detection results (used by CameraItem).")]
+    public TMP_Text debugTextTMP;    // make sure you drag your DebugText here
     public TMP_Text detectTextTMP;
+    public Transform spawnPoint;     // make sure you drag your spawn point here
 
-    [Header("Switch Animation Settings")]
-    [Tooltip("Animator component used to play the item‑switch animation.")]
+    [Header("Animation")]
     public Animator itemAnimator;
-    [Tooltip("Name of the trigger parameter in the Animator to start switching.")]
     public string switchTrigger = "SwitchItem";
 
-    [Header("Available Items (Slots 0=Camera, 1=Log, 2=Map, 3=Food)")]
-    [Tooltip("List of BaseItem assets representing each inventory slot.")]
+    [Header("Slots (0=Camera,1=Log,2=Map,3=Food/Equip)")]
     public List<BaseItem> availableItems;
 
-    // --- Internal State ---
-    private BaseItem currentItem;      // Currently selected item
-    private GameObject currentModel;   // Instantiated placeholder/model for the current item
-    private bool isReady;              // Whether the current item is in its ready state
-    private int pendingIndex = -1;     // Index of the next item to switch to
+    BaseItem currentItem;
+    GameObject currentModel;
+    bool isReady;
+    int pendingIndex = -1;
 
-    /// <summary>
-    /// On start, if there are any items available, prepare to select the first slot.
-    /// </summary>
-    private void Start()
+    void Start()
     {
-        if (availableItems != null && availableItems.Count > 0)
+        if (availableItems.Count > 3 && availableItems[3] != null)
+            InventoryCycler.InitWith(availableItems[3]);
+
+        if (availableItems.Count > 0)
         {
             pendingIndex = 0;
             inventoryUI.HighlightSlot(0);
-            // 把初始的槽 3 物品（通常是 FoodItem）注册到循环队列
-            if (availableItems.Count > 3 && availableItems[3] != null)
-                InventoryCycler.InitWith(availableItems[3]);
-
             PlaySwitchAnimation();
         }
     }
 
-    /// <summary>
-    /// Per‑frame input handling:
-    /// 1) Number keys (1–4) to switch slots (locked if an item is ready).
-    /// 2) Right mouse button to toggle ready/unready on the current item.
-    /// 3) Left mouse button to use the item when it is ready (ignores UI clicks).
-    /// </summary>
-    private void Update()
+    void Update()
     {
-        // 1) Slot switching via number keys
+        HandleSlotSwitch();
+        HandleReadyToggle();
+        HandleUse();
+    }
+
+    void HandleSlotSwitch()
+    {
+        // 1) 数字键切槽
         for (int i = 0; i < availableItems.Count; i++)
         {
             if (Input.GetKeyDown(KeyCode.Alpha1 + i))
             {
-                // Prevent switching while an item is in ready state
                 if (isReady)
                 {
-                    if (debugTextTMP != null)
-                        debugTextTMP.text = "Please holster your current item first!";
+                    debugTextTMP.text = "请先收起当前物品！";
                     return;
                 }
-
-                // If the chosen slot is already pending, do nothing
-                if (pendingIndex == i)
-                    return;
-
+                if (pendingIndex == i) return;
                 pendingIndex = i;
                 inventoryUI.HighlightSlot(i);
                 PlaySwitchAnimation();
@@ -87,53 +64,66 @@ public class InventorySystem : MonoBehaviour
             }
         }
 
-        // 2) Toggle ready/unready on right-click
+        // 2) 槽3（索引3）特判：食物类型切换 + 道具循环
+        if (pendingIndex == 3)
+        {
+            // —— 食物类型切换 ([ 和 ]) ——
+            if (availableItems[3] is FoodItem foodItem)
+            {
+                if (Input.GetKeyDown(KeyCode.LeftBracket))
+                {
+                    Debug.Log("InventorySystem: Detected [  key");
+                    foodItem.CycleFoodType(false);
+                    return;
+                }
+                if (Input.GetKeyDown(KeyCode.RightBracket))
+                {
+                    Debug.Log("InventorySystem: Detected ]  key");
+                    foodItem.CycleFoodType(true);
+                    return;
+                }
+            }
+
+            // —— Q/E 或 滚轮 切槽3内循环 —— 
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll > 0f) CycleSlot3(true);
+            else if (scroll < 0f) CycleSlot3(false);
+
+            if (Input.GetKeyDown(KeyCode.Q)) CycleSlot3(false);
+            if (Input.GetKeyDown(KeyCode.E)) CycleSlot3(true);
+        }
+    }
+
+    void CycleSlot3(bool forward)
+    {
+        var list = InventoryCycler.GetSlot3List();
+        if (list.Count == 0) return;
+        int cur = list.IndexOf(availableItems[3]);
+        int next = (cur + (forward ? 1 : -1) + list.Count) % list.Count;
+        availableItems[3] = list[next];
+        debugTextTMP.text = $"切换至 {list[next].itemName}";
+        PlaySwitchAnimation();
+    }
+
+    void HandleReadyToggle()
+    {
         if (Input.GetMouseButtonDown(1) && currentItem != null)
         {
             isReady = !isReady;
-            if (isReady)
-                currentItem.OnReady();
-            else
-                currentItem.OnUnready();
-
+            if (isReady) currentItem.OnReady();
+            else currentItem.OnUnready();
             inventoryUI.SetReadyState(isReady);
         }
-
-        // 3) Use the item on left-click if it's ready and not clicking on UI
-        if (isReady && Input.GetMouseButtonDown(0) && currentItem != null)
-        {
-            if (!EventSystem.current.IsPointerOverGameObject())
-                currentItem.OnUse();
-        }
-        // 放在数字键逻辑下方
-        if (pendingIndex == 3 && Input.GetAxis("Mouse ScrollWheel") != 0f)
-        {
-            CycleSlot3(Input.GetAxis("Mouse ScrollWheel") > 0f);
-        }
-
-        if (pendingIndex == 3 && Input.GetKeyDown(KeyCode.Q))
-            CycleSlot3(false);
-        if (pendingIndex == 3 && Input.GetKeyDown(KeyCode.E))
-            CycleSlot3(true);
-
-        // …
-        void CycleSlot3(bool forward)
-        {
-            var list = InventoryCycler.GetSlot3List();   // 静态助手（后面实现）
-            int cur = list.IndexOf(availableItems[3]);
-            int next = (cur + (forward ? 1 : -1) + list.Count) % list.Count;
-            availableItems[3] = list[next];
-            debugTextTMP?.SetText($"切换至 {list[next].itemName}");
-            OnSwitchAnimationComplete(); // 立即刷新模型与 UI
-        }
-
     }
 
-    /// <summary>
-    /// Triggers the switch animation, or immediately completes the switch
-    /// if no Animator has been assigned.
-    /// </summary>
-    private void PlaySwitchAnimation()
+    void HandleUse()
+    {
+        if (!isReady || currentItem == null) return;
+        if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
+            currentItem.OnUse();
+    }
+
+    void PlaySwitchAnimation()
     {
         if (itemAnimator != null)
             itemAnimator.SetTrigger(switchTrigger);
@@ -141,40 +131,38 @@ public class InventorySystem : MonoBehaviour
             OnSwitchAnimationComplete();
     }
 
-    /// <summary>
-    /// Called via Animation Event at the end of the switch animation.
-    /// Destroys the previous model, instantiates the new one, and notifies the item.
-    /// Also injects CameraItem references when appropriate.
-    /// </summary>
+    // 动画事件或无动画时直接调用
     public void OnSwitchAnimationComplete()
     {
-        // Highlight the newly selected slot
+        Debug.Log($"OnSwitchAnimationComplete: pendingIndex={pendingIndex}");
         inventoryUI.HighlightSlot(pendingIndex);
 
-        // Deselect and clean up the previous item
-        if (currentItem != null)
-            currentItem.OnDeselect();
-        if (currentModel != null)
-            Destroy(currentModel);
+        if (currentItem != null) currentItem.OnDeselect();
+        if (currentModel != null) Destroy(currentModel);
 
-        // Set the new current item
         currentItem = availableItems[pendingIndex];
-
-        // Instantiate a placeholder cube as the item model
         currentModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
         currentModel.transform.SetParent(itemHolder, false);
         currentModel.transform.localPosition = Vector3.zero;
         currentModel.transform.localRotation = Quaternion.identity;
         currentModel.name = currentItem.itemName + "_Model";
 
-        // Notify the item that it has been selected
         currentItem.OnSelect(currentModel);
 
-        // If this is a CameraItem, inject the camera and UI references
-        if (currentItem is CameraItem camItem)
+        // 注入 FoodItem
+        if (currentItem is FoodItem food)
         {
-            camItem.Init(Camera.main);
-            camItem.InitUI(debugTextTMP, detectTextTMP);
+            
+            food.debugText = debugTextTMP;
+            Debug.Log("Injected spawnPoint & debugText into FoodItem");
+            food.OnSelect(currentModel);
+        }
+
+        // 注入 CameraItem
+        if (currentItem is CameraItem cam)
+        {
+            cam.Init(Camera.main);
+            cam.InitUI(debugTextTMP, detectTextTMP);
         }
     }
 }

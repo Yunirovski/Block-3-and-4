@@ -148,6 +148,7 @@ GameObject:
   - component: {fileID: 3819823347214958894}
   - component: {fileID: 7294159128819581038}
   - component: {fileID: 4628657002903864989}
+  - component: {fileID: 4846261665168767771}
   m_Layer: 5
   m_Name: ItemEntryPrefab
   m_TagString: Untagged
@@ -257,3 +258,17 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4846261665168767771
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6634418338514869157}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7ffa0651f57e8c448cebee70294ac07, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  label: {fileID: 7222620250187756873}
+  buyButton: {fileID: 4628657002903864989}

@@ -1,45 +1,52 @@
 using UnityEngine;
 using TMPro;
 
+/// <summary>
+/// 常驻右上角资源显示：Quota★、Total★、Film、Food。
+/// 订阅并响应 CurrencyManager 与 ConsumableManager 的变化事件，
+/// 并在销毁时解绑，防止跨场景残留回调导致空引用异常。
+/// </summary>
 public class ResourceHUD : MonoBehaviour
 {
-    [SerializeField] TMP_Text quotaText;
-    [SerializeField] TMP_Text totalText;
-    [SerializeField] TMP_Text filmText;
-    [SerializeField] TMP_Text foodText;
-    [SerializeField] TMP_Text cooldownText;
-    float nextReadyTime = 0f;
-    BaseItem coolingItem;
+    [Header("Text References (assign in Inspector)")]
+    [SerializeField] private TMP_Text quotaText;
+    [SerializeField] private TMP_Text totalText;
+    [SerializeField] private TMP_Text filmText;
+    [SerializeField] private TMP_Text foodText;
 
-    void Start()
+    private void Start()
     {
         // 初次刷新
         Refresh();
-        CurrencyManager.Instance.OnCurrencyChanged += Refresh;
-        ConsumableManager.Instance.OnConsumableChanged += Refresh;
-        InventorySystemEvents.OnItemCooldownStart += BeginCooldownDisplay;
+
+        // 订阅变化事件
+        if (CurrencyManager.Instance != null)
+            CurrencyManager.Instance.OnCurrencyChanged += Refresh;
+        if (ConsumableManager.Instance != null)
+            ConsumableManager.Instance.OnConsumableChanged += Refresh;
     }
-    void BeginCooldownDisplay(BaseItem item, float cd)
+
+    private void OnDestroy()
     {
-        coolingItem = item;
-        nextReadyTime = Time.time + cd;
-        StartCoroutine(CooldownRoutine());
+        // 解绑，防止场景卸载后回调空引用
+        if (CurrencyManager.Instance != null)
+            CurrencyManager.Instance.OnCurrencyChanged -= Refresh;
+        if (ConsumableManager.Instance != null)
+            ConsumableManager.Instance.OnConsumableChanged -= Refresh;
     }
-    System.Collections.IEnumerator CooldownRoutine()
+
+    /// <summary>
+    /// 刷新所有文本字段。
+    /// </summary>
+    private void Refresh()
     {
-        while (Time.time < nextReadyTime)
-        {
-            float remain = nextReadyTime - Time.time;
-            cooldownText.text = $"{coolingItem.itemName} CD: {remain:F1}s";
-            yield return null;
-        }
-        cooldownText.text = "";
-    }
-    void Refresh()
-    {
-        quotaText.text = $"★ {CurrencyManager.Instance.QuotaStar}";
-        totalText.text = $"Σ {CurrencyManager.Instance.TotalStar}";
-        filmText.text = $"Film: {ConsumableManager.Instance.Film}";
-        foodText.text = $"Food: {ConsumableManager.Instance.Food}";
+        if (quotaText != null)
+            quotaText.text = $"★ {CurrencyManager.Instance.QuotaStar}";
+        if (totalText != null)
+            totalText.text = $"Σ {CurrencyManager.Instance.TotalStar}";
+        if (filmText != null)
+            filmText.text = $"Film: {ConsumableManager.Instance.Film}";
+        if (foodText != null)
+            foodText.text = $"Food: {ConsumableManager.Instance.Food}";
     }
 }

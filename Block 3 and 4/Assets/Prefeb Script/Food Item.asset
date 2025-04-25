@@ -13,5 +13,10 @@ MonoBehaviour:
   m_Name: Food Item
   m_EditorClassIdentifier: 
   itemName: 
-  foodPrefab: {fileID: 564612403454184441, guid: 1f77dba3cf5cb414a9ade1b1f80a743c, type: 3}
-  spawnPoint: {fileID: 0}
+  foodTypes: 000000000100000002000000
+  foodPrefabs:
+  - {fileID: 3366124602774938091, guid: 397e3f28e7a9fb043809a6f712afd700, type: 3}
+  - {fileID: 3366124602774938091, guid: 2f57c607f5fdcf747b8633a0d43e0f54, type: 3}
+  - {fileID: 3366124602774938091, guid: e8c0359fb7a72774f9fb109fe74a9565, type: 3}
+  spawnDistance: 2
+  debugText: {fileID: 0}

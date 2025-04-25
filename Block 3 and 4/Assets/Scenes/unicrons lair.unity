@@ -153,7 +153,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -225.7, y: -226}
+  m_AnchoredPosition: {x: -328.4, y: -226}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &234010177
@@ -321,9 +321,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotImages:
   - {fileID: 1079598994}
-  - {fileID: 1869372991}
   - {fileID: 930536250}
   - {fileID: 234010178}
+  - {fileID: 1869372991}
   normalColor: {r: 0, g: 0, b: 0, a: 1}
   highlightColor: {r: 0.8679245, g: 0.061409745, b: 0.08534577, a: 1}
   readyIcon: {fileID: 0}
@@ -343,13 +343,14 @@ MonoBehaviour:
   inventoryUI: {fileID: 256840479}
   debugTextTMP: {fileID: 1184771359}
   detectTextTMP: {fileID: 1008195503}
+  spawnPoint: {fileID: 0}
   itemAnimator: {fileID: 0}
   switchTrigger: SwitchItem
   availableItems:
   - {fileID: 11400000, guid: 07ee67998a0a56d4da47943f3ede7072, type: 2}
-  - {fileID: 11400000, guid: bb7bdce8e5e05af4da8e06b1600b7b5a, type: 2}
   - {fileID: 11400000, guid: c741be8a3707c06488b1885a29fa664d, type: 2}
   - {fileID: 11400000, guid: d782c3132c5e6d54eb3c2c39aeb151e8, type: 2}
+  - {fileID: 11400000, guid: bb7bdce8e5e05af4da8e06b1600b7b5a, type: 2}
 --- !u!114 &256840481
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -546,7 +547,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8412247016472085660, guid: 2ed9fd7226df86d44be41489f0511816, type: 3}
   m_PrefabInstance: {fileID: 1324906730}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1965192879}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 47bdb7b3f80305d4cbf2b0f7aab3f1b6, type: 3}
@@ -639,7 +640,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0.933, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -970,7 +971,6 @@ MonoBehaviour:
   totalText: {fileID: 997529542}
   filmText: {fileID: 2000285919}
   foodText: {fileID: 2125554756}
-  cooldownText: {fileID: 1394813867}
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1459,7 +1459,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -331, y: -226}
+  m_AnchoredPosition: {x: -434.4, y: -226}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &930536249
@@ -2349,7 +2349,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6498719065466850296, guid: 2ed9fd7226df86d44be41489f0511816, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1965192886}
   m_SourcePrefab: {fileID: 100100000, guid: 2ed9fd7226df86d44be41489f0511816, type: 3}
 --- !u!1 &1394813866
 GameObject:
@@ -3086,7 +3089,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -436.3, y: -226}
+  m_AnchoredPosition: {x: -220.6, y: -226}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1869372990
@@ -3127,6 +3130,29 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &1965192879 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6498719065466850296, guid: 2ed9fd7226df86d44be41489f0511816, type: 3}
+  m_PrefabInstance: {fileID: 1324906730}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1965192886
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1965192879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e35191e5c59c9844dafc83e6df2bc959, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  preferences: 
+  temperament: 0
+  detectionRadius: 20
+  safeDistance: 15
+  eatDuration: 5
+  graceDuration: 10
 --- !u!1 &1994101601
 GameObject:
   m_ObjectHideFlags: 0

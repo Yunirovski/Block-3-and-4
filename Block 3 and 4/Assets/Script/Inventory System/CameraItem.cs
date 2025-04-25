@@ -24,8 +24,10 @@ public class CameraItem : BaseItem
 
     // ───────────────────────── Runtime refs (injected) ─────────────────────────
     [System.NonSerialized] private Camera cam;
-    [System.NonSerialized] private TMP_Text debugText;
-    [System.NonSerialized] private TMP_Text resultText;
+    [Header("UI Text (assign in InventorySystem)")]
+    [SerializeField] private TMP_Text debugText;
+    [SerializeField] private TMP_Text resultText;
+
 
     // ───────────────────────── Private state ─────────────────────────
     private int photoCount;          // Naming counter
