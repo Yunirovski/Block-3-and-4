@@ -76,6 +76,7 @@
     <Compile Include="Assets\Script\Food\FoodType.cs" />
     <Compile Include="Assets\Script\Animal\spawner1.cs" />
     <Compile Include="Assets\Script\System\IMoveController.cs" />
+    <Compile Include="Assets\Script\System\PhotoDetector.cs" />
     <Compile Include="Assets\Script\Photo\PhotoScorer.cs" />
     <Compile Include="Assets\Script\Photo\ScreenshotHelper.cs" />
     <Compile Include="Assets\Script\Inventory System\FoodPickup.cs" />

@@ -1,52 +1,61 @@
+// Assets/Scripts/AnimalEvent.cs
+
 using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
-/// Handles the detection of an animal in a photo: invokes configured events,
-/// awards stars via the CurrencyManager (both quota¡ï and total¡ï), and logs the event.
+/// Handles detection of an animal in a photo:
+/// - Invokes configured PhotoEvent (photoPath, stars)
+/// - Adds stars to the player¡¯s currency
+/// - If this is an Easter-egg animal, gives +1 extra star
 /// </summary>
 public class AnimalEvent : MonoBehaviour
 {
-    [Tooltip("The display name or identifier for this animal.")]
+    [Tooltip("Display name for this animal.")]
     public string animalName;
 
-    [Tooltip("Rarity level of the animal (1¨C3), used as part of the star rating.")]
-    public int rarityLevel = 1;
+    [Tooltip("If true, this is a 'Easter-egg' animal and grants +1 bonus star.")]
+    public bool isEasterEgg;
 
     /// <summary>
-    /// UnityEvent that passes the photo path and star rating to any listeners.
-    /// Configure additional reactions (e.g. sounds, VFX) in the Inspector.
+    /// PhotoEvent passes back the saved photo path and the final star count.
     /// </summary>
     [System.Serializable]
     public class PhotoEvent : UnityEvent<string, int> { }
 
-    [Tooltip("Invoked when this animal is detected; provides (photoPath, starRating).")]
+    [Tooltip("Configure additional reactions (VFX, sounds, etc.) in the Inspector.")]
     public PhotoEvent onDetected;
 
     /// <summary>
-    /// Call this to trigger the detection workflow for this animal.
-    /// Invokes any configured events, awards stars, and logs details.
+    /// Called by the photo-capture system when this animal is detected.
     /// </summary>
-    /// <param name="photoPath">Filesystem path or identifier of the captured photo.</param>
-    /// <param name="starRating">Number of stars awarded (1¨C3).</param>
-    public void TriggerEvent(string photoPath, int starRating)
+    /// <param name="photoPath">Filesystem path of the captured image.</param>
+    /// <param name="stars">Base star rating computed by the detector.</param>
+    public void TriggerEvent(string photoPath, int stars)
     {
-        // 1) Invoke any listeners configured in the Inspector
-        onDetected?.Invoke(photoPath, starRating);
+        // If this is an Easter-egg animal, grant one extra star
+        if (isEasterEgg)
+        {
+            stars += 1;
+        }
 
-        // 2) Award stars via CurrencyManager (updates both quota¡ï and total¡ï)
+        // Invoke any configured UnityEvent listeners
+        onDetected?.Invoke(photoPath, stars);
+
+        // Award the stars via the currency system
         if (CurrencyManager.Instance != null)
         {
-            CurrencyManager.Instance.AddStars(starRating);
+            CurrencyManager.Instance.AddStars(stars);
         }
         else
         {
-            Debug.LogWarning($"AnimalEvent: CurrencyManager instance not found; stars not added for '{animalName}'.");
+            Debug.LogWarning($"AnimalEvent: CurrencyManager not found; stars not added for '{animalName}'.");
         }
 
-        // 3) Log formatted detection info for debugging and analytics
-        Debug.LogFormat("Detected Animal: {0} | Stars: {1} | Photo: {2}",
-                        animalName, starRating, photoPath);
+        // Debug log
+        Debug.LogFormat(
+            "AnimalEvent: {0} detected ¡ú {1}¡ï (EasterEgg: {2}) | Photo: {3}",
+            animalName, stars, isEasterEgg, photoPath
+        );
     }
 }
-
