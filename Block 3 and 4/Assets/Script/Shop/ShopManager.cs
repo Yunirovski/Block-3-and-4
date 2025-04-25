@@ -3,27 +3,39 @@ using TMPro;
 using UnityEngine.UI;
 
 /// <summary>
-/// 商店系统：按 B 打开，暂停游戏，列出 catalog 中的物品，
-/// 支持购买 Consumable（胶卷/食物）与 Equipment（注册到槽3循环）。
-/// 在销毁时解绑 CurrencyManager 的回调。
+/// Manages the in-game shop.  
+/// Press B to open/close the shop, which pauses/resumes the game and toggles the cursor.  
+/// Displays all items from the catalog, allows purchasing consumables (film/food) or equipment  
+/// (registered into slot 3 for cycling).  
+/// Automatically subscribes to and unsubscribes from the CurrencyManager's currency-changed event.
 /// </summary>
 public class ShopManager : MonoBehaviour
 {
-    // —— 单例实例 —— 
+    /// <summary>
+    /// Singleton instance for global access.
+    /// </summary>
     public static ShopManager Instance { get; private set; }
 
     [Header("UI References")]
-    public GameObject shopRoot;        // ShopPanel 根，Start 时保持 inactive
-    public Transform contentHolder;    // ScrollView/Viewport/Content
-    public GameObject itemEntryPrefab; // Button+Text 的预制
-    public TMP_Text quotaText;         // 显示当前配额★
+    [Tooltip("Root GameObject for the shop panel (should start inactive).")]
+    public GameObject shopRoot;
+
+    [Tooltip("Parent transform of the ScrollView content where item entries are instantiated.")]
+    public Transform contentHolder;
+
+    [Tooltip("Prefab containing the UI for one shop entry (e.g., button + text).")]
+    public GameObject itemEntryPrefab;
+
+    [Tooltip("Text field displaying the player's current quota (★).")]
+    public TMP_Text quotaText;
 
     [Header("Catalog Data")]
-    public ShopItemData[] catalog;     // 在 Inspector 中填入多个 ShopItemData
+    [Tooltip("Array of shop items defined in the Inspector.")]
+    public ShopItemData[] catalog;
 
     private void Awake()
     {
-        // 单例初始化
+        // Initialize singleton pattern
         if (Instance == null)
         {
             Instance = this;
@@ -38,92 +50,120 @@ public class ShopManager : MonoBehaviour
 
     private void Start()
     {
+        // Build the UI entries for each catalog item
         BuildUI();
+
+        // Update the quota display initially
         UpdateQuotaLabel();
 
-        // 订阅 CurrencyManager 回调
+        // Subscribe to currency changes to keep quota display in sync
         if (CurrencyManager.Instance != null)
+        {
             CurrencyManager.Instance.OnCurrencyChanged += UpdateQuotaLabel;
+        }
     }
 
     private void OnDestroy()
     {
-        // 解绑事件
+        // Unsubscribe from currency change events to prevent memory leaks
         if (CurrencyManager.Instance != null)
+        {
             CurrencyManager.Instance.OnCurrencyChanged -= UpdateQuotaLabel;
+        }
     }
 
     private void Update()
     {
+        // Toggle the shop panel when pressing B
         if (Input.GetKeyDown(KeyCode.B))
+        {
             ToggleShop();
+        }
     }
 
     /// <summary>
-    /// 构建滚动列表的按钮条目，只执行一次。
+    /// Instantiates one UI entry per catalog item under the contentHolder.
+    /// Called once at startup.
     /// </summary>
     private void BuildUI()
     {
         foreach (var data in catalog)
         {
-            GameObject go = Instantiate(itemEntryPrefab, contentHolder);
-            var entry = go.GetComponent<ShopEntryUI>();
-            entry.Init(data);
+            GameObject entryGO = Instantiate(itemEntryPrefab, contentHolder);
+            var entryUI = entryGO.GetComponent<ShopEntryUI>();
+            entryUI.Init(data);
         }
     }
 
     /// <summary>
-    /// 打开/关闭商店面板，并暂停/恢复游戏时间与鼠标状态。
-    /// 打开时刷新所有条目的状态。
+    /// Opens or closes the shop panel.
+    /// When opened: pauses the game, unlocks cursor, and refreshes each entry's purchase state.
+    /// When closed: resumes the game and locks/hides cursor.
     /// </summary>
     private void ToggleShop()
     {
-        bool active = !shopRoot.activeSelf;
-        shopRoot.SetActive(active);
-        Time.timeScale = active ? 0f : 1f;
-        Cursor.lockState = active ? CursorLockMode.None : CursorLockMode.Locked;
-        Cursor.visible = active;
+        bool activating = !shopRoot.activeSelf;
+        shopRoot.SetActive(activating);
 
-        if (active)
+        // Pause or resume game time
+        Time.timeScale = activating ? 0f : 1f;
+
+        // Toggle cursor lock and visibility
+        Cursor.lockState = activating ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = activating;
+
+        if (activating)
         {
-            // 打开时逐条刷新可购买状态
-            foreach (Transform t in contentHolder)
+            // Refresh all entries so purchase buttons reflect current currency and unlock status
+            foreach (Transform child in contentHolder)
             {
-                var entry = t.GetComponent<ShopEntryUI>();
-                if (entry != null)
-                    entry.Refresh();
+                var entryUI = child.GetComponent<ShopEntryUI>();
+                if (entryUI != null)
+                {
+                    entryUI.Refresh();
+                }
             }
         }
     }
 
     /// <summary>
-    /// 更新顶部配额★ 文本显示。
+    /// Updates the quota (★) text at the top of the shop UI.
     /// </summary>
     private void UpdateQuotaLabel()
     {
-        if (quotaText != null)
+        if (quotaText != null && CurrencyManager.Instance != null)
+        {
             quotaText.text = $"Quota★: {CurrencyManager.Instance.QuotaStar}";
+        }
     }
 
     /// <summary>
-    /// 供 ShopEntryUI 调用的购买尝试逻辑。
+    /// Attempts to purchase the given ShopItemData.
+    /// Called by ShopEntryUI when the player clicks Buy.
+    /// Checks unlock requirements, spends currency, and grants the item.
     /// </summary>
+    /// <param name="data">The shop item the player wants to buy.</param>
     public void TryBuy(ShopItemData data)
     {
+        // Must have collected enough total stars to unlock the item
         if (CurrencyManager.Instance.TotalStar < data.unlockNeedTotal)
         {
-            Debug.Log($"未满足收藏★需求 ({data.unlockNeedTotal})");
-            return;
-        }
-        if (!CurrencyManager.Instance.TrySpendStars(data.priceQuota))
-        {
-            Debug.Log("配额★不足！");
+            Debug.Log($"ShopManager: Unlock requirement not met ({data.unlockNeedTotal}★ required).");
             return;
         }
 
+        // Must have enough current quota stars to pay the price
+        if (!CurrencyManager.Instance.TrySpendStars(data.priceQuota))
+        {
+            Debug.Log("ShopManager: Not enough quota★ to purchase.");
+            return;
+        }
+
+        // Grant the purchased item
         switch (data.type)
         {
             case ShopItemType.Consumable:
+                // Distinguish between film and food by name convention
                 if (data.itemName.Contains("Film"))
                     ConsumableManager.Instance.AddFilm(data.amount);
                 else
@@ -131,8 +171,9 @@ public class ShopManager : MonoBehaviour
                 break;
 
             case ShopItemType.Equipment:
+                // Register equipment into Slot 3 cycling
                 InventoryCycler.RegisterItem(data.linkedItem);
-                Debug.Log($"已购买装备 {data.itemName}，可用 Q/E 切换！");
+                Debug.Log($"ShopManager: Purchased equipment '{data.itemName}'. Use Q/E to cycle.");
                 break;
         }
     }

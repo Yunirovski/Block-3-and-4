@@ -1,35 +1,74 @@
 using System.Collections.Generic;
 
 /// <summary>
-/// 管理“槽3”的可循环物品列表：Init/Clear/Register/Remove/GetCopy
+/// Manages the cyclical list of items assignable to “Slot 3” in the inventory.
+/// Provides methods to initialize, clear, register, remove, and retrieve a safe copy of the list.
 /// </summary>
 public static class InventoryCycler
 {
-    private static readonly List<BaseItem> slot3List = new List<BaseItem>();
+    // Underlying storage for all items currently in “Slot 3”
+    private static readonly List<BaseItem> slot3Items = new List<BaseItem>();
 
-    // 场景启动或切区时调用：清空并注入初始
+    /// <summary>
+    /// Initializes the Slot 3 list at scene load or when changing zones.
+    /// Clears any existing entries and, if provided, adds the specified initial item.
+    /// </summary>
+    /// <param name="initial">
+    /// The default item to seed into Slot 3 (can be null to start empty).
+    /// </param>
     public static void InitWith(BaseItem initial)
     {
-        slot3List.Clear();
+        // Remove all existing items from the list
+        slot3Items.Clear();
+
+        // If an initial item was provided, add it as the first entry
         if (initial != null)
-            slot3List.Add(initial);
+        {
+            slot3Items.Add(initial);
+        }
     }
 
-    // 购买后调用：注册装备
+    /// <summary>
+    /// Registers a newly purchased or acquired item into Slot 3.
+    /// Prevents duplicate entries.
+    /// </summary>
+    /// <param name="item">
+    /// The item to add to the Slot 3 cycle (ignored if null or already present).
+    /// </param>
     public static void RegisterItem(BaseItem item)
     {
-        if (item != null && !slot3List.Contains(item))
-            slot3List.Add(item);
+        // Only add non-null items that aren't already in the list
+        if (item != null && !slot3Items.Contains(item))
+        {
+            slot3Items.Add(item);
+        }
     }
 
-    // 卖掉或回收时调用：移除
+    /// <summary>
+    /// Removes an item from Slot 3, e.g., when sold or recycled.
+    /// </summary>
+    /// <param name="item">
+    /// The item to remove (ignored if null or not found).
+    /// </param>
     public static void RemoveItem(BaseItem item)
     {
+        // Safely attempt removal; List.Remove handles missing entries gracefully
         if (item != null)
-            slot3List.Remove(item);
+        {
+            slot3Items.Remove(item);
+        }
     }
 
-    // InventorySystem 用，返回拷贝防误改
+    /// <summary>
+    /// Retrieves a copy of the current Slot 3 list.
+    /// Returns a new list instance to prevent external modification of the internal list.
+    /// </summary>
+    /// <returns>
+    /// A shallow copy of the list of items currently registered in Slot 3.
+    /// </returns>
     public static List<BaseItem> GetSlot3List()
-        => new List<BaseItem>(slot3List);
+    {
+        // Return a new list constructed from the internal list
+        return new List<BaseItem>(slot3Items);
+    }
 }

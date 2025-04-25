@@ -1,11 +1,14 @@
 /// <summary>
-/// 提供给装备调用的移动控制接口：允许动态修改角色行走与奔跑速度。
+/// Interface for movement control, allowing equipment to modify the player’s walk and run speeds at runtime.
 /// </summary>
 public interface IMoveController
 {
     /// <summary>
-    /// 按 multiplier 调整角色基础速度（走/跑）。
-    /// multiplier = 1 恢复原速。
+    /// Adjusts the character’s base movement speed by the given multiplier.
+    /// A value of 1.0 restores the original speed; values >1.0 increase speed, values between 0 and 1.0 slow the character down.
     /// </summary>
+    /// <param name="multiplier">
+    /// The factor by which to multiply the character’s base speed.
+    /// </param>
     void ModifySpeed(float multiplier);
 }

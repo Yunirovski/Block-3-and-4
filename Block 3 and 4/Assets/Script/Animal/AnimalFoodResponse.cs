@@ -2,25 +2,42 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// 动物对食物的简单响应：基于喜好(FoodType)和性格(Temperament)实现
-/// Idle → Approach → Eat → Grace 的状态机。
+/// Simple food-response state machine for animals.
+/// Animals transition through Idle → Approaching → Eating → Grace states
+/// based on their food preferences and temperament.
 /// </summary>
 public class AnimalFoodResponse : MonoBehaviour
 {
-    public List<FoodType> preferences;   // 喜欢的食物类型列表
-    public Temperament temperament;      // 性格：Neutral/ Fearful/ Hostile
-    public float detectionRadius = 20f;  // 发现食物半径
-    public float safeDistance = 15f;     // 对 Fearful/Hostile 的安全距离阈值
-    public float eatDuration = 5f;       // 进食时长
-    public float graceDuration = 10f;    // 进食后温顺时长
+    [Header("Food Interaction Settings")]
+    [Tooltip("List of FoodTypes this animal will respond to.")]
+    public List<FoodType> preferences;
 
-    enum State { Idle, Approaching, Eating, Grace }
-    State state = State.Idle;
+    [Tooltip("Animal temperament: controls approach behavior.")]
+    public Temperament temperament;
 
+    [Tooltip("Radius within which the animal can detect food.")]
+    public float detectionRadius = 20f;
+
+    [Tooltip("Safe distance threshold for Fearful/Hostile temperaments.")]
+    public float safeDistance = 15f;
+
+    [Tooltip("Duration (seconds) the animal spends eating.")]
+    public float eatDuration = 5f;
+
+    [Tooltip("Duration (seconds) the animal remains calm after eating.")]
+    public float graceDuration = 10f;
+
+    // Internal state machine states
+    private enum State { Idle, Approaching, Eating, Grace }
+    private State state = State.Idle;
+
+    // The current food target the animal is moving toward
     private Transform targetFood;
+
+    // Timer used for Eating and Grace durations
     private float timer;
 
-    void Update()
+    private void Update()
     {
         switch (state)
         {
@@ -33,8 +50,9 @@ public class AnimalFoodResponse : MonoBehaviour
                 break;
 
             case State.Eating:
+                // Count down eating time; then enter Grace state
                 timer -= Time.deltaTime;
-                if (timer <= 0)
+                if (timer <= 0f)
                 {
                     state = State.Grace;
                     timer = graceDuration;
@@ -42,87 +60,121 @@ public class AnimalFoodResponse : MonoBehaviour
                 break;
 
             case State.Grace:
+                // After grace period, return to Idle
                 timer -= Time.deltaTime;
-                if (timer <= 0) state = State.Idle;
+                if (timer <= 0f)
+                {
+                    state = State.Idle;
+                }
                 break;
         }
     }
 
-    void DetectAndReact()
+    /// <summary>
+    /// Scans for nearby FoodWorld objects and reacts based on preference and temperament.
+    /// </summary>
+    private void DetectAndReact()
     {
+        // Find all colliders within detectionRadius
         Collider[] hits = Physics.OverlapSphere(transform.position, detectionRadius);
         foreach (var col in hits)
         {
-            var fw = col.GetComponent<FoodWorld>();
-            if (fw == null) continue;
-            if (!preferences.Contains(fw.foodType)) continue;
+            var foodWorld = col.GetComponent<FoodWorld>();
+            if (foodWorld == null)
+                continue;
 
+            // Skip if this food type is not in the preference list
+            if (!preferences.Contains(foodWorld.foodType))
+                continue;
+
+            // Compute distance between animal and player camera
             float distToPlayer = Vector3.Distance(
                 transform.position,
                 Camera.main.transform.position);
 
+            // Decide if the animal should approach, based on temperament
             switch (temperament)
             {
                 case Temperament.Neutral:
-                    StartApproach(fw.transform);
+                    StartApproach(foodWorld.transform);
                     return;
 
                 case Temperament.Fearful:
+                    // Only approach if the player is far enough away
                     if (distToPlayer > safeDistance)
-                        StartApproach(fw.transform);
+                        StartApproach(foodWorld.transform);
                     return;
 
                 case Temperament.Hostile:
+                    // Only approach if the player is within a certain range
                     if (distToPlayer <= safeDistance)
-                        StartApproach(fw.transform);
+                        StartApproach(foodWorld.transform);
                     return;
             }
         }
     }
 
-    void StartApproach(Transform food)
+    /// <summary>
+    /// Initializes approach toward the specified food transform.
+    /// </summary>
+    /// <param name="food">Transform of the FoodWorld object to approach.</param>
+    private void StartApproach(Transform food)
     {
         targetFood = food;
         state = State.Approaching;
     }
 
-    void MoveTowardsFood()
+    /// <summary>
+    /// Moves the animal toward the target food without using NavMesh.
+    /// Destroys the food and begins Eating once close enough.
+    /// </summary>
+    private void MoveTowardsFood()
     {
         if (targetFood == null)
         {
+            // If food was destroyed or lost, return to Idle
             state = State.Idle;
             return;
         }
-        // 简易移动：不做 NavMesh，直接向目标移动
+
+        // Simple linear movement toward the food
         transform.position = Vector3.MoveTowards(
             transform.position,
             targetFood.position,
             3f * Time.deltaTime);
 
+        // Check arrival at food (<1 meter)
         if (Vector3.Distance(transform.position, targetFood.position) < 1f)
         {
-            // 到达，开始进食
+            // Begin Eating state
             state = State.Eating;
             timer = eatDuration;
+
+            // Remove food object from scene
             Destroy(targetFood.gameObject);
             targetFood = null;
         }
     }
 
-    void OnDrawGizmosSelected()
+    private void OnDrawGizmosSelected()
     {
-        // 在编辑器中可视化检测半径
+        // Visualize detection radius in the editor for debugging
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(transform.position, detectionRadius);
     }
 }
 
 /// <summary>
-/// 性格枚举：中立 / 害怕 / 敌对
+/// Defines animal temperaments affecting food-approach behavior.
 /// </summary>
 public enum Temperament
 {
+    /// <summary>No bias: always approach preferred food when detected.</summary>
     Neutral,
+
+    /// <summary>Timid: only approach if the player is far away.</summary>
     Fearful,
+
+    /// <summary>Aggressive: only approach when the player is close.</summary>
     Hostile
 }
