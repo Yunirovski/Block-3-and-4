@@ -47,6 +47,10 @@ public class InventorySystem : MonoBehaviour
         {
             pendingIndex = 0;
             inventoryUI.HighlightSlot(0);
+            // 把初始的槽 3 物品（通常是 FoodItem）注册到循环队列
+            if (availableItems.Count > 3 && availableItems[3] != null)
+                InventoryCycler.InitWith(availableItems[3]);
+
             PlaySwitchAnimation();
         }
     }
@@ -101,6 +105,28 @@ public class InventorySystem : MonoBehaviour
             if (!EventSystem.current.IsPointerOverGameObject())
                 currentItem.OnUse();
         }
+        // 放在数字键逻辑下方
+        if (pendingIndex == 3 && Input.GetAxis("Mouse ScrollWheel") != 0f)
+        {
+            CycleSlot3(Input.GetAxis("Mouse ScrollWheel") > 0f);
+        }
+
+        if (pendingIndex == 3 && Input.GetKeyDown(KeyCode.Q))
+            CycleSlot3(false);
+        if (pendingIndex == 3 && Input.GetKeyDown(KeyCode.E))
+            CycleSlot3(true);
+
+        // …
+        void CycleSlot3(bool forward)
+        {
+            var list = InventoryCycler.GetSlot3List();   // 静态助手（后面实现）
+            int cur = list.IndexOf(availableItems[3]);
+            int next = (cur + (forward ? 1 : -1) + list.Count) % list.Count;
+            availableItems[3] = list[next];
+            debugTextTMP?.SetText($"切换至 {list[next].itemName}");
+            OnSwitchAnimationComplete(); // 立即刷新模型与 UI
+        }
+
     }
 
     /// <summary>

@@ -19,6 +19,11 @@ public class FoodItem : BaseItem
     /// </summary>
     public override void OnUse()
     {
+        if (!ConsumableManager.Instance.UseFood())   // 胶卷一样
+        {
+            Debug.Log("没有食物可投放！");
+            return;
+        }
         // Verify that both prefab and spawn point have been assigned
         if (foodPrefab != null && spawnPoint != null)
         {

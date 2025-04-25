@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb60bd72d1fd4a43b38e86de8592fd6, type: 3}
+  m_Name: Grapple Item
+  m_EditorClassIdentifier: 
+  itemName: 
+  maxDistance: 30
+  pullSpeed: 15
+  cooldown: 4

@@ -4,13 +4,13 @@ using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// ScriptableObject-based camera item that captures a screenshot of the game view,
-/// hides UI during capture, saves the image, evaluates it with PhotoScorer,
-/// triggers detection events on AnimalEvent components, and updates UI texts.
+/// Camera item: hides UI, captures a screenshot, scores it, triggers AnimalEvent,
+/// consumes film, enforces a cooldown, and updates on-screen texts.
 /// </summary>
 [CreateAssetMenu(menuName = "Items/CameraItem_Tag")]
 public class CameraItem : BaseItem
 {
+    // ───────────────────────── Inspector ─────────────────────────
     [Header("Detection Settings")]
     [Tooltip("World-space radius around the pivot point to search for detectable objects.")]
     public float detectRadius = 2f;
@@ -18,151 +18,136 @@ public class CameraItem : BaseItem
     [Tooltip("LayerMask specifying which layers to include in raycast and OverlapSphere.")]
     public LayerMask detectMask;
 
-    // Runtime-injected references
+    [Header("Capture Settings")]
+    [Tooltip("Cooldown (seconds) between two consecutive shots.")]
+    public float shootCooldown = 1.5f;
+
+    // ───────────────────────── Runtime refs (injected) ─────────────────────────
     [System.NonSerialized] private Camera cam;
     [System.NonSerialized] private TMP_Text debugText;
     [System.NonSerialized] private TMP_Text resultText;
 
-    private int photoCount;    // Counter for naming saved photos
-    private bool photoMode;    // Whether photo mode is currently active
-
+    // ───────────────────────── Private state ─────────────────────────
+    private int photoCount;          // Naming counter
+    private bool photoMode;           // Ready state flag
     private const string TagAnimal = "AnimalDetectable";
 
-    /// <summary>
-    /// Injects the Camera reference for screen-to-world projections.
-    /// </summary>
+    private static float s_LastShotTime = -999f; // shared cooldown
+
+    // ───────────────────────── Init helpers ─────────────────────────
     public void Init(Camera camera) => cam = camera;
 
-    /// <summary>
-    /// Injects the UI text components for debug and detection result messages.
-    /// </summary>
     public void InitUI(TMP_Text debug, TMP_Text result)
     {
         debugText = debug;
         resultText = result;
     }
 
-    /// <summary>
-    /// Called when the player readies (equips) this item.
-    /// Enables photo mode and updates the debug UI.
-    /// </summary>
+    // ───────────────────────── Item life-cycle ─────────────────────────
     public override void OnReady()
     {
         photoMode = true;
-        if (debugText != null)
-            debugText.text = "Photo Mode: ON";
+        debugText?.SetText("Photo Mode: ON");
     }
 
-    /// <summary>
-    /// Called when the player un-readies (holsters) this item.
-    /// Disables photo mode and updates the debug UI.
-    /// </summary>
     public override void OnUnready()
     {
         photoMode = false;
-        if (debugText != null)
-            debugText.text = "Photo Mode: OFF";
+        debugText?.SetText("Photo Mode: OFF");
     }
 
-    /// <summary>
-    /// Called when the player uses this item (left-click while ready).
-    /// Starts the screenshot capture coroutine if photo mode is active.
-    /// </summary>
+    // ───────────────────────── Primary action ─────────────────────────
     public override void OnUse()
     {
-        if (photoMode && cam != null)
+        if (!photoMode || cam == null) return;
+
+        // 1) cooldown check
+        float remainingCd = shootCooldown - (Time.time - s_LastShotTime);
+        if (remainingCd > 0f)
         {
-            ScreenshotHelper.Instance.StartCoroutine(CaptureCoroutine());
+            debugText?.SetText($"Camera cooling… {remainingCd:F1}s");
+            return;
         }
+
+        // 2) film check
+        if (!ConsumableManager.Instance.UseFilm())
+        {
+            debugText?.SetText("胶卷已用尽！");
+            return;
+        }
+
+        s_LastShotTime = Time.time;
+        ScreenshotHelper.Instance.StartCoroutine(CaptureCoroutine());
     }
 
-    /// <summary>
-    /// Coroutine that:
-    /// 1) Hides all UI canvases.
-    /// 2) Waits for end of frame (including post-processing).
-    /// 3) Reads back the screen into a Texture2D.
-    /// 4) Restores UI canvases.
-    /// 5) Processes the captured screenshot.
-    /// </summary>
+    // ───────────────────────── Capture coroutine ─────────────────────────
     private IEnumerator CaptureCoroutine()
     {
-        // 1) Cache and disable all Canvas components
+        // 1) Disable all canvases
 #if UNITY_2023_1_OR_NEWER
         var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 #else
         var canvases = Object.FindObjectsOfType<Canvas>();
 #endif
-        var previousStates = new bool[canvases.Length];
+        var states = new bool[canvases.Length];
         for (int i = 0; i < canvases.Length; i++)
         {
-            previousStates[i] = canvases[i].enabled;
+            states[i] = canvases[i].enabled;
             canvases[i].enabled = false;
         }
 
-        // 2) Wait for frame rendering to complete
+        // 2) wait end-of-frame
         yield return new WaitForEndOfFrame();
 
-        // 3) Capture screen pixels into a Texture2D
-        var screenshot = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
-        screenshot.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
-        screenshot.Apply();
+        // 3) read pixels
+        var tex = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
+        tex.Apply();
 
-        // 4) Restore original canvas states
+        // 4) restore canvases
         for (int i = 0; i < canvases.Length; i++)
-            canvases[i].enabled = previousStates[i];
+            canvases[i].enabled = states[i];
 
-        // 5) Process the screenshot (save, detect, score, and update UI)
-        ProcessShot(screenshot);
+        // 5) analyse & save
+        ProcessShot(tex);
     }
 
-    /// <summary>
-    /// Saves the captured Texture2D to disk, performs world-space detection using
-    /// a raycast and OverlapSphere, evaluates the photo score, triggers the animal event,
-    /// and updates the detection result UI.
-    /// </summary>
-    /// <param name="tex">The captured screenshot as a Texture2D.</param>
+    // ───────────────────────── Analyse / save ─────────────────────────
     private void ProcessShot(Texture2D tex)
     {
-        // --- 1) Save PNG file ---
+        /* 1. save PNG */
         string fileName = $"photo_{photoCount:D4}.png";
         string path = Path.Combine(Application.persistentDataPath, fileName);
         File.WriteAllBytes(path, tex.EncodeToPNG());
         photoCount++;
-        if (debugText != null)
-            debugText.text = $"Saved {fileName}";
+        debugText?.SetText($"Saved {fileName}");
 
-        // --- 2) Determine world‐space pivot via screen‐center raycast ---
-        Vector3 screenCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
-        Ray ray = cam.ScreenPointToRay(screenCenter);
-        Vector3 pivotPoint = ray.origin + ray.direction * 100f;
+        /* 2. get world pivot */
+        Vector3 scrCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
+        Ray ray = cam.ScreenPointToRay(scrCenter);
+        Vector3 pivot = ray.origin + ray.direction * 100f;
         if (Physics.Raycast(ray, out RaycastHit hit, 100f, detectMask))
-            pivotPoint = hit.point;
+            pivot = hit.point;
 
-        // --- 3) Detect colliders in radius and process first valid animal ---
-        Collider[] hits = Physics.OverlapSphere(pivotPoint, detectRadius, detectMask);
-        string uiMessage = "Nothing detected";
+        /* 3. detect animals */
+        Collider[] hits = Physics.OverlapSphere(pivot, detectRadius, detectMask);
+        string uiMsg = "Nothing detected";
 
         foreach (var col in hits)
         {
-            if (!col.CompareTag(TagAnimal))
-                continue;
+            if (!col.CompareTag(TagAnimal)) continue;
 
-            var animalEvent = col.GetComponent<AnimalEvent>();
-            if (animalEvent == null)
-                continue;
+            AnimalEvent ani = col.GetComponent<AnimalEvent>();
+            if (ani == null) continue;
 
-            // Evaluate photo score and get star rating
-            ScoreResult scoreResult = PhotoScorer.Evaluate(cam, col.bounds, animalEvent.rarityLevel);
+            // score & trigger
+            ScoreResult res = PhotoScorer.Evaluate(cam, col.bounds, ani.rarityLevel);
+            ani.TriggerEvent(path, res.stars);
 
-            // Trigger the animal's detection event (photoPath, starRating)
-            animalEvent.TriggerEvent(path, scoreResult.stars);
-
-            // Update result UI with animal name and stars
-            uiMessage = $"{animalEvent.animalName} Rating: {scoreResult.stars}★";
-            break; // Only process the first detected animal
+            uiMsg = $"{ani.animalName} Rating: {res.stars}★";
+            break; // only first hit
         }
 
-        if (resultText != null)
-            resultText.text = uiMessage;
+        resultText?.SetText(uiMsg);
     }
 }
