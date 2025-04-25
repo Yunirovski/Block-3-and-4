@@ -3,30 +3,26 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 检测结果：每层框的星数 + 总星数
+/// 检测结果：每层窗口的星数 + 总星数
 /// </summary>
 public struct PhotoResult
 {
-    public int[] windowStars; // 长度 = 配置窗口数
-    public int totalStars;
+    public int[] windowStars; // 每层窗口对应的星数
+    public int totalStars;  // 总星数
 }
 
 /// <summary>
-/// Inspector 可调的拍照评分系统：
-///   * windowMargins  : 每个框对四边收缩百分比 (0.0 = 全屏)
-///   * windowStars    : 每个框对应的加星数
-/// 两个列表长度必须一致 (≥1)；从大框到小框顺序填写。
+/// MonoBehaviour 单例，用于在 Inspector 中配置多层窗口的收缩比例及对应星数。
+/// 若任何一个角落在摄像机后方（非常近的情况），会自动给所有层满星。
 /// </summary>
 public class PhotoDetector : MonoBehaviour
 {
-    // ───────── Configurable ─────────
-    [Tooltip("对四边收缩的百分比(0-1)。第 0 个应为 0 表示全屏框")]
+    [Tooltip("对屏幕四边收缩的比例 (0~1)，第0项应为0（全屏）")]
     public List<float> windowMargins = new List<float> { 0f, 0.15f, 0.30f };
 
-    [Tooltip("每个窗口对应的星数，加起来就是总星数")]
+    [Tooltip("每层窗口对应的星数，加起来就是总星数")]
     public List<int> windowStarValues = new List<int> { 1, 2, 3 };
 
-    // ───────── Singleton setup ─────────
     public static PhotoDetector Instance { get; private set; }
 
     void Awake()
@@ -35,65 +31,111 @@ public class PhotoDetector : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    // ───────── Public API ─────────
     /// <summary>
-    /// 由 CameraItem 调用：返回 PhotoResult
+    /// 给定相机和物体World BOUNDS，返回每层窗口的星数和总星数。
     /// </summary>
     public PhotoResult Detect(Camera cam, Bounds bounds)
     {
-        if (windowMargins.Count == 0 ||
-            windowMargins.Count != windowStarValues.Count)
+        int layers = windowMargins.Count;
+        if (layers == 0 || layers != windowStarValues.Count)
         {
-            Debug.LogError("PhotoDetector 配置错误：windowMargins / windowStarValues 长度不一致！");
+            Debug.LogError("PhotoDetector 配置错误：请保证 windowMargins 与 windowStarValues 长度一致且 ≥ 1");
             return default;
         }
 
-        int layers = windowMargins.Count;
-        Rect[] windows = new Rect[layers];
         float sw = Screen.width, sh = Screen.height;
-
-        // 根据百分比生成每层矩形
+        // 构建每层窗口矩形
+        Rect[] windows = new Rect[layers];
         for (int i = 0; i < layers; i++)
         {
             float m = Mathf.Clamp01(windowMargins[i]);
             float left = sw * m;
-            float top = sh * m;
-            windows[i] = new Rect(left, top, sw - 2 * left, sh - 2 * top);
+            float bottom = sh * m;
+            windows[i] = new Rect(left, bottom, sw - 2 * left, sh - 2 * bottom);
         }
 
-        // 取 8 角屏幕点
-        Vector3[] corners = new Vector3[8];
+        // 计算八个角的屏幕坐标
+        Vector2[] screenPoints = new Vector2[8];
+        bool anyBehind = false;
         for (int i = 0; i < 8; i++)
         {
             Vector3 sign = new Vector3(
                 (i & 1) == 0 ? -1 : 1,
                 (i & 2) == 0 ? -1 : 1,
                 (i & 4) == 0 ? -1 : 1);
-            corners[i] = cam.WorldToScreenPoint(bounds.center + Vector3.Scale(bounds.extents, sign));
+            Vector3 worldCorner = bounds.center + Vector3.Scale(bounds.extents, sign);
+            Vector3 sp = cam.WorldToScreenPoint(worldCorner);
+            if (sp.z < 0f)
+            {
+                anyBehind = true;
+            }
+            screenPoints[i] = new Vector2(sp.x, sp.y);
         }
 
-        int[] starPerWin = new int[layers];
-        int total = 0;
-
-        // 判断每一层
-        for (int w = 0; w < layers; w++)
+        // 如果有任何角落在摄像机后方，视作“非常近”，默认给满星
+        if (anyBehind)
         {
-            bool allIn = true;
-            foreach (var sp in corners)
+            int[] fullStars = new int[layers];
+            int total = 0;
+            for (int i = 0; i < layers; i++)
             {
-                if (sp.z < 0f || !windows[w].Contains(new Vector2(sp.x, sp.y)))
-                {
-                    allIn = false;
-                    break;
-                }
+                fullStars[i] = windowStarValues[i];
+                total += fullStars[i];
             }
-            if (allIn)
+            return new PhotoResult { windowStars = fullStars, totalStars = total };
+        }
+
+        // 过滤到前方的点用于包围盒计算
+        var pts = new List<Vector2>();
+        foreach (var p in screenPoints)
+        {
+            if (p.x >= 0f && p.x <= sw && p.y >= 0f && p.y <= sh)
+                pts.Add(p);
+        }
+        // 如果完全不在屏幕上，直接零分
+        if (pts.Count == 0)
+        {
+            return new PhotoResult
             {
-                starPerWin[w] = windowStarValues[w];
-                total += starPerWin[w];
+                windowStars = new int[layers],
+                totalStars = 0
+            };
+        }
+
+        // 计算这些点的 2D 包围盒
+        float minX = pts[0].x, maxX = pts[0].x;
+        float minY = pts[0].y, maxY = pts[0].y;
+        foreach (var p in pts)
+        {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+        }
+
+        // 针对每层窗口打星
+        int[] stars = new int[layers];
+        int totalStars = 0;
+        for (int i = 0; i < layers; i++)
+        {
+            var w = windows[i];
+            // 只要包围盒完全在窗口内，给该层星数
+            if (minX >= w.xMin && maxX <= w.xMax &&
+                minY >= w.yMin && maxY <= w.yMax)
+            {
+                stars[i] = windowStarValues[i];
+                totalStars += stars[i];
+            }
+            else
+            {
+                stars[i] = 0;
             }
         }
 
-        return new PhotoResult { windowStars = starPerWin, totalStars = total };
+        return new PhotoResult
+        {
+            windowStars = stars,
+            totalStars = totalStars
+        };
     }
 }

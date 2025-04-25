@@ -343,7 +343,6 @@ MonoBehaviour:
   inventoryUI: {fileID: 256840479}
   debugTextTMP: {fileID: 1184771359}
   detectTextTMP: {fileID: 1008195503}
-  spawnPoint: {fileID: 0}
   itemAnimator: {fileID: 0}
   switchTrigger: SwitchItem
   availableItems:
@@ -950,11 +949,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9178cd65cd795a54ea6fb8539b893933, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scoreText: {fileID: 1769536887}
-  debugText: {fileID: 1184771359}
-  detectText: {fileID: 1008195503}
-  quotaText: {fileID: 309063608}
-  totalText: {fileID: 997529542}
 --- !u!114 &396027403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2006,6 +2000,7 @@ GameObject:
   - component: {fileID: 1182194345}
   - component: {fileID: 1182194344}
   - component: {fileID: 1182194347}
+  - component: {fileID: 1182194348}
   m_Layer: 0
   m_Name: System
   m_TagString: Untagged
@@ -2077,10 +2072,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e56772a5fe7dda84ebaff19b3fc01558, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  filmCap: 20
+  filmCap: 50
   foodCap: 20
-  film: 5
+  film: 50
   food: 3
+--- !u!114 &1182194348
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1182194343}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b06d3c4817789b14bbfd5ecfb914ac17, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  windowMargins:
+  - 0
+  - 0.15
+  - 0.3
+  windowStarValues: 010000000100000001000000
 --- !u!1 &1184771356
 GameObject:
   m_ObjectHideFlags: 0
@@ -2301,6 +2313,10 @@ PrefabInstance:
     - target: {fileID: 2267306727964149306, guid: 2ed9fd7226df86d44be41489f0511816, type: 3}
       propertyPath: scoreValue
       value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 2267306727964149306, guid: 2ed9fd7226df86d44be41489f0511816, type: 3}
+      propertyPath: isEasterEgg
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3708167734894941824, guid: 2ed9fd7226df86d44be41489f0511816, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3572,7 +3588,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animalName: 
-  rarityLevel: 1
+  isEasterEgg: 0
   onDetected:
     m_PersistentCalls:
       m_Calls: []
