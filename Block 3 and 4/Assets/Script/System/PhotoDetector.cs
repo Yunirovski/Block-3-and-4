@@ -1,141 +1,71 @@
-// Assets/Scripts/Systems/PhotoDetector.cs
-using System.Collections.Generic;
+ï»¿// Assets/Scripts/Systems/PhotoDetector.cs
 using UnityEngine;
+using System.Collections.Generic;
 
-/// <summary>
-/// ¼ì²â½á¹û£ºÃ¿²ã´°¿ÚµÄĞÇÊı + ×ÜĞÇÊı
-/// </summary>
-public struct PhotoResult
-{
-    public int[] windowStars; // Ã¿²ã´°¿Ú¶ÔÓ¦µÄĞÇÊı
-    public int totalStars;  // ×ÜĞÇÊı
-}
+public struct PhotoResult { public int stars; }
 
-/// <summary>
-/// MonoBehaviour µ¥Àı£¬ÓÃÓÚÔÚ Inspector ÖĞÅäÖÃ¶à²ã´°¿ÚµÄÊÕËõ±ÈÀı¼°¶ÔÓ¦ĞÇÊı¡£
-/// ÈôÈÎºÎÒ»¸ö½ÇÂäÔÚÉãÏñ»úºó·½£¨·Ç³£½üµÄÇé¿ö£©£¬»á×Ô¶¯¸øËùÓĞ²ãÂúĞÇ¡£
-/// </summary>
 public class PhotoDetector : MonoBehaviour
 {
-    [Tooltip("¶ÔÆÁÄ»ËÄ±ßÊÕËõµÄ±ÈÀı (0~1)£¬µÚ0ÏîÓ¦Îª0£¨È«ÆÁ£©")]
-    public List<float> windowMargins = new List<float> { 0f, 0.15f, 0.30f };
+    [Header("Size score")]
+    [Tooltip("ä½äºè¯¥ç™¾åˆ†æ¯”åˆ¤ 0â˜…")][Range(0, 1)] public float minSizePct = 0.15f; // 15 %
+    [Tooltip("ç†æƒ³åŒºé—´ä¸Šç•Œ")][Range(0, 1)] public float idealSizePct = 0.45f; // 45 %
 
-    [Tooltip("Ã¿²ã´°¿Ú¶ÔÓ¦µÄĞÇÊı£¬¼ÓÆğÀ´¾ÍÊÇ×ÜĞÇÊı")]
-    public List<int> windowStarValues = new List<int> { 1, 2, 3 };
+    [Header("Position score (é»„é‡‘åˆ†å‰²)")]
+    [Range(0, 1)] public float centerTolerance = 0.20f;   // è¶Šå°è¶Šä¸¥æ ¼
+
+    [Header("Corner bonus")]
+    [Range(0, 1)] public float cornerPctNeeded = 0.75f;   // â‰¥75 % è§’åœ¨å±å†… +1â˜…
+
+    [Header("Multi-target penalty")]
+    public int multiTargetPenalty = 1;                   // æ¯å¤š 1 åª âˆ’1â˜…
 
     public static PhotoDetector Instance { get; private set; }
+    void Awake() { if (Instance == null) Instance = this; else Destroy(gameObject); }
 
-    void Awake()
+    /* â€”â€” å•ä¸ªåŠ¨ç‰©æ‰“åˆ† â€”â€” */
+    public int ScoreSingle(Camera cam, Bounds b)
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
-    }
-
-    /// <summary>
-    /// ¸ø¶¨Ïà»úºÍÎïÌåWorld BOUNDS£¬·µ»ØÃ¿²ã´°¿ÚµÄĞÇÊıºÍ×ÜĞÇÊı¡£
-    /// </summary>
-    public PhotoResult Detect(Camera cam, Bounds bounds)
-    {
-        int layers = windowMargins.Count;
-        if (layers == 0 || layers != windowStarValues.Count)
-        {
-            Debug.LogError("PhotoDetector ÅäÖÃ´íÎó£ºÇë±£Ö¤ windowMargins Óë windowStarValues ³¤¶ÈÒ»ÖÂÇÒ ¡İ 1");
-            return default;
-        }
-
-        float sw = Screen.width, sh = Screen.height;
-        // ¹¹½¨Ã¿²ã´°¿Ú¾ØĞÎ
-        Rect[] windows = new Rect[layers];
-        for (int i = 0; i < layers; i++)
-        {
-            float m = Mathf.Clamp01(windowMargins[i]);
-            float left = sw * m;
-            float bottom = sh * m;
-            windows[i] = new Rect(left, bottom, sw - 2 * left, sh - 2 * bottom);
-        }
-
-        // ¼ÆËã°Ë¸ö½ÇµÄÆÁÄ»×ø±ê
-        Vector2[] screenPoints = new Vector2[8];
-        bool anyBehind = false;
+        // 1) å±å¹•æŠ•å½±è§’ç‚¹
+        List<Vector3> vis = new();
         for (int i = 0; i < 8; i++)
         {
-            Vector3 sign = new Vector3(
-                (i & 1) == 0 ? -1 : 1,
-                (i & 2) == 0 ? -1 : 1,
-                (i & 4) == 0 ? -1 : 1);
-            Vector3 worldCorner = bounds.center + Vector3.Scale(bounds.extents, sign);
-            Vector3 sp = cam.WorldToScreenPoint(worldCorner);
-            if (sp.z < 0f)
-            {
-                anyBehind = true;
-            }
-            screenPoints[i] = new Vector2(sp.x, sp.y);
+            Vector3 s = new(((i & 1) == 0 ? -1 : 1), ((i & 2) == 0 ? -1 : 1), ((i & 4) == 0 ? -1 : 1));
+            Vector3 p = cam.WorldToScreenPoint(b.center + Vector3.Scale(b.extents, s));
+            if (p.z > 0) vis.Add(p);
         }
+        if (vis.Count == 0) return 0;
 
-        // Èç¹ûÓĞÈÎºÎ½ÇÂäÔÚÉãÏñ»úºó·½£¬ÊÓ×÷¡°·Ç³£½ü¡±£¬Ä¬ÈÏ¸øÂúĞÇ
-        if (anyBehind)
-        {
-            int[] fullStars = new int[layers];
-            int total = 0;
-            for (int i = 0; i < layers; i++)
-            {
-                fullStars[i] = windowStarValues[i];
-                total += fullStars[i];
-            }
-            return new PhotoResult { windowStars = fullStars, totalStars = total };
-        }
+        // 2) åŒ…å›´ç›’
+        Vector2 min = vis[0], max = vis[0];
+        foreach (var p in vis) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
+        float sw = Screen.width, sh = Screen.height;
+        Rect rect = new(min, max - min);
+        float areaPct = rect.width * rect.height / (sw * sh);
 
-        // ¹ıÂËµ½Ç°·½µÄµãÓÃÓÚ°üÎ§ºĞ¼ÆËã
-        var pts = new List<Vector2>();
-        foreach (var p in screenPoints)
-        {
-            if (p.x >= 0f && p.x <= sw && p.y >= 0f && p.y <= sh)
-                pts.Add(p);
-        }
-        // Èç¹ûÍêÈ«²»ÔÚÆÁÄ»ÉÏ£¬Ö±½ÓÁã·Ö
-        if (pts.Count == 0)
-        {
-            return new PhotoResult
-            {
-                windowStars = new int[layers],
-                totalStars = 0
-            };
-        }
+        // ---- é¢ç§¯å¾—åˆ† ----
+        int sizeScore = 0;
+        if (areaPct >= minSizePct && areaPct <= idealSizePct) sizeScore = 2;
+        else if (areaPct >= minSizePct * 0.5f && areaPct <= idealSizePct * 1.2f) sizeScore = 1;
 
-        // ¼ÆËãÕâĞ©µãµÄ 2D °üÎ§ºĞ
-        float minX = pts[0].x, maxX = pts[0].x;
-        float minY = pts[0].y, maxY = pts[0].y;
-        foreach (var p in pts)
-        {
-            if (p.x < minX) minX = p.x;
-            if (p.x > maxX) maxX = p.x;
-            if (p.y < minY) minY = p.y;
-            if (p.y > maxY) maxY = p.y;
-        }
-
-        // Õë¶ÔÃ¿²ã´°¿Ú´òĞÇ
-        int[] stars = new int[layers];
-        int totalStars = 0;
-        for (int i = 0; i < layers; i++)
-        {
-            var w = windows[i];
-            // Ö»Òª°üÎ§ºĞÍêÈ«ÔÚ´°¿ÚÄÚ£¬¸ø¸Ã²ãĞÇÊı
-            if (minX >= w.xMin && maxX <= w.xMax &&
-                minY >= w.yMin && maxY <= w.yMax)
-            {
-                stars[i] = windowStarValues[i];
-                totalStars += stars[i];
-            }
-            else
-            {
-                stars[i] = 0;
-            }
-        }
-
-        return new PhotoResult
-        {
-            windowStars = stars,
-            totalStars = totalStars
+        // ---- ä½ç½®å¾—åˆ† (ç¦»æœ€è¿‘é»„é‡‘åˆ†å‰²ç‚¹è·ç¦») ----
+        Vector2 center = rect.center;
+        Vector2[] sweet = {
+            new(sw*0.333f, sh*0.333f),
+            new(sw*0.667f, sh*0.333f),
+            new(sw*0.333f, sh*0.667f),
+            new(sw*0.667f, sh*0.667f)
         };
+        float best = float.MaxValue;
+        foreach (var p in sweet) best = Mathf.Min(best, Vector2.Distance(center, p));
+        float norm = best / Mathf.Sqrt(sw * sw + sh * sh); // 0~0.707
+        int posScore = norm <= centerTolerance ? 1 : 0;
+
+        // ---- è§’ç‚¹ bonus ----
+        int inside = 0;
+        Rect screen = new(0, 0, sw, sh);
+        foreach (var p in vis) if (screen.Contains(p)) inside++;
+        int cornerBonus = (inside / (float)vis.Count >= cornerPctNeeded) ? 1 : 0;
+
+        return sizeScore + posScore + cornerBonus;  // 0~4
     }
 }
