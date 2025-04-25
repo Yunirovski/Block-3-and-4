@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1def02857b33b864a8697766422c2e52, type: 3}
   m_Name: FoodPack
   m_EditorClassIdentifier: 
-  itemName: 
+  itemName: FoodPack
   type: 0
-  priceQuota: 0
+  priceQuota: 2
   unlockNeedTotal: 0
   linkedItem: {fileID: 0}
   amount: 1

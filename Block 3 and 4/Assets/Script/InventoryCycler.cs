@@ -1,30 +1,46 @@
 using System.Collections.Generic;
-using UnityEngine;
 
 /// <summary>
-/// 暂时的占位类：维护一个“槽 3 可循环物品”列表，
-/// 目前仅返回游戏开始时已有的那一个 FoodItem，
-/// 以后会由商店系统动态把抓钩 / 滑板等注册进来。
+/// 管理“槽3”可循环的物品列表：初始注入、动态注册/移除、重置列表、获取副本。
 /// </summary>
 public static class InventoryCycler
 {
-    // 内部静态列表
+    // 真正存数据的私有列表
     private static readonly List<BaseItem> slot3List = new List<BaseItem>();
 
-    /// <summary>在游戏启动时把初始物品注册进来。</summary>
+    /// <summary>
+    /// 初始化时调用：先清空旧列表，再把初始物品加入。
+    /// </summary>
     public static void InitWith(BaseItem initial)
     {
-        if (initial != null && !slot3List.Contains(initial))
+        slot3List.Clear();
+        if (initial != null)
             slot3List.Add(initial);
     }
 
-    /// <summary>商店购买新装备后调用，把装备加入循环。</summary>
+    /// <summary>
+    /// 购买装备后调用：若不在列表中则注册（不重复添加）。
+    /// </summary>
     public static void RegisterItem(BaseItem item)
     {
         if (item != null && !slot3List.Contains(item))
             slot3List.Add(item);
     }
 
-    /// <summary>返回当前可循环列表（供 InventorySystem 调用）。</summary>
-    public static List<BaseItem> GetSlot3List() => slot3List;
+    /// <summary>
+    /// 若要删除某件装备（比如卖掉、失效时）可调用此方法。
+    /// </summary>
+    public static void RemoveItem(BaseItem item)
+    {
+        if (item != null)
+            slot3List.Remove(item);
+    }
+
+    /// <summary>
+    /// InventorySystem 在 Q/E 轮换时调用：提供一个“拷贝”列表，防止外部误改。
+    /// </summary>
+    public static List<BaseItem> GetSlot3List()
+    {
+        return new List<BaseItem>(slot3List);
+    }
 }

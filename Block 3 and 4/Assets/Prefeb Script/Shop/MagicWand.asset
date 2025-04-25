@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1def02857b33b864a8697766422c2e52, type: 3}
   m_Name: MagicWand
   m_EditorClassIdentifier: 
-  itemName: 
-  type: 0
-  priceQuota: 0
-  unlockNeedTotal: 0
-  linkedItem: {fileID: 0}
+  itemName: MagicWand
+  type: 1
+  priceQuota: 50
+  unlockNeedTotal: 999
+  linkedItem: {fileID: 11400000, guid: 28f72fbb89339d7479505ac06bb16362, type: 2}
   amount: 1

@@ -16,5 +16,5 @@ MonoBehaviour:
   type: 1
   priceQuota: 15
   unlockNeedTotal: 30
-  linkedItem: {fileID: 0}
+  linkedItem: {fileID: 11400000, guid: f093cc49d96a83f43a78859e3ea86556, type: 2}
   amount: 1
