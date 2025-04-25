@@ -2092,7 +2092,12 @@ MonoBehaviour:
   - 0
   - 0.15
   - 0.3
-  windowStarValues: 010000000100000001000000
+  windowStarValues: 010000000100000002000000
+  cornerPercentNeeded: 0.5
+  minAreaPct: 0.01
+  maxAreaPct: 0.9
+  edgeTolerancePx: 2
+  multiTargetPenalty: 1
 --- !u!1 &1184771356
 GameObject:
   m_ObjectHideFlags: 0
