@@ -6,12 +6,10 @@ using TMPro;
 [CreateAssetMenu(menuName = "Items/CameraItem_Tag")]
 public class CameraItem : BaseItem
 {
-    [Header("Detection")]
-    public float detectRadius = 2f;
+    [Header("Detection")] public float detectRadius = 2f;
     public LayerMask detectMask;
 
-    [Header("Capture")]
-    public float shootCooldown = 1.5f;
+    [Header("Capture")] public float shootCooldown = 1.5f;
 
     [System.NonSerialized] private Camera cam;
     [SerializeField] private TMP_Text debugText;
@@ -21,6 +19,7 @@ public class CameraItem : BaseItem
     private int photoCnt;
     private bool photoMode;
 
+    /*— 注入 —*/
     public void Init(Camera c) => cam = c;
     public void InitUI(TMP_Text dbg, TMP_Text res) { debugText = dbg; resultText = res; }
 
@@ -31,7 +30,7 @@ public class CameraItem : BaseItem
     {
         if (!photoMode || cam == null) return;
         float cd = shootCooldown - (Time.time - s_LastShot);
-        if (cd > 0) { debugText?.SetText($"Cooling…{cd:F1}s"); return; }
+        if (cd > 0f) { debugText?.SetText($"Cooling… {cd:F1}s"); return; }
         if (!ConsumableManager.Instance.UseFilm()) { debugText?.SetText("No film!"); return; }
 
         s_LastShot = Time.time;
@@ -45,30 +44,30 @@ public class CameraItem : BaseItem
 #else
         var cvs = Object.FindObjectsOfType<Canvas>();
 #endif
-        bool[] s = new bool[cvs.Length];
-        for (int i = 0; i < cvs.Length; i++) { s[i] = cvs[i].enabled; cvs[i].enabled = false; }
+        bool[] st = new bool[cvs.Length];
+        for (int i = 0; i < cvs.Length; i++) { st[i] = cvs[i].enabled; cvs[i].enabled = false; }
 
         yield return new WaitForEndOfFrame();
 
-        Texture2D t = new(Screen.width, Screen.height, TextureFormat.RGB24, false);
-        t.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0); t.Apply();
+        Texture2D tex = new(Screen.width, Screen.height, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0); tex.Apply();
 
-        for (int i = 0; i < cvs.Length; i++) cvs[i].enabled = s[i];
+        for (int i = 0; i < cvs.Length; i++) cvs[i].enabled = st[i];
 
-        ProcessShot(t);
+        ProcessShot(tex);
     }
 
     void ProcessShot(Texture2D tex)
     {
-        string name = $"photo_{photoCnt:D4}.png";
-        string path = Path.Combine(Application.persistentDataPath, name);
+        string fn = $"photo_{photoCnt:D4}.png";
+        string path = Path.Combine(Application.persistentDataPath, fn);
         File.WriteAllBytes(path, tex.EncodeToPNG());
-        photoCnt++; debugText?.SetText($"Saved {name}");
+        photoCnt++; debugText?.SetText($"Saved {fn}");
 
-        Vector3 sc = new(Screen.width * .5f, Screen.height * .5f, 0);
-        Ray r = cam.ScreenPointToRay(sc);
-        Vector3 pivot = r.origin + r.direction * 100;
-        if (Physics.Raycast(r, out var h, 100, detectMask)) pivot = h.point;
+        Vector3 scr = new(Screen.width / 2f, Screen.height / 2f, 0);
+        Ray ray = cam.ScreenPointToRay(scr);
+        Vector3 pivot = ray.origin + ray.direction * 100f;
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f, detectMask)) pivot = hit.point;
 
         Collider[] cols = Physics.OverlapSphere(pivot, detectRadius, detectMask);
         if (cols.Length == 0) { resultText?.SetText("Nothing detected"); return; }
@@ -80,14 +79,14 @@ public class CameraItem : BaseItem
             var ae = c.GetComponent<AnimalEvent>(); if (ae == null) continue;
 
             animals++;
-            var pr = PhotoDetector.Instance.DetectSingle(cam, c.bounds);
-            if (pr.totalStars > bestStars) { bestStars = pr.totalStars; bestAE = ae; }
+            int stars = PhotoDetector.Instance.ScoreSingle(cam, c.bounds);
+            if (stars > bestStars) { bestStars = stars; bestAE = ae; }
         }
 
         if (bestAE == null) { resultText?.SetText("Nothing detected"); return; }
 
         int penalty = (animals - 1) * PhotoDetector.Instance.multiTargetPenalty;
-        int finalStars = Mathf.Max(1, bestStars - penalty);
+        int finalStars = Mathf.Clamp(bestStars - penalty, 1, 4);          // 1-4★
 
         bestAE.TriggerEvent(path, finalStars);
         resultText?.SetText($"{bestAE.animalName}: {finalStars}★ (-{penalty})");
