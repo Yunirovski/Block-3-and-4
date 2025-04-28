@@ -1,36 +1,89 @@
-using UnityEngine;
+﻿using UnityEngine;
 
-public class MouseToggle : MonoBehaviour
+public class PauseAndMouseManager : MonoBehaviour
 {
+    [Tooltip("Pause menu UI panel (optional)")]
+    public GameObject pauseMenuUI;
+
+    private bool isPaused = false;
     private bool isCursorLocked = true;
+
+    private player_move2 playerMove;   // Player movement script
 
     void Start()
     {
-        LockCursor();  // Lock and hide the cursor at the start of the game
+        LockCursor();  // Lock cursor at start
+        playerMove = FindObjectOfType<player_move2>();  // Find player script
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Tab))
+        HandlePauseInput();
+        HandleMouseToggleInput();
+    }
+
+    private void HandlePauseInput()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
-            if (isCursorLocked)
-                UnlockCursor();  // Show and unlock the cursor
+            if (isPaused)
+                ResumeGame();
             else
-                LockCursor();    // Hide and lock the cursor
+                PauseGame();
         }
     }
 
-    void LockCursor()
+    private void HandleMouseToggleInput()
     {
-        Cursor.lockState = CursorLockMode.Locked; // Lock cursor to the center of the screen
-        Cursor.visible = false;                   // Hide the cursor
+        if (isPaused)
+            return;
+
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            if (isCursorLocked)
+                UnlockCursor();
+            else
+                LockCursor();
+        }
+    }
+
+    public void PauseGame()
+    {
+        Time.timeScale = 0f;
+        UnlockCursor();
+        isPaused = true;
+
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(true);
+
+        if (playerMove != null)
+            playerMove.enabled = false; // Disable player movement
+    }
+
+    public void ResumeGame()
+    {
+        Time.timeScale = 1f;
+        LockCursor();
+        isPaused = false;
+
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(false);
+
+        if (playerMove != null)
+            playerMove.enabled = true; // Enable player movement
+    }
+
+    private void LockCursor()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
         isCursorLocked = true;
     }
 
-    void UnlockCursor()
+    private void UnlockCursor()
     {
-        Cursor.lockState = CursorLockMode.None;   // Unlock the cursor
-        Cursor.visible = true;                    // Show the cursor
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
         isCursorLocked = false;
     }
 }
