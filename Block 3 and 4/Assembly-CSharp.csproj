@@ -79,6 +79,7 @@
     <Compile Include="Assets\Script\System\PhotoDetector.cs" />
     <Compile Include="Assets\Script\Photo\PhotoScorer.cs" />
     <Compile Include="Assets\Script\Photo\ScreenshotHelper.cs" />
+    <Compile Include="Assets\Script\Animal\AnimalAI_Runaway.cs" />
     <Compile Include="Assets\Script\Inventory System\FoodPickup.cs" />
     <Compile Include="Assets\Script\Ui\ResourceHUD.cs" />
     <Compile Include="Assets\Script\Animal\EnemyController.cs" />

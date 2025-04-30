@@ -90,12 +90,6 @@ PrefabInstance:
       addedObject: {fileID: -2316230610928769928}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 79cabd95709bc9642aa0abe16f67a632, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2453890156293195419}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 79cabd95709bc9642aa0abe16f67a632, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6199770851596225835}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 79cabd95709bc9642aa0abe16f67a632, type: 3}
-      insertIndex: -1
       addedObject: {fileID: -6068824555693435869}
   m_SourcePrefab: {fileID: 100100000, guid: 79cabd95709bc9642aa0abe16f67a632, type: 3}
 --- !u!1 &3801128681893858607 stripped
@@ -147,44 +141,6 @@ MonoBehaviour:
   onDetected:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &2453890156293195419
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3801128681893858607}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 47bdb7b3f80305d4cbf2b0f7aab3f1b6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  PatrolPath: {fileID: 0}
-  RotationSpeed: 2
-  MoveSpeed: 20
-  WaitTimeAtEachNode: 2
---- !u!195 &6199770851596225835
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3801128681893858607}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 0.5
-  m_Speed: 3.5
-  m_Acceleration: 8
-  avoidancePriority: 50
-  m_AngularSpeed: 120
-  m_StoppingDistance: 0
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
-  m_AutoRepath: 1
-  m_Height: 2
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
 --- !u!65 &-6068824555693435869
 BoxCollider:
   m_ObjectHideFlags: 0
