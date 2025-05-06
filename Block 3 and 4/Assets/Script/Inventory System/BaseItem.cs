@@ -1,60 +1,31 @@
-﻿using UnityEngine;
+﻿// Assets/Scripts/Items/BaseItem.cs
+using UnityEngine;
 
 /// <summary>
-/// Abstract base class for all in‑game items.
-/// Derive from this class to implement custom selection,
-/// readiness, and usage behavior for your items.
+/// 所有道具 ScriptableObject 的基类。  
+/// 子类只需重写需要的回调（OnUse / OnReady …）。
 /// </summary>
 public abstract class BaseItem : ScriptableObject
 {
-    [Tooltip("Display name and identifier for this item")]
-    public string itemName;
+    [Tooltip("显示名称，亦作唯一 ID")]
+    public string itemName = "New Item";
 
-    /// <summary>
-    /// Called when the player selects this item.
-    /// Override to add custom logic — for example, highlight the model or show info.
-    /// </summary>
-    /// <param name="model">
-    /// The instantiated GameObject representing this item  
-    /// (e.g. the 3D model you might highlight or animate).
-    /// </param>
-    public virtual void OnSelect(GameObject model)
+    /* ───── 手持偏移 ───── */
+    [Header("Hold Offset (在 ItemAnchor 的局部坐标)")]
+    public Vector3 holdPosition = Vector3.zero;         // 位置偏移
+    public Vector3 holdRotation = Vector3.zero;         // 欧拉角（度）
+
+    /// <summary>由 <see cref="InventorySystem"/> 在实例化模型后调用。</summary>
+    public virtual void ApplyHoldTransform(Transform modelTf)
     {
-        // Default implementation does nothing.
-        // Derived items can use 'model' to enable visual feedback.
+        modelTf.localPosition = holdPosition;
+        modelTf.localRotation = Quaternion.Euler(holdRotation);
     }
 
-    /// <summary>
-    /// Called when the player deselects this item.
-    /// Override to remove highlights or hide item-specific UI.
-    /// </summary>
-    public virtual void OnDeselect()
-    {
-        // Default implementation does nothing.
-    }
-
-    /// <summary>
-    /// Called when the item enters a "ready" state (e.g. drawn or primed).
-    /// Override to prepare animations, enable effects, or display UI hints.
-    /// </summary>
-    public virtual void OnReady()
-    {
-        // Default implementation does nothing.
-    }
-
-    /// <summary>
-    /// Called when the item exits its "ready" state.
-    /// Override to clean up any effects or UI enabled in OnReady().
-    /// </summary>
-    public virtual void OnUnready()
-    {
-        // Default implementation does nothing.
-    }
-
-    /// <summary>
-    /// Called when the item is actually used (e.g. player presses the use button
-    /// while the item is ready).  
-    /// Must be implemented by every concrete item to define its primary effect.
-    /// </summary>
-    public abstract void OnUse();
+    /* ────────── 回调接口 ────────── */
+    public virtual void OnSelect(GameObject model) { }
+    public virtual void OnDeselect() { }
+    public virtual void OnReady() { }
+    public virtual void OnUnready() { }
+    public virtual void OnUse() { }
 }

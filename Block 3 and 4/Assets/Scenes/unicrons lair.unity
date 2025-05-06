@@ -361,12 +361,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 63c9cb696ae4d2e4b94c569baf217ccf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemHolder: {fileID: 0}
+  itemAnchor: {fileID: -3910990755373119420, guid: d242b3e826c57f546ba8ec21c3ed1a6f, type: 3}
   radialUI: {fileID: 2127922837}
-  debugTextTMP: {fileID: 1184771359}
-  detectTextTMP: {fileID: 1008195503}
   mainHUDCanvas: {fileID: 787990330}
   cameraHUDCanvas: {fileID: 277626014}
+  debugTextTMP: {fileID: 1184771359}
+  detectTextTMP: {fileID: 1008195503}
   itemAnimator: {fileID: 0}
   switchTrigger: SwitchItem
   availableItems:
@@ -3275,8 +3275,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e56772a5fe7dda84ebaff19b3fc01558, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  filmCap: 20
-  filmStart: 20
+  filmCap: 60
+  filmStart: 60
   foodCap: 10
   foodStart: 10
 --- !u!4 &1344134547
