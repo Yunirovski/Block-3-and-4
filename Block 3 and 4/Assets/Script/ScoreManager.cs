@@ -1,62 +1,45 @@
-﻿using UnityEngine;
+﻿// Assets/Scripts/ScoreManager.cs
+using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// Singleton component that tracks the player's total score,
-/// updates the on‑screen UI, and provides a global access point.
+/// 只负责在 UI 上实时显示「总星星数」。  
+/// 真正的星星统计逻辑由 ProgressionManager 维护；
+/// ProgressionManager 每次更新都会调用 SetStars()。
 /// </summary>
 public class ScoreManager : MonoBehaviour
 {
-    /// <summary>
-    /// Global instance of the ScoreManager.
-    /// </summary>
     public static ScoreManager Instance { get; private set; }
 
-    [Header("UI References")]
-    [Tooltip("Text component used to display the total score value.")]
+    [Header("UI")]
+    [Tooltip("TextMeshPro 组件：显示 Stars: xx")]
     [SerializeField] private TMP_Text scoreText;
 
-    private int totalScore = 0;  // Accumulated score
+    private int totalStars;
 
     private void Awake()
     {
-        // Enforce singleton pattern
-        if (Instance == null)
-        {
-            Instance = this;
-            // Uncomment the next line if you want this object to persist across scenes:
-            // DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        if (Instance == null) Instance = this;
+        else { Destroy(gameObject); return; }
     }
 
-    /// <summary>
-    /// Adds points to the total score, updates the UI display, and logs the change.
-    /// </summary>
-    /// <param name="points">The number of points to add.</param>
-    public void AddScore(int points)
+    /// <summary>ProgressionManager 调用：设定最新总星星数。</summary>
+    public void SetStars(int stars)
     {
-        totalScore += points;
-        UpdateScoreText();
-        Debug.Log($"ScoreManager: Added {points} points. New total: {totalScore}");
+        totalStars = Mathf.Max(0, stars);
+        UpdateText();
     }
 
-    /// <summary>
-    /// Updates the TMP_Text component to reflect the current total score.
-    /// Logs a warning if the text reference is missing.
-    /// </summary>
-    private void UpdateScoreText()
+    /// <summary>可选：某些地方想做 +1 弹窗时直接加。</summary>
+    public void AddStars(int delta)
+    {
+        totalStars = Mathf.Max(0, totalStars + delta);
+        UpdateText();
+    }
+
+    private void UpdateText()
     {
         if (scoreText != null)
-        {
-            scoreText.text = $"Score: {totalScore}";
-        }
-        else
-        {
-            Debug.LogWarning("ScoreManager: 'scoreText' reference is not assigned. Cannot update score display.");
-        }
+            scoreText.text = $"Stars: {totalStars}";
     }
 }

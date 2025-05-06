@@ -1,193 +1,152 @@
 ﻿// Assets/Scripts/Inventory/InventorySystem.cs
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using TMPro;
 
-/// <summary>
-/// Core inventory system handling item selection, cycling, and use.
-/// Supports four slots (0=Camera, 1=Log, 2=Map, 3=Food/Equipment) with special cycling behavior for slot 3.
-/// Handles user input for switching slots, toggling ready state, and using the current item.
-/// Injects UI references into CameraItem and FoodItem instances.
-/// </summary>
 public class InventorySystem : MonoBehaviour
 {
-    [Header("Item & UI References")]
-    [Tooltip("Parent transform under which the selected item's model will be instantiated.")]
+    [Header("Item & UI")]
     public Transform itemHolder;
-
-    [Tooltip("Reference to the UI controller managing slot highlights and ready-state visuals.")]
-    public InventoryUI inventoryUI;
-
-    [Tooltip("Text field for general debug messages (e.g., switch warnings, camera cooldown).")]
+    public RadialInventoryUI radialUI;
     public TMP_Text debugTextTMP;
-
-    [Tooltip("Text field for detection messages (e.g., camera detection results).")]
     public TMP_Text detectTextTMP;
+    public Canvas mainHUDCanvas;
+    public Canvas cameraHUDCanvas;
 
-    [Header("Animation")]
-    [Tooltip("Animator component to drive switch-item animations.")]
+    [Header("Animator (可选)")]
     public Animator itemAnimator;
-    [Tooltip("Trigger parameter name in the Animator to play the switch animation.")]
     public string switchTrigger = "SwitchItem";
 
-    [Header("Slots (0=Camera, 1=Log, 2=Map, 3=Food/Equip)")]
-    [Tooltip("List of all possible items the player can switch between.")]
-    public List<BaseItem> availableItems;
+    [Header("Item List (Cam→Food→Hook→Board→Gun→Wand)")]
+    public List<BaseItem> availableItems; // 必须长度=6
 
-    // Internals
-    private BaseItem currentItem;
-    private GameObject currentModel;
-    private bool isReady;
-    private int pendingIndex = -1;
+    BaseItem currentItem;
+    GameObject currentModel;
+    int currentIndex;
+    int pendingIndex;
+    bool ringOpen;
 
-    private void Start()
+    void Start() => EquipSlot(0);
+
+    void Update()
     {
-        // Initialize cycling list for slot 3
-        if (availableItems.Count > 3 && availableItems[3] != null)
-            InventoryCycler.InitWith(availableItems[3]);
-
-        // Select first slot
-        if (availableItems.Count > 0)
+        HandleRing();
+        if (!ringOpen)
         {
-            pendingIndex = 0;
-            inventoryUI.HighlightSlot(0);
-            PlaySwitchAnimation();
+            HandleNumberKeys();
+            HandleUse();
+        }
+        // Q 交给 CameraItem 自己处理，OnUse/HandleUse 负责左键
+        if (currentItem is CameraItem cam) cam.HandleInput();
+    }
+
+    void HandleRing()
+    {
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            ringOpen = true;
+            radialUI.SetUnlockedStates(BuildUnlockArray(), currentIndex);
+            radialUI.Show();
+        }
+        else if (Input.GetKeyUp(KeyCode.I))
+        {
+            int sel = radialUI.CurrentIndex;
+            ringOpen = false;
+            radialUI.Hide();
+
+            if (sel == 1) RefreshSlot1List();
+            if (sel >= 0 && sel != currentIndex) BeginSwitch(sel);
+        }
+
+        if (ringOpen)
+        {
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll > 0.01f) radialUI.Step(+1);
+            else if (scroll < -0.01f) radialUI.Step(-1);
         }
     }
 
-    private void Update()
+    void HandleNumberKeys()
     {
-        HandleSlotSwitch();
-        HandleReadyToggle();
-        HandleUse();
-    }
-
-    private void HandleSlotSwitch()
-    {
-        // Direct slot selection via number keys 1-4
-        for (int i = 0; i < availableItems.Count; i++)
+        var unlocked = BuildUnlockArray();
+        for (int i = 0; i < 6; i++)
         {
-            if (Input.GetKeyDown(KeyCode.Alpha1 + i))
+            if (!unlocked[i]) continue;
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i) && i != currentIndex)
             {
-                if (isReady)
-                {
-                    debugTextTMP.text = "Please holster your current item first!";
-                    return;
-                }
-                if (pendingIndex == i) return;
-
-                pendingIndex = i;
-                inventoryUI.HighlightSlot(i);
-                PlaySwitchAnimation();
+                BeginSwitch(i);
                 return;
             }
         }
-
-        // Special handling for slot 3 (Food/Equipment)
-        if (pendingIndex == 3)
-        {
-            // Food-type cycling via [ and ] keys
-            if (availableItems[3] is FoodItem foodItem)
-            {
-                if (Input.GetKeyDown(KeyCode.LeftBracket))
-                {
-                    foodItem.CycleFoodType(false);
-                    return;
-                }
-                if (Input.GetKeyDown(KeyCode.RightBracket))
-                {
-                    foodItem.CycleFoodType(true);
-                    return;
-                }
-            }
-
-            // Cycle through registered slot-3 items via scroll wheel or Q/E keys
-            float scroll = Input.GetAxis("Mouse ScrollWheel");
-            if (scroll > 0f) CycleSlot3(true);
-            else if (scroll < 0f) CycleSlot3(false);
-
-            if (Input.GetKeyDown(KeyCode.Q)) CycleSlot3(false);
-            if (Input.GetKeyDown(KeyCode.E)) CycleSlot3(true);
-        }
     }
 
-    private void CycleSlot3(bool forward)
+    void HandleUse()
     {
-        var list = InventoryCycler.GetSlot3List();
-        if (list.Count == 0) return;
+        if (currentItem == null) return;
 
-        int current = list.IndexOf(availableItems[3]);
-        int next = (current + (forward ? 1 : -1) + list.Count) % list.Count;
-        availableItems[3] = list[next];
-        debugTextTMP.text = $"Switched to {list[next].itemName}";
-        PlaySwitchAnimation();
-    }
-
-    private void HandleReadyToggle()
-    {
-        if (Input.GetMouseButtonDown(1) && currentItem != null)
-        {
-            isReady = !isReady;
-            if (isReady) currentItem.OnReady();
-            else currentItem.OnUnready();
-
-            inventoryUI.SetReadyState(isReady);
-        }
-    }
-
-    private void HandleUse()
-    {
-        if (!isReady || currentItem == null) return;
-
-        if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
+        bool onUI = EventSystem.current.IsPointerOverGameObject();
+        bool allow = !(currentItem is CameraItem) ? !onUI : true;
+        if (Input.GetMouseButtonDown(0) && allow)
             currentItem.OnUse();
     }
 
-    private void PlaySwitchAnimation()
+    void BeginSwitch(int idx)
     {
-        if (itemAnimator != null)
-            itemAnimator.SetTrigger(switchTrigger);
-        else
-            OnSwitchAnimationComplete();
+        pendingIndex = idx;
+        if (itemAnimator) itemAnimator.SetTrigger(switchTrigger);
+        OnSwitchAnimationComplete();
     }
+    public void OnSwitchAnimationComplete() => EquipSlot(pendingIndex);
 
-    /// <summary>
-    /// Called by Animation Event or immediately if no Animator.
-    /// Destroys previous model, instantiates the new one, calls OnSelect,
-    /// and injects UI references into CameraItem and FoodItem.
-    /// </summary>
-    public void OnSwitchAnimationComplete()
+    void EquipSlot(int idx)
     {
-        inventoryUI.HighlightSlot(pendingIndex);
+        currentItem?.OnUnready();
+        currentItem?.OnDeselect();
+        if (currentModel) Destroy(currentModel);
 
-        // Deselect and destroy previous
-        if (currentItem != null) currentItem.OnDeselect();
-        if (currentModel != null) Destroy(currentModel);
+        currentIndex = idx;
+        currentItem = availableItems[idx];
 
-        // Instantiate new model
-        currentItem = availableItems[pendingIndex];
         currentModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
         currentModel.transform.SetParent(itemHolder, false);
         currentModel.transform.localPosition = Vector3.zero;
-        currentModel.transform.localRotation = Quaternion.identity;
         currentModel.name = currentItem.itemName + "_Model";
 
-        // Notify selection
         currentItem.OnSelect(currentModel);
+        currentItem.OnReady();
 
-        // Inject for FoodItem
-        if (currentItem is FoodItem food)
+        if (currentItem is CameraItem cam)
+        {
+            cam.Init(Camera.main, mainHUDCanvas, cameraHUDCanvas, debugTextTMP, detectTextTMP);
+        }
+        else if (currentItem is FoodItem food)
         {
             food.debugText = debugTextTMP;
-            food.OnSelect(currentModel);
         }
-        // Inject for CameraItem
-        else if (currentItem is CameraItem cam)
+
+        debugTextTMP?.SetText($"切换到 {currentItem.itemName}");
+    }
+
+    void RefreshSlot1List()
+    {
+        var list = InventoryCycler.GetSlot3List();
+        if (list.Count == 0) return;
+        if (!list.Contains(availableItems[1]))
+            availableItems[1] = list[0];
+    }
+
+    bool[] BuildUnlockArray()
+    {
+        var pm = ProgressionManager.Instance;
+        return new[]
         {
-            cam.Init(Camera.main);
-            cam.InitUI(debugTextTMP, detectTextTMP);
-        }
+            true,
+            true,
+            pm && pm.HasGrapple,
+            pm && pm.HasSkateboard,
+            pm && pm.HasDartGun,
+            pm && pm.HasMagicWand
+        };
     }
 }
