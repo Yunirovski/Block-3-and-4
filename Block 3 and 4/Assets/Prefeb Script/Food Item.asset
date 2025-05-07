@@ -13,6 +13,9 @@ MonoBehaviour:
   m_Name: Food Item
   m_EditorClassIdentifier: 
   itemName: 
+  modelPrefab: {fileID: 0}
+  holdPosition: {x: 0, y: -0.1, z: 0.35}
+  holdRotation: {x: -30, y: 0, z: 0}
   foodTypes: 000000000100000002000000
   foodPrefabs:
   - {fileID: 3366124602774938091, guid: 397e3f28e7a9fb043809a6f712afd700, type: 3}

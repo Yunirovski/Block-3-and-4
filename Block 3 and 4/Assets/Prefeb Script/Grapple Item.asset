@@ -13,6 +13,9 @@ MonoBehaviour:
   m_Name: Grapple Item
   m_EditorClassIdentifier: 
   itemName: 
+  modelPrefab: {fileID: 240308904319307836, guid: 86fc7cf335f0c3d419cc3a23b59778ac, type: 3}
+  holdPosition: {x: 0.08, y: -0.05, z: 0.3}
+  holdRotation: {x: 0, y: 90, z: -10}
   maxDistance: 30
   pullSpeed: 15
   cooldown: 4

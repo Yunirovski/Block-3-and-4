@@ -13,8 +13,11 @@ MonoBehaviour:
   m_Name: Camera Item
   m_EditorClassIdentifier: 
   itemName: 
-  textureSource: {fileID: 8400000, guid: 2816cd7bbcc70d3418cc4e24b2a7103e, type: 2}
-  detectRadius: 2
-  detectMask:
-    serializedVersion: 2
-    m_Bits: 8
+  modelPrefab: {fileID: 6663048144736745615, guid: 91b864fa8fed5784eb9245e329b92002, type: 3}
+  holdPosition: {x: 0, y: -0.06, z: 0.28}
+  holdRotation: {x: 0, y: 90, z: 0}
+  shootCooldown: 1
+  mainCanvas: {fileID: 0}
+  cameraCanvas: {fileID: 0}
+  debugText: {fileID: 0}
+  resultText: {fileID: 0}

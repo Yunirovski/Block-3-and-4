@@ -1,28 +1,28 @@
 ﻿// Assets/Scripts/Items/BaseItem.cs
 using UnityEngine;
 
-/// <summary>
-/// 所有道具 ScriptableObject 的基类。  
-/// 子类只需重写需要的回调（OnUse / OnReady …）。
-/// </summary>
+/// <summary>所有道具 ScriptableObject 的基类。</summary>
 public abstract class BaseItem : ScriptableObject
 {
-    [Tooltip("显示名称，亦作唯一 ID")]
-    public string itemName = "New Item";
+    [Tooltip("显示名称，也作为唯一 ID")] public string itemName = "New Item";
 
-    /* ───── 手持偏移 ───── */
-    [Header("Hold Offset (在 ItemAnchor 的局部坐标)")]
-    public Vector3 holdPosition = Vector3.zero;         // 位置偏移
-    public Vector3 holdRotation = Vector3.zero;         // 欧拉角（度）
+    /* ───── 手持模型 ───── */
+    [Header("Model")]
+    [Tooltip("若留空，将用默认立方体占位")]
+    public GameObject modelPrefab;          // ← 可拖具体 FBX / Prefab
 
-    /// <summary>由 <see cref="InventorySystem"/> 在实例化模型后调用。</summary>
-    public virtual void ApplyHoldTransform(Transform modelTf)
+    [Header("Hold Offset (局部)")]
+    public Vector3 holdPosition;
+    public Vector3 holdRotation;
+
+    /// <summary>由 InventorySystem 在实例化后调用。</summary>
+    public virtual void ApplyHoldTransform(Transform tf)
     {
-        modelTf.localPosition = holdPosition;
-        modelTf.localRotation = Quaternion.Euler(holdRotation);
+        tf.localPosition = holdPosition;
+        tf.localRotation = Quaternion.Euler(holdRotation);
     }
 
-    /* ────────── 回调接口 ────────── */
+    /* ───── 可选回调 ───── */
     public virtual void OnSelect(GameObject model) { }
     public virtual void OnDeselect() { }
     public virtual void OnReady() { }

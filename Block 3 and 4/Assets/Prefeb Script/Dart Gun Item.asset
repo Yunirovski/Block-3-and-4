@@ -13,5 +13,8 @@ MonoBehaviour:
   m_Name: Dart Gun Item
   m_EditorClassIdentifier: 
   itemName: 
+  modelPrefab: {fileID: 0}
+  holdPosition: {x: 0.06, y: -0.04, z: 0.28}
+  holdRotation: {x: 0, y: 90, z: -8}
   range: 25
   cooldown: 20

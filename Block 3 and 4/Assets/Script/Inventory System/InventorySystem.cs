@@ -4,71 +4,56 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using TMPro;
 
-/// <summary>
-/// 圆形工具环版背包系统：<br/>
-/// • I 长按呼出工具环，滚轮 / 数字键 / 鼠标移动选槽 <br/>
-/// • 松开 I → 装备所选物品，并立即进入 Ready 状态 <br/>
-/// • 左键直接 OnUse（无右键 Ready 流程）<br/>
-/// • 相机在取景状态下可继续左键拍照（忽略 PointerOverUI）
-/// </summary>
 public class InventorySystem : MonoBehaviour
 {
-    /* ───── 引用 & UI ───── */
     [Header("Anchors / UI")]
-    public Transform itemAnchor;          // MainCamera 下 ItemAnchor
-    public RadialInventoryUI radialUI;            // 圆形工具环
-    public Canvas mainHUDCanvas;       // 常规 HUD
-    public Canvas cameraHUDCanvas;     // 相机取景 HUD
-    public TMP_Text debugTextTMP;        // 左上 Debug
-    public TMP_Text detectTextTMP;       // 拍照结果
-
-    [Header("Animator (可选)")]
-    public Animator itemAnimator;
-    public string switchTrigger = "SwitchItem";
+    public Transform itemAnchor;          // MainCamera > ItemAnchor
+    public RadialInventoryUI radialUI;
+    public Canvas mainHUDCanvas;
+    public Canvas cameraHUDCanvas;
+    public TMP_Text debugTextTMP;
+    public TMP_Text detectTextTMP;
 
     [Header("Item List (Cam→Food→Hook→Board→Gun→Wand)")]
     public List<BaseItem> availableItems;         // 固定 6 槽
 
     /* ───── 内部状态 ───── */
-    BaseItem currentItem;
-    GameObject currentModel;
-    int currentIndex;
-    int pendingIndex;
+    BaseItem curItem;
+    GameObject curModel;
+    int curIdx;
     bool ringOpen;
 
-    /* ===================================================================== */
+    /* ================================================================= */
     void Start() => EquipSlot(0);
 
     void Update()
     {
-        HandleRing();                 // I 键呼出 / 松开
+        HandleRing();
         if (!ringOpen)
         {
-            HandleNumberKeys();       // 1-6 直切
-            HandleUse();              // 左键 Use
+            HandleNumberKeys();
+            HandleUse();
         }
-
-        // 相机专属输入：Q / 左键拍照
-        if (currentItem is CameraItem cam) cam.HandleInput();
+        if (curItem is CameraItem cam) cam.HandleInput();
     }
 
-    /* ======================== I 键圆环 ======================== */
+    /* =============== I 键圆环 =============== */
     void HandleRing()
     {
         if (Input.GetKeyDown(KeyCode.I))
         {
             ringOpen = true;
-            radialUI.SetUnlockedStates(BuildUnlockArray(), currentIndex);
+            radialUI.SetUnlockedStates(BuildUnlocks(), curIdx);
             radialUI.Show();
         }
         else if (Input.GetKeyUp(KeyCode.I))
         {
-            int sel = radialUI.CurrentIndex;
             ringOpen = false;
             radialUI.Hide();
 
-            if (sel == 1) RefreshSlot1List();      // 食物槽动态刷新
-            if (sel >= 0 && sel != currentIndex) BeginSwitch(sel);
+            int sel = radialUI.CurrentIndex;
+            if (sel == 1) RefreshFoodSlot();
+            if (sel >= 0 && sel != curIdx) EquipSlot(sel);
         }
 
         if (ringOpen)
@@ -79,80 +64,67 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    /* ====================== 数字键兜底 ====================== */
+    /* =========== 数字键兜底 =========== */
     void HandleNumberKeys()
     {
-        bool[] unlocked = BuildUnlockArray();
+        bool[] unlocked = BuildUnlocks();
         for (int i = 0; i < availableItems.Count && i < 9; i++)
         {
             if (!unlocked[i]) continue;
-            if (Input.GetKeyDown(KeyCode.Alpha1 + i) && i != currentIndex)
-            {
-                BeginSwitch(i);
-                return;
-            }
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i) && i != curIdx)
+            { EquipSlot(i); return; }
         }
     }
 
-    /* ======================== 左键 Use ======================== */
+    /* ============= 左键 Use ============= */
     void HandleUse()
     {
-        if (currentItem == null) return;
+        if (curItem == null) return;
+        bool overUI = EventSystem.current.IsPointerOverGameObject();
+        bool allow = !(curItem is CameraItem) ? !overUI : true;
 
-        bool pointerOnUI = EventSystem.current.IsPointerOverGameObject();
-        bool allowClick = !(currentItem is CameraItem) ? !pointerOnUI : true;
-
-        if (Input.GetMouseButtonDown(0) && allowClick)
-            currentItem.OnUse();
+        if (Input.GetMouseButtonDown(0) && allow)
+            curItem.OnUse();
     }
 
-    /* ======================= 切槽流程 ======================= */
-    void BeginSwitch(int idx)
-    {
-        pendingIndex = idx;
-        if (itemAnimator) itemAnimator.SetTrigger(switchTrigger);
-        else OnSwitchAnimationComplete();
-    }
-    public void OnSwitchAnimationComplete() => EquipSlot(pendingIndex);
-
+    /* ============= EquipSlot ============= */
     void EquipSlot(int idx)
     {
-        /* 1. 清理旧物 */
-        currentItem?.OnUnready();
-        currentItem?.OnDeselect();
-        if (currentModel) Destroy(currentModel);
+        /* 1. 移除旧物 */
+        curItem?.OnUnready();
+        curItem?.OnDeselect();
+        if (curModel) Destroy(curModel);
 
-        /* 2. 记录新索引 */
-        currentIndex = idx;
-        currentItem = availableItems[idx];
+        /* 2. 记录新物 */
+        curIdx = idx;
+        curItem = availableItems[idx];
 
-        /* 3. 实例化模型（可换真正 prefab） */
-        currentModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        currentModel.transform.SetParent(itemAnchor, false);
-        currentModel.name = currentItem.itemName + "_Model";
+        /* 3. 实例化模型 */
+        GameObject prefab = curItem.modelPrefab;
+        curModel = prefab ? Instantiate(prefab) :
+                            GameObject.CreatePrimitive(PrimitiveType.Cube);
+        curModel.transform.SetParent(itemAnchor, false);
+        curModel.name = curItem.itemName + "_Model";
 
-        /* 4. 应用持握偏移 */
-        currentItem.ApplyHoldTransform(currentModel.transform);
+        /* 4. 应用偏移 & 通知脚本 */
+        curItem.ApplyHoldTransform(curModel.transform);
+        curItem.OnSelect(curModel);
+        curItem.OnReady();
 
-        /* 5. 通知脚本 */
-        currentItem.OnSelect(currentModel);
-        currentItem.OnReady();                  // 立即 Ready
-
-        /* 6. 专属注入 */
-        if (currentItem is CameraItem cam)
+        /* 5. 相机 / 食物特别注入 */
+        if (curItem is CameraItem cam)
         {
-            cam.Init(Camera.main, mainHUDCanvas, cameraHUDCanvas, debugTextTMP, detectTextTMP);
+            cam.Init(Camera.main, mainHUDCanvas, cameraHUDCanvas,
+                     debugTextTMP, detectTextTMP);
         }
-        else if (currentItem is FoodItem food)
-        {
-            food.debugText = debugTextTMP;
-        }
+        else if (curItem is FoodItem food)
+        { food.debugText = debugTextTMP; }
 
-        debugTextTMP?.SetText($"切换到 {currentItem.itemName}");
+        debugTextTMP?.SetText($"切换到 {curItem.itemName}");
     }
 
-    /* ================ Slot-1（食物）动态刷新 ================ */
-    void RefreshSlot1List()
+    /* ========= 食物槽跟随 Slot3 列表 ========= */
+    void RefreshFoodSlot()
     {
         var list = InventoryCycler.GetSlot3List();
         if (list.Count == 0) return;
@@ -160,18 +132,18 @@ public class InventorySystem : MonoBehaviour
             availableItems[1] = list[0];
     }
 
-    /* =================== 解锁布尔数组 =================== */
-    bool[] BuildUnlockArray()
+    /* ============ 解锁布尔数组 ============ */
+    bool[] BuildUnlocks()
     {
         var pm = ProgressionManager.Instance;
         return new[]
         {
-            true,                                // 0 相机
-            true,                                // 1 食物
-            pm && pm.HasGrapple,                 // 2 抓钩
-            pm && pm.HasSkateboard,              // 3 滑板
-            pm && pm.HasDartGun,                 // 4 麻醉枪
-            pm && pm.HasMagicWand               // 5 魔法棒
+            true,                            // 0 相机
+            true,                            // 1 食物
+            pm && pm.HasGrapple,             // 2 抓钩
+            pm && pm.HasSkateboard,          // 3 滑板
+            pm && pm.HasDartGun,             // 4 麻醉枪
+            pm && pm.HasMagicWand           // 5 魔法棒
         };
     }
 }
