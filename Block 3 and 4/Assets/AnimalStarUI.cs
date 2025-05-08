@@ -1,78 +1,62 @@
-// Assets/Scripts/UI/AnimalStarUI.cs
-using System;
+ï»¿// Assets/Scripts/UI/AnimalStarUI.cs
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// ÈÕÖ¾Ãæ°å»ò¶¯ÎïÒ»ÀÀÓÃµÄ UI ¿ØÖÆ½Å±¾£º
-/// ÔÚ Inspector ÌîĞ´ËùÓĞ¶¯ÎïµÄ key ºÍ¶ÔÓ¦µÄĞÇ¼¶ÎÄ±¾ÔªËØ£¬
-/// ½Å±¾»á¸ù¾İ ProgressionManager µÄ BestStars Êı¾İ³õÊ¼»¯ÏÔÊ¾£¬
-/// ²¢¶©ÔÄ OnAnimalStarUpdated ÊµÊ±Ë¢ĞÂ×î¸ßĞÇ¼¶ÏÔÊ¾¡£
+/// è‡ªåŠ¨ç”Ÿæˆ & æ›´æ–°â€œåŠ¨ç‰©-æœ€é«˜æ˜Ÿçº§â€åˆ—è¡¨çš„ UIã€‚
+/// éœ€è¦åœ¨ Inspector é‡ŒæŒ‡å®šï¼š
+/// â€¢ container      â€”â€” æ¡ç›®å®ä¾‹åŒ–åˆ°å“ªä¸ªçˆ¶èŠ‚ç‚¹
+/// â€¢ entryPrefab    â€”â€” ä¸€ä¸ªåªæœ‰ TMP_Text çš„ç®€å•é¢„åˆ¶ä½“
 /// </summary>
 public class AnimalStarUI : MonoBehaviour
 {
-    [Serializable]
-    public class Entry
-    {
-        [Tooltip("Óë AnimalEvent.animalName ¶ÔÓ¦µÄÎ¨Ò»¼ü")]
-        public string animalKey;
-        [Tooltip("ÓÃÓÚÏÔÊ¾¸Ã¶¯Îï×î¸ßĞÇ¼¶µÄ TextMeshProUGUI")]
-        public TMP_Text starText;
-    }
+    [Header("UI References")]
+    [Tooltip("æ‰€æœ‰æ¡ç›®å®ä¾‹åŒ–åˆ°è¿™é‡Œä¹‹ä¸‹ï¼ˆå¯ä»¥æŒ‚ VerticalLayoutGroupï¼‰")]
+    public Transform container;
 
-    [Header("ÔÚ´ËÁĞ±íÖĞÌí¼ÓËùÓĞ¶¯ÎïÌõÄ¿")]
-    public List<Entry> entries = new List<Entry>();
+    [Tooltip("é¢„åˆ¶ä½“ï¼šé‡Œè¾¹æ”¾ä¸€ä¸ª TMP_Textï¼Œç”¨æ¥æ˜¾ç¤ºâ€œä¼é¹…ï¼š3 â˜…â€è¿™ç±»æ–‡å­—")]
+    public GameObject entryPrefab;
 
-    // ¿ìËÙ²éÕÒ±í
-    Dictionary<string, Entry> entryMap;
+    // å†…éƒ¨å­—å…¸ï¼šanimalKey â†’ TMP_Text
+    readonly Dictionary<string, TMP_Text> starTexts = new();
 
-    void Awake()
-    {
-        entryMap = new Dictionary<string, Entry>(entries.Count);
-        foreach (var e in entries)
-        {
-            if (string.IsNullOrEmpty(e.animalKey) || e.starText == null)
-            {
-                Debug.LogWarning($"AnimalStarUI: ºöÂÔÎŞĞ§ÌõÄ¿ '{e.animalKey}'");
-                continue;
-            }
-            if (!entryMap.ContainsKey(e.animalKey))
-                entryMap[e.animalKey] = e;
-            else
-                Debug.LogWarning($"AnimalStarUI: ÖØ¸´µÄ animalKey '{e.animalKey}'");
-        }
-    }
-
+    /* ---------------- ç”Ÿå‘½å‘¨æœŸ ---------------- */
     void OnEnable()
     {
-        // 1) ³õÊ¼»¯ÒÑÓĞÊı¾İ
-        var best = ProgressionManager.Instance.BestStars;
-        foreach (var kvp in best)
-            UpdateStar(kvp.Key, kvp.Value);
+        // åˆå§‹åŒ–å·²æœ‰æ•°æ®
+        foreach (var kvp in ProgressionManager.Instance.BestStars)
+            CreateOrUpdate(kvp.Key, kvp.Value);
 
-        // 2) ¶©ÔÄºóĞø¸üĞÂ
-        ProgressionManager.Instance.OnAnimalStarUpdated += OnStarUpdated;
+        // è®¢é˜…å®æ—¶æ›´æ–°
+        ProgressionManager.Instance.OnAnimalStarUpdated += CreateOrUpdate;
     }
 
     void OnDisable()
     {
         if (ProgressionManager.Instance != null)
-            ProgressionManager.Instance.OnAnimalStarUpdated -= OnStarUpdated;
+            ProgressionManager.Instance.OnAnimalStarUpdated -= CreateOrUpdate;
     }
 
-    // »Øµ÷£ºÄ³¸ö¶¯ÎïµÄ×î¸ßĞÇ¼¶¸üĞÂÁË
-    void OnStarUpdated(string animalKey, int newStars)
+    /* ---------------- ä¸»é€»è¾‘ ---------------- */
+    void CreateOrUpdate(string animalKey, int stars)
     {
-        UpdateStar(animalKey, newStars);
-    }
+        if (string.IsNullOrEmpty(animalKey)) return;
 
-    // ¸ù¾İ key ¸üĞÂ¶ÔÓ¦ÎÄ±¾
-    void UpdateStar(string animalKey, int stars)
-    {
-        if (entryMap != null && entryMap.TryGetValue(animalKey, out var entry))
+        // 1) è‹¥ä¸å­˜åœ¨ï¼Œå°±å®ä¾‹åŒ–ä¸€è¡Œ
+        if (!starTexts.TryGetValue(animalKey, out TMP_Text text))
         {
-            entry.starText.text = $"{stars} ¡ï";
+            GameObject go = Instantiate(entryPrefab, container);
+            text = go.GetComponentInChildren<TMP_Text>();
+            if (text == null)
+            {
+                Debug.LogError("AnimalStarUI: entryPrefab å¿…é¡»å¸¦ TMP_Textï¼");
+                return;
+            }
+            starTexts[animalKey] = text;
         }
+
+        // 2) æ›´æ–°æ˜¾ç¤º
+        text.text = $"{animalKey}ï¼š{stars} â˜…";
     }
 }
