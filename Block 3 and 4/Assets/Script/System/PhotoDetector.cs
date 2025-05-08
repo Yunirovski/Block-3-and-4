@@ -6,9 +6,10 @@ public struct PhotoResult { public int stars; }
 
 public class PhotoDetector : MonoBehaviour
 {
+    /* ─── Inspector ─── */
     [Header("Size score (屏幕面积百分比)")]
-    [Range(0, 1)] public float minSizePct = 0.15f;   //  ≤ 给 0/1★
-    [Range(0, 1)] public float idealSizePct = 0.45f;   //  ≤ 给 2★
+    [Range(0, 1)] public float minSizePct = 0.15f;  // ≤ 给 0/1★
+    [Range(0, 1)] public float idealSizePct = 0.45f;  // ≤ 给 2★
 
     [Header("Position score (距黄金分割点)")]
     [Range(0, 1)] public float centerTolerance = 0.20f; // ≤ 给 1★
@@ -22,7 +23,9 @@ public class PhotoDetector : MonoBehaviour
     public static PhotoDetector Instance { get; private set; }
     void Awake() { if (Instance == null) Instance = this; else Destroy(gameObject); }
 
-    /// <summary>给单只动物打分（0-4★）</summary>
+    /* ===================================================================== */
+    /*              主评分：给单只动物打分（0-4★）                           */
+    /* ===================================================================== */
     public int ScoreSingle(Camera cam, Bounds b)
     {
         // —— 投影 8 角，仅保留 z>0 —— //
@@ -49,18 +52,18 @@ public class PhotoDetector : MonoBehaviour
             areaPct >= minSizePct && areaPct <= idealSizePct ? 2 :
             areaPct >= minSizePct * 0.5f && areaPct <= idealSizePct * 1.2f ? 1 : 0;
 
-        // —— 位置分：离最近黄金分割点距离 —— //
+        // —— 位置分：距黄金分割点 —— //
         Vector2 c = r.center;
         Vector2[] sweet =
         {
-            new(sw * 0.333f, sh * 0.333f),
-            new(sw * 0.667f, sh * 0.333f),
-            new(sw * 0.333f, sh * 0.667f),
-            new(sw * 0.667f, sh * 0.667f)
+            new(sw*0.333f, sh*0.333f),
+            new(sw*0.667f, sh*0.333f),
+            new(sw*0.333f, sh*0.667f),
+            new(sw*0.667f, sh*0.667f)
         };
         float best = float.MaxValue;
         foreach (var p in sweet) best = Mathf.Min(best, Vector2.Distance(c, p));
-        float norm = best / Mathf.Sqrt(sw * sw + sh * sh);          // 0-~0.71
+        float norm = best / Mathf.Sqrt(sw * sw + sh * sh);      // 0-~0.71
         int posScore = norm <= centerTolerance ? 1 : 0;
 
         // —— Corner bonus —— //
@@ -69,6 +72,28 @@ public class PhotoDetector : MonoBehaviour
         foreach (var p in vis) if (screen.Contains(p)) inside++;
         int cornerBonus = inside / (float)vis.Count >= cornerPctNeeded ? 1 : 0;
 
-        return sizeScore + posScore + cornerBonus;                  // 0-4★
+        return sizeScore + posScore + cornerBonus;          // 0-4★
+    }
+
+    /* ===================================================================== */
+    /*      新增：计算屏幕面积占比（供多目标距离过滤用）                      */
+    /* ===================================================================== */
+    public float GetAreaPercent(Camera cam, Bounds b)
+    {
+        List<Vector3> vis = new();
+        for (int i = 0; i < 8; i++)
+        {
+            Vector3 sign = new(((i & 1) == 0 ? -1 : 1),
+                               ((i & 2) == 0 ? -1 : 1),
+                               ((i & 4) == 0 ? -1 : 1));
+            Vector3 sp = cam.WorldToScreenPoint(b.center + Vector3.Scale(b.extents, sign));
+            if (sp.z > 0) vis.Add(sp);
+        }
+        if (vis.Count == 0) return 0f;
+
+        Vector2 min = vis[0], max = vis[0];
+        foreach (var p in vis) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
+        Rect r = new(min, max - min);
+        return r.width * r.height / (Screen.width * Screen.height);
     }
 }

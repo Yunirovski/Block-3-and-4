@@ -1,51 +1,81 @@
-﻿using UnityEngine;
+﻿// Assets/Scripts/Systems/ProgressionManager.cs
+using System;
 using System.Collections.Generic;
+using UnityEngine;
 
+/// <summary>
+/// 进度与解锁中心，增加 Inspector 手动解锁道具开关：
+/// • 在 Inspector 勾上“ManualUnlockX”，即可在启动时直接解锁对应道具。  
+/// • 其它逻辑与之前完全一致：拍照解锁、桥梁解锁、事件广播、UI 更新。
+/// </summary>
 public class ProgressionManager : MonoBehaviour
 {
     public static ProgressionManager Instance { get; private set; }
 
-    /* ---------- 区域桥梁 ---------- */
-    public int savannaThreshold = 12;            // 保持
-    public int jungleThreshold = 20;            // 保持
+    [Header("Bridge Unlock")]
+    public int savannaThreshold = 12;
+    public int jungleThreshold = 20;
     public GameObject savannaBridge;
     public GameObject jungleBridge;
 
-    /* ---------- 道具 ScriptableObject ---------- */
-    public BaseItem grappleItem;      // 4 种
-    public BaseItem skateboardItem;   // 8 种
-    public BaseItem dartGunItem;      // 12 种
+    [Header("Item Unlock (ScriptableObjects)")]
+    public BaseItem grappleItem;      // 4 种动物
+    public BaseItem skateboardItem;   // 8 种动物
+    public BaseItem dartGunItem;      // 12 种动物
     public BaseItem magicWandItem;    // 50 ★
 
-    /* ---------- 弹窗 (可选) ---------- */
+    [Header("Manual Unlock Flags (Inspector)")]
+    [Tooltip("勾选后启动时直接解锁抓钩")]
+    public bool ManualUnlockGrapple = false;
+    [Tooltip("勾选后启动时直接解锁滑板")]
+    public bool ManualUnlockSkateboard = false;
+    [Tooltip("勾选后启动时直接解锁麻醉枪")]
+    public bool ManualUnlockDartGun = false;
+    [Tooltip("勾选后启动时直接解锁魔法棒")]
+    public bool ManualUnlockMagicWand = false;
+
+    [Header("Optional Popup Prefab")]
     public PopupController popupPrefab;
 
-    /* ---------- 内部数据 ---------- */
+    // —— 内部进度数据 —— //
     readonly Dictionary<string, int> bestStars = new();
+    public IReadOnlyDictionary<string, int> BestStars => bestStars;
+
     public int TotalStars { get; private set; }
     public int UniqueAnimals { get; private set; }
 
-    /* 道具解锁布尔 */
-    public bool HasGrapple, HasSkateboard, HasDartGun, HasMagicWand;
+    public bool HasGrapple { get; private set; }
+    public bool HasSkateboard { get; private set; }
+    public bool HasDartGun { get; private set; }
+    public bool HasMagicWand { get; private set; }
 
-    /* 50★ 解锁魔法棒 */
     const int MagicWandStarThreshold = 50;
 
-    /* ===================================================================== */
+    /// <summary>动物星级更新事件 (animalKey, newStars)</summary>
+    public event Action<string, int> OnAnimalStarUpdated;
+
     void Awake()
     {
         if (Instance == null) Instance = this;
-        else { Destroy(gameObject); }
+        else { Destroy(gameObject); return; }
+
+        // 手动解锁
+        if (ManualUnlockGrapple && !HasGrapple) UnlockGrapple();
+        if (ManualUnlockSkateboard && !HasSkateboard) UnlockSkateboard();
+        if (ManualUnlockDartGun && !HasDartGun) UnlockDartGun();
+        if (ManualUnlockMagicWand && !HasMagicWand) UnlockMagicWand();
     }
 
-    /* ---------------- 注册星星 ---------------- */
+    /// <summary>
+    /// 拍照后汇报某物种的新星级，由 AnimalEvent.TriggerEvent 调用。
+    /// </summary>
     public void RegisterStars(string animalKey, int stars, bool isEasterEgg)
     {
         if (string.IsNullOrEmpty(animalKey) || stars <= 0) return;
 
         int cap = isEasterEgg ? 5 : 4;
         int clamped = Mathf.Clamp(stars, 1, cap);
-        bool newSpec = false;
+        bool isNew = false;
 
         if (bestStars.TryGetValue(animalKey, out int prev))
         {
@@ -58,33 +88,32 @@ public class ProgressionManager : MonoBehaviour
             bestStars[animalKey] = clamped;
             TotalStars += clamped;
             UniqueAnimals++;
-            newSpec = true;
+            isNew = true;
         }
 
+        OnAnimalStarUpdated?.Invoke(animalKey, clamped);
+
         CheckBridgeUnlock();
-        if (newSpec) CheckItemUnlocks();
-        CheckWandUnlock();                  // 每次都检测魔法棒
+        if (isNew) CheckItemUnlocks();
+        CheckMagicWandUnlock();
     }
 
-    /* ---------------- 桥梁解锁 ---------------- */
     void CheckBridgeUnlock()
     {
         if (savannaBridge && !savannaBridge.activeSelf &&
             TotalStars >= savannaThreshold)
         {
             savannaBridge.SetActive(true);
-            ShowPopup($"已获得 {savannaThreshold} ★！热带草原开放");
+            ShowPopup($"累计 {savannaThreshold} ★，热带草原开放！");
         }
-
         if (jungleBridge && !jungleBridge.activeSelf &&
             TotalStars >= jungleThreshold)
         {
             jungleBridge.SetActive(true);
-            ShowPopup($"已获得 {jungleThreshold} ★！丛林开放");
+            ShowPopup($"累计 {jungleThreshold} ★，丛林开放！");
         }
     }
 
-    /* ---------------- 道具解锁 ---------------- */
     void CheckItemUnlocks()
     {
         if (!HasGrapple && UniqueAnimals >= 4) UnlockGrapple();
@@ -96,33 +125,40 @@ public class ProgressionManager : MonoBehaviour
     {
         HasGrapple = true;
         InventoryCycler.RegisterItem(grappleItem);
-        ShowPopup("抓钩已解锁！按 I 装备");
+        ShowPopup("已解锁抓钩！按 I 装备");
     }
+
     void UnlockSkateboard()
     {
         HasSkateboard = true;
-        ShowPopup("滑板已解锁！按 I 装备后用 Q 上/下板");
+        InventoryCycler.RegisterItem(skateboardItem);
+        ShowPopup("已解锁滑板！按 I 装备");
     }
+
     void UnlockDartGun()
     {
         HasDartGun = true;
         InventoryCycler.RegisterItem(dartGunItem);
-        ShowPopup("麻醉枪已解锁！按 I 装备");
+        ShowPopup("已解锁麻醉枪！");
     }
 
-    void CheckWandUnlock()
+    void CheckMagicWandUnlock()
     {
-        if (HasMagicWand || TotalStars < MagicWandStarThreshold) return;
+        if (HasMagicWand || TotalStars < MagicWandStarThreshold)
+            return;
+        UnlockMagicWand();
+    }
 
+    void UnlockMagicWand()
+    {
         HasMagicWand = true;
         InventoryCycler.RegisterItem(magicWandItem);
-        ShowPopup($"恭喜！累计 {MagicWandStarThreshold} ★，魔法棒已解锁");
+        ShowPopup($"累计 {MagicWandStarThreshold} ★，魔法棒已解锁！");
     }
 
-    /* ---------------- 弹窗 ---------------- */
     void ShowPopup(string msg)
     {
-        if (popupPrefab == null) { Debug.Log(msg); return; }
-        Instantiate(popupPrefab).Show(msg);
+        if (popupPrefab == null) Debug.Log(msg);
+        else Instantiate(popupPrefab).Show(msg);
     }
 }

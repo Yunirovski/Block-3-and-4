@@ -1,5 +1,6 @@
 ﻿// Assets/Scripts/Items/CameraItem.cs
 using System.Collections;
+using System.Collections.Generic;   // ★ 解决 Dictionary<> 未定义
 using System.IO;
 using UnityEngine;
 using TMPro;
@@ -8,21 +9,27 @@ using TMPro;
 public class CameraItem : BaseItem
 {
     /* ───── Inspector ───── */
-    [Header("Settings")] public float shootCooldown = 1f;    // 两次拍照最短间隔
+    [Header("Settings")]
+    [Tooltip("两次拍照的最短冷却时间（秒）")]
+    public float shootCooldown = 1f;
 
     [Header("Injected UI")]
-    public Canvas mainCanvas;      // 常规 HUD
-    public Canvas cameraCanvas;    // 取景框 HUD
+    [Tooltip("常规 HUD Canvas")]
+    public Canvas mainCanvas;
+    [Tooltip("相机取景 HUD Canvas")]
+    public Canvas cameraCanvas;
+    [Tooltip("取景模式下的提示/冷却文本 (挂在 cameraCanvas 下)")]
     public TMP_Text debugText;
+    [Tooltip("取景模式下的结果文本 (挂在 cameraCanvas 下)")]
     public TMP_Text resultText;
 
-    /* ───── 运行时 ───── */
-    [System.NonSerialized] public Camera cam;   // 由 InventorySystem 注入
+    /* ───── Runtime ───── */
+    [System.NonSerialized] public Camera cam;
 
-    bool isCamMode;      // 是否处于取景模式
-    bool justEntered;    // 刚进入取景时，忽略首帧左键
-    float nextShotTime;   // 下一次允许拍照的时间
-    int photoCnt;       // 已拍照片计数
+    bool isCamMode;
+    bool justEntered;
+    float nextShotTime;
+    int photoCnt;
 
     /* ============================ 注入 ============================ */
     public void Init(Camera c, Canvas main, Canvas camHud,
@@ -39,28 +46,26 @@ public class CameraItem : BaseItem
     /* ======================== Inventory 回调 ======================= */
     public override void OnSelect(GameObject model)
     {
-        model.SetActive(false);      // 相机模型隐藏；只显示 UI
+        model.SetActive(false);      // 手持不显示模型
         ResetUI();
     }
     public override void OnDeselect() => ExitCameraMode();
     public override void OnReady() => debugText?.SetText("按 Q 进入相机模式");
     public override void OnUnready() => ExitCameraMode();
-    public override void OnUse() { if (!isCamMode) EnterCameraMode(); }   // 第一次左键→取景
+    public override void OnUse() { if (!isCamMode) EnterCameraMode(); }
 
     /* =========================== 输入监听 ========================== */
     public void HandleInput()
     {
-        // Q 键切换取景
         if (Input.GetKeyDown(KeyCode.Q))
         {
             if (isCamMode) ExitCameraMode();
             else EnterCameraMode();
         }
 
-        // 取景状态：左键拍照
         if (isCamMode && Input.GetMouseButtonDown(0))
         {
-            if (justEntered) { justEntered = false; return; }  // 忽略首帧
+            if (justEntered) { justEntered = false; return; }
             TryShoot();
         }
     }
@@ -70,18 +75,19 @@ public class CameraItem : BaseItem
     {
         isCamMode = true;
         justEntered = true;
-        nextShotTime = 0f;                // 清零冷却
-        mainCanvas.enabled = false;
-        cameraCanvas.enabled = true;
+        nextShotTime = 0f;
+        if (mainCanvas) mainCanvas.enabled = false;
+        if (cameraCanvas) cameraCanvas.enabled = true;
         debugText?.SetText("Camera ON");
+        resultText?.SetText("");
     }
 
     void ExitCameraMode()
     {
         if (!isCamMode) return;
         isCamMode = false;
-        cameraCanvas.enabled = false;
-        mainCanvas.enabled = true;
+        if (cameraCanvas) cameraCanvas.enabled = false;
+        if (mainCanvas) mainCanvas.enabled = true;
         debugText?.SetText("Camera OFF");
     }
 
@@ -121,7 +127,6 @@ public class CameraItem : BaseItem
 #else
         var canvases = UnityEngine.Object.FindObjectsOfType<Canvas>();
 #endif
-        // 关闭所有 Canvas，避免拍到 UI
         bool[] states = new bool[canvases.Length];
         for (int i = 0; i < canvases.Length; i++)
         {
@@ -135,53 +140,85 @@ public class CameraItem : BaseItem
         tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
         tex.Apply();
 
-        // 恢复 Canvas
-        for (int i = 0; i < canvases.Length; i++) canvases[i].enabled = states[i];
+        for (int i = 0; i < canvases.Length; i++)
+            canvases[i].enabled = states[i];
 
         ProcessShot(tex);
-        ExitCameraMode();      // 拍完自动退出取景
+        ExitCameraMode();  // 拍完自动退出
     }
 
+    /* ========================= 评分与扣分 ========================= */
     void ProcessShot(Texture2D tex)
     {
-        /* 1) 保存 PNG */
+        // 1) 保存文件
         string fname = $"photo_{photoCnt:D4}.png";
         string path = Path.Combine(Application.persistentDataPath, fname);
         File.WriteAllBytes(path, tex.EncodeToPNG());
         photoCnt++;
         debugText?.SetText($"已保存 {fname}");
 
-        /* 2) 收集动物 & 评分 */
+        // 2) 收集动物 & 主目标评分
         var animals = Object.FindObjectsOfType<AnimalEvent>();
         var planes = GeometryUtility.CalculateFrustumPlanes(cam);
+        var pd = PhotoDetector.Instance;
 
-        int bestStars = 0, targets = 0;
+        // 阈值：占屏≥5% 且 与主目标距离 ≤2×才算“近”
+        const float areaMinPct = 0.05f;
+        const float distFactor = 2f;
+
+        int bestStars = 0;
+        float bestDist = float.MaxValue;
         AnimalEvent bestAE = null;
+
+        // 缓存：AnimalEvent → (stars,dist,areaPct)
+        var cache = new Dictionary<AnimalEvent, (int stars, float dist, float area)>();
 
         foreach (var ae in animals)
         {
-            Collider col = ae.GetComponent<Collider>();
-            if (!col || !ae.gameObject.activeInHierarchy) continue;
+            if (!ae.gameObject.activeInHierarchy) continue;
+            var col = ae.GetComponent<Collider>();
+            if (col == null) continue;
             if (!GeometryUtility.TestPlanesAABB(planes, col.bounds)) continue;
 
-            int stars = PhotoDetector.Instance.ScoreSingle(cam, col.bounds);
-            if (stars > 0) targets++;
-            if (stars > bestStars) { bestStars = stars; bestAE = ae; }
+            int stars = pd.ScoreSingle(cam, col.bounds);
+            if (stars <= 0) continue;
+
+            float dist = Vector3.Distance(cam.transform.position, col.bounds.center);
+            float area = pd.GetAreaPercent(cam, col.bounds);
+
+            cache[ae] = (stars, dist, area);
+
+            if (stars > bestStars)
+            {
+                bestStars = stars;
+                bestAE = ae;
+                bestDist = dist;
+            }
         }
 
-        if (!bestAE)
+        if (bestAE == null)
         {
             resultText?.SetText("未检测到任何动物");
             return;
         }
 
-        /* 3) 多目标扣分 & 彩蛋奖励 */
-        int penalty = Mathf.Max(0, targets - 1) * PhotoDetector.Instance.multiTargetPenalty;
-        int final = Mathf.Clamp(bestStars - penalty, 1, 4);
-        if (bestAE.isEasterEgg) final = Mathf.Clamp(final + 1, 1, 5);
+        // 3) 统计“近”目标数
+        int nearCount = 0;
+        foreach (var kv in cache.Values)
+        {
+            var (stars, dist, area) = kv;
+            if (area >= areaMinPct && dist <= bestDist * distFactor)
+                nearCount++;
+        }
 
-        /* 4) 汇报进度 & UI */
+        // 4) 多目标扣分 & 彩蛋奖励
+        int penalty = Mathf.Max(0, nearCount - 1) * pd.multiTargetPenalty;
+        int final = Mathf.Clamp(bestStars - penalty, 1, 4);
+        if (bestAE.isEasterEgg)
+            final = Mathf.Clamp(final + 1, 1, 5);
+
+        // 5) 汇报进度 & 更新 UI
         bestAE.TriggerEvent(path, final);
-        resultText?.SetText($"{bestAE.animalName}: {final}★  (targets:{targets}  -{penalty})");
+        resultText?.SetText($"{bestAE.animalName}: {final}★ (近:{nearCount} 扣:{penalty})");
     }
 }
