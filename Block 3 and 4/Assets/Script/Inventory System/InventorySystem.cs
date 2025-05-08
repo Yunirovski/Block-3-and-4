@@ -120,6 +120,7 @@ public class InventorySystem : MonoBehaviour
     }
 
     // —— 真正装备新槽 —— 
+    // 在 InventorySystem.cs 中修复 EquipSlot 方法
     void EquipSlot(int idx)
     {
         // 清理旧物
@@ -131,9 +132,18 @@ public class InventorySystem : MonoBehaviour
         currentIndex = idx;
         currentItem = availableItems[idx];
 
-        // 实例化模型（可替换为 prefab）
-        currentModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        currentModel.transform.SetParent(itemAnchor, false);
+        // 实例化模型 - 优先使用 prefab，否则创建立方体占位符
+        if (currentItem.modelPrefab != null)
+        {
+            currentModel = Instantiate(currentItem.modelPrefab, itemAnchor);
+        }
+        else
+        {
+            // 如果没有设置 prefab，创建默认立方体
+            currentModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            currentModel.transform.SetParent(itemAnchor, false);
+        }
+
         currentModel.name = currentItem.itemName + "_Model";
 
         // 应用持握偏移
@@ -151,7 +161,7 @@ public class InventorySystem : MonoBehaviour
                 mainHUDCanvas,
                 cameraHUDCanvas,
                 debugTextTMP,
-                detectTextTMP   // ← 这里补上第五个参数
+                detectTextTMP
             );
         }
         else if (currentItem is FoodItem food)
