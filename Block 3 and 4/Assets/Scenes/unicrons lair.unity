@@ -366,7 +366,6 @@ MonoBehaviour:
   mainHUDCanvas: {fileID: 787990330}
   cameraHUDCanvas: {fileID: 277626014}
   debugTextTMP: {fileID: 1184771359}
-  detectTextTMP: {fileID: 1008195503}
   availableItems:
   - {fileID: 11400000, guid: 07ee67998a0a56d4da47943f3ede7072, type: 2}
   - {fileID: 11400000, guid: bb7bdce8e5e05af4da8e06b1600b7b5a, type: 2}
@@ -3648,6 +3647,15 @@ MonoBehaviour:
   crouchHeight: 1
   normalHeight: 2
   crouchTransitionSpeed: 5
+  footstepAudioSource: {fileID: 0}
+  defaultFootsteps: []
+  terrainLayerFootsteps: []
+  walkStepInterval: 0.5
+  runStepInterval: 0.3
+  crouchStepInterval: 0.8
+  stepVolume: 0.7
+  pitchMin: 0.9
+  pitchMax: 1.1
 --- !u!1 &1556106996
 GameObject:
   m_ObjectHideFlags: 0
