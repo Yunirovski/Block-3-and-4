@@ -366,13 +366,16 @@ MonoBehaviour:
   mainHUDCanvas: {fileID: 787990330}
   cameraHUDCanvas: {fileID: 277626014}
   debugTextTMP: {fileID: 1184771359}
+  detectTextTMP: {fileID: 0}
+  itemAnimator: {fileID: 0}
+  switchTrigger: SwitchItem
   availableItems:
   - {fileID: 11400000, guid: 07ee67998a0a56d4da47943f3ede7072, type: 2}
-  - {fileID: 11400000, guid: bb7bdce8e5e05af4da8e06b1600b7b5a, type: 2}
   - {fileID: 11400000, guid: 61e58ca49b3f83f4585d606903ab638a, type: 2}
-  - {fileID: 11400000, guid: 2bd9a362c2bfcf64db5e1ce31728ae66, type: 2}
   - {fileID: 11400000, guid: f093cc49d96a83f43a78859e3ea86556, type: 2}
+  - {fileID: 11400000, guid: 2bd9a362c2bfcf64db5e1ce31728ae66, type: 2}
   - {fileID: 11400000, guid: 28f72fbb89339d7479505ac06bb16362, type: 2}
+  - {fileID: 11400000, guid: bb7bdce8e5e05af4da8e06b1600b7b5a, type: 2}
 --- !u!114 &256840481
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2618,6 +2621,10 @@ MonoBehaviour:
   skateboardItem: {fileID: 11400000, guid: 2bd9a362c2bfcf64db5e1ce31728ae66, type: 2}
   dartGunItem: {fileID: 11400000, guid: f093cc49d96a83f43a78859e3ea86556, type: 2}
   magicWandItem: {fileID: 11400000, guid: 28f72fbb89339d7479505ac06bb16362, type: 2}
+  ManualUnlockGrapple: 1
+  ManualUnlockSkateboard: 1
+  ManualUnlockDartGun: 1
+  ManualUnlockMagicWand: 1
   popupPrefab: {fileID: 1182194352}
 --- !u!114 &1182194351
 MonoBehaviour:
@@ -3441,6 +3448,7 @@ GameObject:
   - component: {fileID: 1473197924}
   - component: {fileID: 1473197922}
   - component: {fileID: 1473197926}
+  - component: {fileID: 1473197931}
   m_Layer: 0
   m_Name: Recorder
   m_TagString: Player
@@ -3637,6 +3645,103 @@ MonoBehaviour:
   stepVolume: 0.7
   pitchMin: 0.9
   pitchMax: 1.1
+--- !u!82 &1473197931
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1473197916}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1 &1556106996
 GameObject:
   m_ObjectHideFlags: 0
