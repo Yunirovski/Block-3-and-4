@@ -3628,6 +3628,15 @@ MonoBehaviour:
   crouchHeight: 1
   normalHeight: 2
   crouchTransitionSpeed: 5
+  footstepAudioSource: {fileID: 0}
+  defaultFootsteps: []
+  terrainLayerFootsteps: []
+  walkStepInterval: 0.5
+  runStepInterval: 0.3
+  crouchStepInterval: 0.8
+  stepVolume: 0.7
+  pitchMin: 0.9
+  pitchMax: 1.1
 --- !u!1 &1556106996
 GameObject:
   m_ObjectHideFlags: 0
