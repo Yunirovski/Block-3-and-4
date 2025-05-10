@@ -37,12 +37,12 @@ public class AnimalEvent : MonoBehaviour
         // ① 汇报进度（星星 & 解锁）
         ProgressionManager.Instance?.RegisterStars(animalName, stars, isEasterEgg);
 
-        // ② 添加到相册
-        PhotoCollectionManager.Instance?.AddPhoto(animalName, photoPath);
+        // ② 不再直接添加到旧的PhotoCollectionManager
+        // (由CameraItem通过新的PhotoCollectionManager处理)
 
         // ③ 触发自定义回调
         onDetected?.Invoke(photoPath, stars);
 
-        Debug.Log($"{animalName} detected → {stars}★  ({photoPath})");
+        Debug.Log($"{animalName} detected → {stars}★ ({photoPath})");
     }
 }

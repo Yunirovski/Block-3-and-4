@@ -247,7 +247,18 @@ public class CameraItem : BaseItem
             final = Mathf.Clamp(final + 1, 1, 5);
 
         // 5) 汇报进度 & 更新 UI
+        // 汇报进度 & 更新 UI
         bestAE.TriggerEvent(path, final);
         resultText?.SetText($"{bestAE.animalName}: {final}★ (近:{nearCount} 扣:{penalty})");
+
+        // 使用PhotoCollectionManager添加照片（而不是直接调用旧的方法）
+        if (PhotoCollectionManager.Instance != null)
+        {
+            bool added = PhotoCollectionManager.Instance.AddPhoto(bestAE.animalName, path, final);
+            if (!added)
+            {
+                resultText?.SetText($"{resultText.text}\n照片已达上限({PhotoLibrary.MaxPerAnimal})");
+            }
+        }
     }
 }

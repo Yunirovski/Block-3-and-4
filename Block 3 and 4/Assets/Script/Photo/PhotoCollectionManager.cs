@@ -4,30 +4,23 @@ using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// Manages collections of photos, categorized by animal name.
-/// Provides a global singleton to add new photos and automatically updates
-/// the on‑screen UI text to show counts per animal category.
+/// 照片收集管理器：负责UI显示和用户交互
+/// 与PhotoLibrary协作，提供照片收集状态的可视化
 /// </summary>
 public class PhotoCollectionManager : MonoBehaviour
 {
-    /// <summary>
-    /// Singleton instance for easy global access.
-    /// </summary>
-    public static PhotoCollectionManager Instance;
-
-    // Internal data structure mapping each animal name to its list of photo paths.
-    private readonly Dictionary<string, List<string>> photoCollections = new Dictionary<string, List<string>>();
+    public static PhotoCollectionManager Instance { get; private set; }
 
     [Header("UI References")]
-    [Tooltip("Text element used to display the photo collection summary in the UI.")]
+    [Tooltip("用于显示照片收集摘要的UI文本")]
     [SerializeField] private TMP_Text collectionText;
 
     private void Awake()
     {
-        // Ensure only one instance exists (singleton pattern).
         if (Instance == null)
         {
             Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
         else
         {
@@ -36,49 +29,96 @@ public class PhotoCollectionManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Adds a new photo path under the specified animal category.
-    /// If the category does not yet exist, it will be created.
-    /// </summary>
-    /// <param name="animalName">The key/category under which to group the photo.</param>
-    /// <param name="photoPath">The filesystem path (or identifier) of the captured photo.</param>
-    public void AddPhoto(string animalName, string photoPath)
+    private void Start()
     {
-        // Create a new list if this animal hasn't been seen before
-        if (!photoCollections.ContainsKey(animalName))
+        // 订阅PhotoLibrary的数据变化事件
+        if (PhotoLibrary.Instance != null)
         {
-            photoCollections[animalName] = new List<string>();
+            PhotoLibrary.Instance.OnPhotoDatabaseChanged += UpdateCollectionText;
+            UpdateCollectionText(); // 初始更新
         }
-
-        // Add the photo path to the appropriate list
-        photoCollections[animalName].Add(photoPath);
-
-        // Refresh the on‑screen summary to reflect the new count
-        UpdateCollectionText();
+        else
+        {
+            Debug.LogError("PhotoCollectionManager: 未找到PhotoLibrary实例");
+        }
     }
 
     /// <summary>
-    /// Regenerates and applies the UI text showing the number of photos per animal.
-    /// Uses a StringBuilder for efficient string concatenation.
+    /// 添加照片到收集中（委托给PhotoLibrary）
+    /// </summary>
+    public bool AddPhoto(string animalName, string photoPath, int stars)
+    {
+        if (PhotoLibrary.Instance == null)
+        {
+            Debug.LogError("PhotoCollectionManager: 尝试添加照片时找不到PhotoLibrary实例");
+            return false;
+        }
+
+        // 委托给PhotoLibrary执行实际添加操作
+        bool success = PhotoLibrary.Instance.AddPhoto(animalName, photoPath, stars);
+
+        // 如果照片达到上限，返回失败
+        if (!success)
+        {
+            Debug.Log($"照片添加失败: {animalName}的照片数量已达上限({PhotoLibrary.MaxPerAnimal})");
+        }
+
+        // 不需要在这里调用UpdateCollectionText，因为PhotoLibrary会触发事件
+        return success;
+    }
+
+    /// <summary>
+    /// 删除照片
+    /// </summary>
+    public bool DeletePhoto(string animalName, int photoIndex)
+    {
+        if (PhotoLibrary.Instance == null)
+        {
+            Debug.LogError("PhotoCollectionManager: 尝试删除照片时找不到PhotoLibrary实例");
+            return false;
+        }
+
+        // 委托给PhotoLibrary执行删除操作
+        return PhotoLibrary.Instance.DeletePhoto(animalName, photoIndex);
+        // 不需要在这里调用UpdateCollectionText，因为PhotoLibrary会触发事件
+    }
+
+    /// <summary>
+    /// 获取指定动物的照片列表
+    /// </summary>
+    public IReadOnlyList<PhotoLibrary.PhotoEntry> GetPhotos(string animalName)
+    {
+        if (PhotoLibrary.Instance == null)
+        {
+            Debug.LogError("PhotoCollectionManager: 尝试获取照片时找不到PhotoLibrary实例");
+            return new List<PhotoLibrary.PhotoEntry>();
+        }
+
+        return PhotoLibrary.Instance.GetPhotos(animalName);
+    }
+
+    /// <summary>
+    /// 更新UI文本，显示当前照片收集状态
     /// </summary>
     private void UpdateCollectionText()
     {
-        if (collectionText == null)
+        if (collectionText == null || PhotoLibrary.Instance == null)
         {
-            Debug.LogWarning("PhotoCollectionManager: Missing reference to 'collectionText'. Cannot update UI.");
             return;
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine("Photo Collections:");
+        sb.AppendLine("照片收集:");
 
-        // Append one line per animal category
-        foreach (var kvp in photoCollections)
+        foreach (string animalId in PhotoLibrary.Instance.GetAnimalIds())
         {
-            sb.AppendLine($"{kvp.Key}: {kvp.Value.Count} photos");
+            int count = PhotoLibrary.Instance.GetPhotoCount(animalId);
+            sb.AppendLine($"{animalId}: {count}/{PhotoLibrary.MaxPerAnimal} 张");
         }
 
-        // Apply the built string to the UI text component
+        int total = PhotoLibrary.Instance.GetTotalPhotoCount();
+        sb.AppendLine($"总计: {total} 张照片");
+
         collectionText.text = sb.ToString();
     }
 }
