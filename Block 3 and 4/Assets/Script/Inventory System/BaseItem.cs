@@ -15,11 +15,16 @@ public abstract class BaseItem : ScriptableObject
     public Vector3 holdPosition;
     public Vector3 holdRotation;
 
+    [Header("Model Scale")]
+    [Tooltip("模型缩放因子，默认为1")]
+    public Vector3 modelScale = Vector3.one;  // 新增：模型缩放控制
+
     /// <summary>由 InventorySystem 在实例化后调用。</summary>
     public virtual void ApplyHoldTransform(Transform tf)
     {
         tf.localPosition = holdPosition;
         tf.localRotation = Quaternion.Euler(holdRotation);
+        tf.localScale = modelScale;  // 应用模型缩放
     }
 
     /* ───── 可选回调 ───── */

@@ -26,6 +26,9 @@ public class CameraItem : BaseItem
     /* ───── Runtime ───── */
     [System.NonSerialized] public Camera cam;
 
+    // 添加对模型的引用
+    [System.NonSerialized] private GameObject currentModel;
+
     bool isCamMode;
     bool justEntered;
     float nextShotTime;
@@ -46,13 +49,29 @@ public class CameraItem : BaseItem
     /* ======================== Inventory 回调 ======================= */
     public override void OnSelect(GameObject model)
     {
-        model.SetActive(false);      // 手持不显示模型
+        // 存储模型引用，但不立即隐藏
+        currentModel = model;
         ResetUI();
     }
-    public override void OnDeselect() => ExitCameraMode();
+
+    public override void OnDeselect()
+    {
+        ExitCameraMode();
+        currentModel = null; // 清除模型引用
+    }
+
     public override void OnReady() => debugText?.SetText("按 Q 进入相机模式");
-    public override void OnUnready() => ExitCameraMode();
-    public override void OnUse() { if (!isCamMode) EnterCameraMode(); }
+
+    public override void OnUnready()
+    {
+        ExitCameraMode();
+        currentModel = null; // 清除模型引用
+    }
+
+    public override void OnUse()
+    {
+        if (!isCamMode) EnterCameraMode();
+    }
 
     /* =========================== 输入监听 ========================== */
     public void HandleInput()
@@ -76,6 +95,11 @@ public class CameraItem : BaseItem
         isCamMode = true;
         justEntered = true;
         nextShotTime = 0f;
+
+        // 隐藏相机模型
+        if (currentModel != null)
+            currentModel.SetActive(false);
+
         if (mainCanvas) mainCanvas.enabled = false;
         if (cameraCanvas) cameraCanvas.enabled = true;
         debugText?.SetText("Camera ON");
@@ -86,6 +110,11 @@ public class CameraItem : BaseItem
     {
         if (!isCamMode) return;
         isCamMode = false;
+
+        // 恢复相机模型显示
+        if (currentModel != null)
+            currentModel.SetActive(true);
+
         if (cameraCanvas) cameraCanvas.enabled = false;
         if (mainCanvas) mainCanvas.enabled = true;
         debugText?.SetText("Camera OFF");
@@ -162,7 +191,7 @@ public class CameraItem : BaseItem
         var planes = GeometryUtility.CalculateFrustumPlanes(cam);
         var pd = PhotoDetector.Instance;
 
-        // 阈值：占屏≥5% 且 与主目标距离 ≤2×才算“近”
+        // 阈值：占屏≥5% 且 与主目标距离 ≤2×才算"近"
         const float areaMinPct = 0.05f;
         const float distFactor = 2f;
 
@@ -202,7 +231,7 @@ public class CameraItem : BaseItem
             return;
         }
 
-        // 3) 统计“近”目标数
+        // 3) 统计"近"目标数
         int nearCount = 0;
         foreach (var kv in cache.Values)
         {
