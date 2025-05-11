@@ -6,10 +6,10 @@ using System.Collections.Generic;
 public class player_move2 : MonoBehaviour, IMoveController
 {
     [Header("Movement Settings")]
-    public float walkSpeed = 10f;      // Walk speed
-    public float runSpeed = 20f;       // Run speed
+    public float walkSpeed = 5f;      // Walk speed
+    public float runSpeed = 10f;       // Run speed
     public float crouchSpeed = 2f;     // Crouch movement speed
-    public float jumpHeight = 4f;      // Jump height
+    public float jumpHeight = 1.5f;      // Jump height
     public float gravity = -12f;       // Gravity force
 
     [Header("Mouse Settings")]
@@ -162,16 +162,23 @@ public class player_move2 : MonoBehaviour, IMoveController
             isCrouching = !isCrouching;
 
         float targetHeight = isCrouching ? crouchHeight : normalHeight;
+
+        // 存储旧高度
+        float previousHeight = controller.height;
+
+        // 平滑调整高度
         controller.height = Mathf.MoveTowards(
             controller.height,
             targetHeight,
-            crouchTransitionSpeed * Time.deltaTime);
+            crouchTransitionSpeed * Time.deltaTime
+        );
 
-        // Adjust center so feet stay on ground
+        // 调整中心以保持脚贴地
         Vector3 center = controller.center;
-        center.y = controller.height / 2f;
+        center.y += (controller.height - previousHeight) / 2f;
         controller.center = center;
     }
+
 
     private void HandleFootsteps()
     {
