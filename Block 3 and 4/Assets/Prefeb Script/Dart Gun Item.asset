@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: 
   modelPrefab: {fileID: 0}
   holdPosition: {x: 0.06, y: -0.04, z: 0.28}
-  holdRotation: {x: 0, y: 90, z: -8}
+  holdRotation: {x: 0, y: 90, z: 0}
   modelScale: {x: 1, y: 1, z: 1}
   maxDistance: 800
   cooldown: 1
