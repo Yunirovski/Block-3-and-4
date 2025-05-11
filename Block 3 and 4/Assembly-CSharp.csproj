@@ -88,6 +88,7 @@
     <Compile Include="Assets\Script\Food\FoodWorld.cs" />
     <Compile Include="Assets\Script\Ui\LogController.cs" />
     <Compile Include="Assets\Script\ScoreManager.cs" />
+    <Compile Include="Assets\Script\player\GrappleController.cs" />
     <Compile Include="Assets\Script\Inventory System\FoodItem.cs" />
     <Compile Include="Assets\Script\System\ConsumableManager.cs" />
     <Compile Include="Assets\Script\Inventory System\BaseItem.cs" />

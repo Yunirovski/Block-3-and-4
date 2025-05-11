@@ -16,5 +16,7 @@ MonoBehaviour:
   modelPrefab: {fileID: 7193051567453843181, guid: 2d00fb44eed81534f92d4334d6906843, type: 3}
   holdPosition: {x: 0, y: 0, z: 0}
   holdRotation: {x: 0, y: 0, z: 0}
-  radius: 20
-  cooldown: 60
+  modelScale: {x: 1, y: 1, z: 1}
+  radius: 7800
+  cooldown: 1
+  attractDuration: 10

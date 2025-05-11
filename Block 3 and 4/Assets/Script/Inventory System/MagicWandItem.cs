@@ -1,59 +1,55 @@
+// Assets/Scripts/Items/MagicWandItem.cs
 using UnityEngine;
 
-/// <summary>
-/// A magic wand item that, when used, attracts nearby animals toward the player.
-/// Has a configurable effect radius and cooldown period.
-/// </summary>
 [CreateAssetMenu(menuName = "Items/MagicWandItem")]
 public class MagicWandItem : BaseItem
 {
-    [Header("Wand Effect Settings")]
-    [Tooltip("Radius (in world units) within which animals will be affected.")]
-    public float radius = 20f;
+    [Header("法杖设置")]
+    [Tooltip("吸引半径 (m)")]
+    public float radius = 30f;
+    [Tooltip("吸引冷却时间 (s)")]
+    public float cooldown = 30f;
+    [Tooltip("吸引持续时间 (s)")]
+    public float attractDuration = 10f;
 
-    [Tooltip("Time (in seconds) before the wand can be used again.")]
-    public float cooldown = 60f;
+    // —— 运行时状态 —— 
+    private float nextReadyTime = 0f;
+    private Transform playerRoot;
 
-    // Timestamp (Time.time) when the wand will next be ready to use
-    private float nextReadyTime;
+    public override void OnSelect(GameObject model)
+    {
+        // 假设玩家根物体标记为 "Player"
+        playerRoot = GameObject.FindGameObjectWithTag("Player")?.transform;
+        if (playerRoot == null)
+            Debug.LogError("MagicWandItem: 找不到标记为 Player 的对象");
+    }
 
-    /// <summary>
-    /// Called when the player uses the wand (e.g., left-click).
-    /// Scans for nearby AnimalEvent components within the radius and triggers attraction behavior.
-    /// Enforces the cooldown between uses and notifies any listeners of cooldown start.
-    /// </summary>
     public override void OnUse()
     {
-        // If still on cooldown, ignore the use request
         if (Time.time < nextReadyTime)
-            return;
-
-        // Perform an overlap sphere to find all colliders within the effect radius
-        Vector3 origin = Camera.main.transform.position;
-        Collider[] hits = Physics.OverlapSphere(origin, radius);
-
-        foreach (var hit in hits)
         {
-            // If the collider has an AnimalEvent component, attract that animal
-            if (hit.TryGetComponent<AnimalEvent>(out var animalEvent))
+            Debug.Log($"MagicWandItem: 冷却中 {(nextReadyTime - Time.time):F1}s");
+            return;
+        }
+        if (playerRoot == null) return;
+
+        // 在玩家位置发出吸引范围
+        Collider[] hits = Physics.OverlapSphere(playerRoot.position, radius);
+        int count = 0;
+        foreach (var col in hits)
+        {
+            var animal = col.GetComponent<AnimalBehavior>();
+            if (animal != null)
             {
-                Debug.Log($"MagicWandItem: Attracting {animalEvent.animalName}");
-                // TODO: Implement AI logic so the animal changes its target to the player
-                // Example: animalEvent.SetTargetPlayer(Camera.main.transform);
+                animal.Attract(playerRoot, attractDuration);
+                count++;
             }
         }
 
-        // Set the next allowed use time based on the cooldown
+        Debug.Log($"MagicWandItem: 吸引 {count} 只动物，持续 {attractDuration}s");
+
+        // 记录冷却
         nextReadyTime = Time.time + cooldown;
-
-        // Notify any systems listening for cooldown start (e.g., UI cooldown indicator)
         InventorySystemEvents.OnItemCooldownStart?.Invoke(this, cooldown);
-    }
-
-    private void OnDrawGizmosSelected()
-    {
-        // Visualize the wand's effect radius in the Scene view for debugging
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(Camera.main.transform.position, radius);
     }
 }

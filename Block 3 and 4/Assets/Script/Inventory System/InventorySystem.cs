@@ -7,12 +7,15 @@ using TMPro;
 public class InventorySystem : MonoBehaviour
 {
     [Header("Anchors / UI")]
-    public Transform itemAnchor;          // 手持模型父节点
-    public RadialInventoryUI radialUI;    // 圆形工具环 UI
-    public Canvas mainHUDCanvas;          // 常规 HUD Canvas
-    public Canvas cameraHUDCanvas;        // 相机取景 HUD Canvas
-    public TMP_Text debugTextTMP;         // 通用提示文本
-    public TMP_Text detectTextTMP;        // 相机结果文本
+    [Tooltip("手持模型父节点")]
+    public Transform itemAnchor;
+    [Tooltip("脚下模型父节点，用于滑板等脚下道具")]
+    public Transform footAnchor;
+    public RadialInventoryUI radialUI;
+    public Canvas mainHUDCanvas;
+    public Canvas cameraHUDCanvas;
+    public TMP_Text debugTextTMP;
+    public TMP_Text detectTextTMP;
 
     [Header("Animator (可选)")]
     public Animator itemAnimator;
@@ -21,7 +24,7 @@ public class InventorySystem : MonoBehaviour
     [Header("Item List (Cam→Food→Hook→Board→Gun→Wand)")]
     public List<BaseItem> availableItems; // 必须填 6 个
 
-    // 内部状态
+    // —— 内部状态 —— 
     BaseItem currentItem;
     GameObject currentModel;
     int currentIndex;
@@ -48,9 +51,14 @@ public class InventorySystem : MonoBehaviour
         {
             cam.HandleInput();
         }
+        // 滑板专属每帧更新
+        else if (currentItem is SkateboardItem skate)
+        {
+            skate.HandleUpdate();
+        }
     }
 
-    // —— I键呼出/松开工具环 —— 
+    // —— I 键呼出/松开工具环 —— 
     void HandleRing()
     {
         if (Input.GetKeyDown(KeyCode.I))
@@ -78,7 +86,7 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    // —— 数字键 1-6 兜底切换 —— 
+    // —— 数字键 1-6 切换 —— 
     void HandleNumberKeys()
     {
         bool[] unlocked = BuildUnlockArray();
@@ -93,7 +101,7 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    // —— 左键直接 Use —— 
+    // —— 鼠标左键 Use —— 
     void HandleUse()
     {
         if (currentItem == null) return;
@@ -120,7 +128,6 @@ public class InventorySystem : MonoBehaviour
     }
 
     // —— 真正装备新槽 —— 
-    // 在 InventorySystem.cs 中修复 EquipSlot 方法
     void EquipSlot(int idx)
     {
         // 清理旧物
@@ -128,25 +135,27 @@ public class InventorySystem : MonoBehaviour
         currentItem?.OnDeselect();
         if (currentModel) Destroy(currentModel);
 
-        // 记录新索引
+        // 记录新索引 & 道具
         currentIndex = idx;
         currentItem = availableItems[idx];
 
-        // 实例化模型 - 优先使用 prefab，否则创建立方体占位符
+        // 选择父节点：滑板用 footAnchor，其它用 itemAnchor
+        Transform parentTf = currentItem is SkateboardItem
+                            ? footAnchor
+                            : itemAnchor;
+
+        // 实例化模型
         if (currentItem.modelPrefab != null)
-        {
-            currentModel = Instantiate(currentItem.modelPrefab, itemAnchor);
-        }
+            currentModel = Instantiate(currentItem.modelPrefab, parentTf);
         else
         {
-            // 如果没有设置 prefab，创建默认立方体
             currentModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            currentModel.transform.SetParent(itemAnchor, false);
+            currentModel.transform.SetParent(parentTf, false);
         }
 
         currentModel.name = currentItem.itemName + "_Model";
 
-        // 应用持握偏移
+        // 应用持握 / 挂载偏移
         currentItem.ApplyHoldTransform(currentModel.transform);
 
         // 回调
@@ -187,12 +196,12 @@ public class InventorySystem : MonoBehaviour
         var pm = ProgressionManager.Instance;
         return new[]
         {
-            true,                              // 0 相机
-            true,                              // 1 食物
-            pm != null && pm.HasGrapple,       // 2 抓钩
-            pm != null && pm.HasSkateboard,    // 3 滑板
-            pm != null && pm.HasDartGun,       // 4 麻醉枪
-            pm != null && pm.HasMagicWand      // 5 魔法棒
+            true,                                  // 0 相机
+            true,                                  // 1 食物
+            pm != null && pm.HasGrapple,           // 2 抓钩
+            pm != null && pm.HasSkateboard,        // 3 滑板
+            pm != null && pm.HasDartGun,           // 4 麻醉枪
+            pm != null && pm.HasMagicWand          // 5 魔法棒
         };
     }
 }

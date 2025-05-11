@@ -3,63 +3,60 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Items/GrappleItem")]
 public class GrappleItem : BaseItem
 {
-    [Header("Grapple Params")]
-    public float maxDistance = 30f;   // 射线最长距离
-    public float pullSpeed = 15f;   // 拉动速度
-    public float cooldown = 4f;    // 冷却
+    [Header("抓钩参数")]
+    public float maxDistance = 20f;
+    public float pullSpeed = 5f;
 
-    private Transform player;         // 玩家 Transform
-    private float nextReadyTime;
+    [Header("钩爪可视化")]
+    [Tooltip("抓钩模型 Prefab，由美术提供")]
+    public GameObject hookPrefab;
+    [Tooltip("钩爪飞行速度 (m/s)")]
+    public float hookTravelSpeed = 50f;
+    [Tooltip("绳索材质，用于 LineRenderer")]
+    public Material ropeMaterial;
+
+    // 运行时缓存
+    Camera _cam;
+    GrappleController _grappler;
 
     public override void OnSelect(GameObject model)
     {
-        player = Camera.main.transform.root;     // 获取玩家根
+        _cam = Camera.main;
+        if (_cam == null) { Debug.LogError("找不到主相机"); return; }
+
+        // 假设 GrappleController 挂在相机的父对象上（玩家身上）
+        _grappler = _cam.GetComponentInParent<GrappleController>();
+        if (_grappler == null)
+        {
+            Debug.LogError("玩家物体上缺少 GrappleController 组件");
+            return;
+        }
+
+        // 注入钩爪可视化资源
+        _grappler.InitializeHook(hookPrefab, hookTravelSpeed, ropeMaterial);
     }
 
     public override void OnUse()
     {
-        // 冷却检查
-        if (Time.time < nextReadyTime) return;
+        if (_grappler == null || _cam == null) return;
 
-        // 射线：注意 origin 用 position，第四参数是 maxDistance(float)
-        if (Physics.Raycast(Camera.main.transform.position,
-                            Camera.main.transform.forward,
-                            out RaycastHit hit,
-                            maxDistance))
+        Ray ray = _cam.ScreenPointToRay(
+            new Vector3(Screen.width / 2f, Screen.height / 2f)
+        );
+        if (Physics.Raycast(ray, out RaycastHit hit, maxDistance))
         {
-            // 在玩家身上加一个 GrappleMover，让它把玩家拉到目标点
-            var mover = player.gameObject.AddComponent<GrappleMover>();
-            mover.Init(hit.point, pullSpeed);
-
-            // 冷却计时 & 通知 HUD
-            nextReadyTime = Time.time + cooldown;
-            InventorySystemEvents.OnItemCooldownStart?.Invoke(this, cooldown);
+            if (hit.collider.gameObject.isStatic)
+            {
+                _grappler.StartGrapple(hit.point, pullSpeed);
+            }
+            else
+            {
+                Debug.Log("命中目标非静态，不可附着");
+            }
         }
-    }
-}
-
-/// <summary>
-/// 运行时挂在玩家上的小组件：把玩家朝目标点拉动，抵达后自动销毁自己
-/// </summary>
-public class GrappleMover : MonoBehaviour
-{
-    private Vector3 target;
-    private float speed;
-
-    public void Init(Vector3 point, float pullSpeed)
-    {
-        target = point;
-        speed = pullSpeed;
-    }
-
-    void Update()
-    {
-        transform.position = Vector3.MoveTowards(
-            transform.position,
-            target,
-            speed * Time.deltaTime);
-
-        if (Vector3.Distance(transform.position, target) < 1f)
-            Destroy(this);     // 到点即结束
+        else
+        {
+            Debug.Log("射程内未命中任何表面");
+        }
     }
 }
