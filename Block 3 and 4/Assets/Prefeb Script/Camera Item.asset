@@ -22,3 +22,4 @@ MonoBehaviour:
   cameraCanvas: {fileID: 0}
   debugText: {fileID: 0}
   resultText: {fileID: 0}
+  shutterSound: {fileID: 8300000, guid: f6eae8222b8b73747b002c546e9921b0, type: 3}
