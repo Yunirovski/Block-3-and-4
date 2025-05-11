@@ -12,33 +12,38 @@ public class MagicWandItem : BaseItem
     [Tooltip("吸引持续时间 (s)")]
     public float attractDuration = 10f;
 
-    // —— 运行时缓存 —— 
-    private float nextReadyTime = 0f;
-    private Transform playerRoot;
+    // —— 运行时状态 —— 
+    float nextReadyTime = 0f;
+    Transform playerRoot;
+
+    /// <summary>
+    /// 允许运行时修改冷却时间
+    /// </summary>
+    public void SetCooldown(float cd)
+    {
+        cooldown = Mathf.Max(0f, cd);
+    }
 
     public override void OnSelect(GameObject model)
     {
+        // 直接用主相机作为吸引目标
         if (Camera.main != null)
             playerRoot = Camera.main.transform;
         else
             Debug.LogError("MagicWandItem: 找不到主相机");
-
-        // 当玩家装备法杖时，打印当前 cooldown
-        Debug.Log($"MagicWandItem 已装备，当前冷却时间：{cooldown}s");
     }
 
     public override void OnUse()
     {
-        // 打印以验证是不是读取了你在 Inspector 里改的值
-        Debug.Log($"MagicWandItem.OnUse() called；cooldown = {cooldown}s，nextReadyTime = {nextReadyTime:F2}");
-
+        // 冷却判断
         if (Time.time < nextReadyTime)
         {
-            Debug.Log($"MagicWandItem: 冷却中 {(nextReadyTime - Time.time):F1}s");
+            Debug.Log($"MagicWandItem: 冷却中，剩余 {(nextReadyTime - Time.time):F1}s");
             return;
         }
         if (playerRoot == null) return;
 
+        // 在玩家位置发射吸引波
         Collider[] hits = Physics.OverlapSphere(playerRoot.position, radius);
         int count = 0;
         foreach (var col in hits)
@@ -51,4 +56,12 @@ public class MagicWandItem : BaseItem
             }
         }
 
-        Debug.Log($"MagicWandItem: 成功吸引 {count} 只动物，持续 {attractDuration}s
+        Debug.Log($"MagicWandItem: 吸引 {count} 只动物，持续 {attractDuration}s");
+
+        // 记录下次可用时间
+        nextReadyTime = Time.time + cooldown;
+
+        // 通知 UI（如有订阅者）
+        InventorySystemEvents.OnItemCooldownStart?.Invoke(this, cooldown);
+    }
+}
