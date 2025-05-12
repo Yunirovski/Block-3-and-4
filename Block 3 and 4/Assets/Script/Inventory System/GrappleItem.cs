@@ -1,44 +1,65 @@
-using UnityEngine;
+锘縰sing UnityEngine;
 
 [CreateAssetMenu(menuName = "Items/GrappleItem")]
 public class GrappleItem : BaseItem
 {
-    [Header("抓钩参数")]
+    [Header("脳楼鹿鲁虏脦脢媒")]
     public float maxDistance = 20f;
     public float pullSpeed = 5f;
 
-    [Header("钩爪可视化")]
-    [Tooltip("抓钩模型 Prefab，由美术提供")]
+    [Header("鹿鲁脳娄驴脡脢脫禄炉")]
+    [Tooltip("脳楼鹿鲁脛拢脨脥 Prefab拢卢脫脡脙脌脢玫脤谩鹿漏")]
     public GameObject hookPrefab;
-    [Tooltip("钩爪飞行速度 (m/s)")]
+    [Tooltip("鹿鲁脳娄路脡脨脨脣脵露脠 (m/s)")]
     public float hookTravelSpeed = 50f;
-    [Tooltip("绳索材质，用于 LineRenderer")]
+    [Tooltip("脡镁脣梅虏脛脰脢拢卢脫脙脫脷 LineRenderer")]
     public Material ropeMaterial;
 
-    // 运行时缓存
+    [Header("脪么脨搂")]
+    [Tooltip("脳楼鹿鲁驴陋脟庐脪么脨搂")]
+    public AudioClip grappleFireSound;
+    [Tooltip("脪么脨搂脪么脕驴")]
+    [Range(0f, 1f)] public float soundVolume = 0.8f;
+
+    // 脭脣脨脨脢卤禄潞麓忙
     Camera _cam;
     GrappleController _grappler;
+    AudioSource _audioSource;
 
     public override void OnSelect(GameObject model)
     {
         _cam = Camera.main;
-        if (_cam == null) { Debug.LogError("找不到主相机"); return; }
+        if (_cam == null) { Debug.LogError("脮脪虏禄碌陆脰梅脧脿禄煤"); return; }
 
-        // 假设 GrappleController 挂在相机的父对象上（玩家身上）
+        // 录脵脡猫 GrappleController 鹿脪脭脷脧脿禄煤碌脛赂赂露脭脧贸脡脧拢篓脥忙录脪脡铆脡脧拢漏
         _grappler = _cam.GetComponentInParent<GrappleController>();
         if (_grappler == null)
         {
-            Debug.LogError("玩家物体上缺少 GrappleController 组件");
+            Debug.LogError("脥忙录脪脦茂脤氓脡脧脠卤脡脵 GrappleController 脳茅录镁");
             return;
         }
 
-        // 注入钩爪可视化资源
+        // 麓麓陆篓脪么脝碌脭麓拢卢脠莽鹿没虏禄麓忙脭脷
+        _audioSource = _cam.GetComponent<AudioSource>();
+        if (_audioSource == null)
+        {
+            _audioSource = _cam.gameObject.AddComponent<AudioSource>();
+            _audioSource.spatialBlend = 0f; // 脠芦戮脰脪么脨搂
+        }
+
+        // 脳垄脠毛鹿鲁脳娄驴脡脢脫禄炉脳脢脭麓
         _grappler.InitializeHook(hookPrefab, hookTravelSpeed, ropeMaterial);
     }
 
     public override void OnUse()
     {
         if (_grappler == null || _cam == null) return;
+
+        // 虏楼路脜驴陋脟庐脪么脨搂
+        if (grappleFireSound != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(grappleFireSound, soundVolume);
+        }
 
         Ray ray = _cam.ScreenPointToRay(
             new Vector3(Screen.width / 2f, Screen.height / 2f)
@@ -51,12 +72,12 @@ public class GrappleItem : BaseItem
             }
             else
             {
-                Debug.Log("命中目标非静态，不可附着");
+                Debug.Log("脙眉脰脨脛驴卤锚路脟戮虏脤卢拢卢虏禄驴脡赂陆脳脜");
             }
         }
         else
         {
-            Debug.Log("射程内未命中任何表面");
+            Debug.Log("脡盲鲁脤脛脷脦麓脙眉脰脨脠脦潞脦卤铆脙忙");
         }
     }
 }
