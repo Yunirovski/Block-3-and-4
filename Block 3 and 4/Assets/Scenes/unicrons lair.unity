@@ -144,7 +144,7 @@ Transform:
   m_GameObject: {fileID: 84977086}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.38, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3639,12 +3639,14 @@ MonoBehaviour:
   crouchHeight: 1
   normalHeight: 2
   crouchTransitionSpeed: 5
-  footstepAudioSource: {fileID: 0}
-  defaultFootsteps: []
-  terrainLayerFootsteps: []
-  walkStepInterval: 0.5
-  runStepInterval: 0.3
-  crouchStepInterval: 0.8
+  footstepAudioSource: {fileID: 1473197931}
+  walkLoopClip: {fileID: 8300000, guid: b2b72c0727f6c7649a3d65d0df5fea1f, type: 3}
+  runLoopClip: {fileID: 8300000, guid: 5a31171a755598e41a801d6363719179, type: 3}
+  crouchLoopClip: {fileID: 0}
+  jumpClip: {fileID: 8300000, guid: 0bc882a0288b38b47a94b877da83340e, type: 3}
+  landClip: {fileID: 8300000, guid: 57c06392d84799948ae2f7e2266ff134, type: 3}
+  minAirTimeForLandSound: 0.2
+  effectAudioSource: {fileID: 0}
   stepVolume: 0.7
   pitchMin: 0.9
   pitchMax: 1.1

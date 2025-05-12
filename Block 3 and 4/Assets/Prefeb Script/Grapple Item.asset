@@ -22,3 +22,5 @@ MonoBehaviour:
   hookPrefab: {fileID: 0}
   hookTravelSpeed: 50
   ropeMaterial: {fileID: 0}
+  grappleFireSound: {fileID: 8300000, guid: f903933ea8964a14d8979346f86f8085, type: 3}
+  soundVolume: 0.8
