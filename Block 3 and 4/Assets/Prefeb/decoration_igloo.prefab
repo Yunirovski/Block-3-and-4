@@ -13,16 +13,28 @@ PrefabInstance:
       value: decoration_igloo
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9dac91274a71aaa489d5dd52262017b1, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 3.6381798
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 9dac91274a71aaa489d5dd52262017b1, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 3.6381798
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 9dac91274a71aaa489d5dd52262017b1, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 3.6381798
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 9dac91274a71aaa489d5dd52262017b1, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0
+      value: 0.27905
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9dac91274a71aaa489d5dd52262017b1, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -5.0987
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9dac91274a71aaa489d5dd52262017b1, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -0.55945
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9dac91274a71aaa489d5dd52262017b1, type: 3}
       propertyPath: m_LocalRotation.w

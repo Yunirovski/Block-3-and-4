@@ -13,16 +13,28 @@ PrefabInstance:
       value: plant_low_poly_trees_free
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: e99fb8fc36af18f4aa48e084d1362706, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 5.9026
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: e99fb8fc36af18f4aa48e084d1362706, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 5.9026
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: e99fb8fc36af18f4aa48e084d1362706, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 5.9026
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: e99fb8fc36af18f4aa48e084d1362706, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0
+      value: 4.8935
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: e99fb8fc36af18f4aa48e084d1362706, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -4.1201
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: e99fb8fc36af18f4aa48e084d1362706, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -0.025277
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: e99fb8fc36af18f4aa48e084d1362706, type: 3}
       propertyPath: m_LocalRotation.w

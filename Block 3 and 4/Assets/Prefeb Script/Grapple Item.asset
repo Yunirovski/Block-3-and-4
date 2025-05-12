@@ -17,10 +17,10 @@ MonoBehaviour:
   holdPosition: {x: 0.5, y: 0.5, z: 1}
   holdRotation: {x: -90, y: 0, z: -90}
   modelScale: {x: 0.1, y: 0.1, z: 0.1}
-  maxDistance: 30
+  maxDistance: 60
   pullSpeed: 15
   hookPrefab: {fileID: 0}
   hookTravelSpeed: 50
   ropeMaterial: {fileID: 0}
   grappleFireSound: {fileID: 8300000, guid: f903933ea8964a14d8979346f86f8085, type: 3}
-  soundVolume: 0.8
+  soundVolume: 0.68

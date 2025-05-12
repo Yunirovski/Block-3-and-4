@@ -15,9 +15,10 @@ GameObject:
   - component: {fileID: 8480506338658869995}
   - component: {fileID: 210778222795247041}
   - component: {fileID: 4262357087930834949}
-  m_Layer: 0
+  - component: {fileID: -2773698025850333741}
+  m_Layer: 3
   m_Name: Giraffe 1
-  m_TagString: Untagged
+  m_TagString: AnimalDetectable
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -181,3 +182,20 @@ MonoBehaviour:
   safeDistance: 8
   forcedEscapeDuration: 10
   modelRotationOffset: {x: 0, y: 90, z: 0}
+--- !u!114 &-2773698025850333741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2599374750076204983}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a07665c178b8e9f40bd3554d20e33853, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  animalName: Giraffe
+  isEasterEgg: 0
+  onDetected:
+    m_PersistentCalls:
+      m_Calls: []

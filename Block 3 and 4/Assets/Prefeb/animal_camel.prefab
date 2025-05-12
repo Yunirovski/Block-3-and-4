@@ -320,7 +320,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!195 &-5318391740398368602
 NavMeshAgent:
@@ -361,8 +361,8 @@ MonoBehaviour:
   minWanderTime: 10
   maxWanderTime: 20
   escapeSpeed: 6
-  detectionRadius: 20
-  safeDistance: 8
+  detectionRadius: 10
+  safeDistance: 5
   forcedEscapeDuration: 10
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!114 &1976996096636471189
