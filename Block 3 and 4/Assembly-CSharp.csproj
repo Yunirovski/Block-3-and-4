@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Script\Animal\AnimalFoodResponse.cs" />
+    <Compile Include="Assets\Script\Log\ConfirmationDialog.cs" />
     <Compile Include="Assets\Script\Ui\InventorySystemEvents.cs" />
     <Compile Include="Assets\Script\Ui\RadialInventoryUI.cs" />
     <Compile Include="Assets\Script\Inventory System\MagicWandItem.cs" />
@@ -103,9 +104,11 @@
     <Compile Include="Assets\Script\Log\PhotoPopup.cs" />
     <Compile Include="Assets\Script\SimplePanels.cs" />
     <Compile Include="Assets\Script\Animal\patrolpath.cs" />
+    <Compile Include="Assets\Script\Log\FullPageAlertPopup.cs" />
     <Compile Include="Assets\Script\Photo\PhotoCollectionManager.cs" />
     <Compile Include="Assets\Script\Inventory System\CameraItem.cs" />
     <Compile Include="Assets\Script\InventoryCycler.cs" />
+    <Compile Include="Assets\Script\Log\ReplacePhotoSelector.cs" />
     <Compile Include="Assets\Script\System\TextureScale.cs" />
     <Compile Include="Assets\Script\System\CurrencyManager.cs" />
   </ItemGroup>

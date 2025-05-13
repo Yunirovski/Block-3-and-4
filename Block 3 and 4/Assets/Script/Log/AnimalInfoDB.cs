@@ -2,23 +2,47 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 在启动时自动扫描 Resources/AnimalInfo 下的所有 ScriptableObject，
-/// 供 UI 通过 animalId → 获取 displayName / description / region 等静态数据。
+/// 动物信息数据库，存储所有动物的显示信息
 /// </summary>
-public static class AnimalInfoDB
+public class AnimalInfoDB : MonoBehaviour
 {
-    static readonly Dictionary<string, AnimalInfo> map = new();
+    [Tooltip("动物信息列表")]
+    public List<AnimalInfo> animalInfos = new List<AnimalInfo>();
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    static void Initialize()
+    // 缓存字典，提高查找性能
+    private Dictionary<string, AnimalInfo> infoCache;
+
+    private void Awake()
     {
-        foreach (var info in Resources.LoadAll<AnimalInfo>("AnimalInfo"))
+        InitializeCache();
+    }
+
+    private void InitializeCache()
+    {
+        infoCache = new Dictionary<string, AnimalInfo>();
+        foreach (var info in animalInfos)
         {
             if (!string.IsNullOrEmpty(info.animalId))
-                map[info.animalId] = info;
+            {
+                infoCache[info.animalId] = info;
+            }
         }
     }
 
-    public static AnimalInfo Lookup(string id) =>
-        id != null && map.TryGetValue(id, out var info) ? info : null;
+    /// <summary>
+    /// 获取动物信息
+    /// </summary>
+    public AnimalInfo GetAnimalInfo(string animalId)
+    {
+        if (infoCache == null)
+        {
+            InitializeCache();
+        }
+
+        if (infoCache.TryGetValue(animalId, out AnimalInfo info))
+        {
+            return info;
+        }
+        return null;
+    }
 }

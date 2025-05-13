@@ -250,6 +250,17 @@ public class CameraItem : BaseItem
             if (!added)
             {
                 resultText?.SetText($"{resultText.text}\n照片已达上限({PhotoLibrary.MaxPerAnimal})");
+
+                // 显示照片已达上限弹窗
+                var alertPrefab = Resources.Load<GameObject>("Prefabs/FullPageAlertPopup");
+                if (alertPrefab != null)
+                {
+                    var alert = Instantiate(alertPrefab).GetComponent<FullPageAlertPopup>();
+                    if (alert != null)
+                    {
+                        alert.Initialize(bestAE.animalName, path, final);
+                    }
+                }
             }
         }
     }

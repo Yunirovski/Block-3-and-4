@@ -1,40 +1,65 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using Newtonsoft.Json;
 
 /// <summary>
-/// 照片库核心数据层：负责存储和管理照片数据，提供持久化
+/// 照片库：存储所有已拍摄的照片记录
 /// </summary>
 public class PhotoLibrary : MonoBehaviour
 {
     public static PhotoLibrary Instance { get; private set; }
 
+    // 每种动物最多保存的照片数
+    public const int MaxPerAnimal = 8;
+
+    /// <summary>
+    /// 照片条目数据结构
+    /// </summary>
     [System.Serializable]
     public class PhotoEntry
     {
-        public string path;        // 照片文件路径
-        public int stars;          // 照片星级
-        public System.DateTime timestamp = System.DateTime.Now;  // 拍摄时间
+        public string path;   // 文件路径
+        public int stars;     // 星级评分
+        public long timestamp; // 拍摄时间戳
+
+        public PhotoEntry(string path, int stars)
+        {
+            this.path = path;
+            this.stars = stars;
+            this.timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        }
     }
 
-    // 每种动物最多存储的照片数
-    public const int MaxPerAnimal = 8;
-    private const string JsonFile = "photos.json";
+    /// <summary>
+    /// 照片数据
+    /// </summary>
+    [Serializable]
+    public class PhotoData
+    {
+        public Dictionary<string, List<PhotoEntry>> animalPhotos = new Dictionary<string, List<PhotoEntry>>();
+    }
 
-    // 照片数据结构：动物ID -> 照片列表
-    private Dictionary<string, List<PhotoEntry>> photoDatabase = new();
+    private PhotoData photoData = new PhotoData();
 
-    // 照片数据变化事件
-    public System.Action OnPhotoDatabaseChanged;
+    // 照片数据变更事件
+    public event Action OnPhotoDatabaseChanged;
 
-    void Awake()
+    // 数据文件路径
+    private string dataFilePath;
+
+    private void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
-            LoadDatabase();
             DontDestroyOnLoad(gameObject);
+
+            // 设置数据文件路径
+            dataFilePath = Path.Combine(Application.persistentDataPath, "photo_database.json");
+
+            // 加载数据
+            LoadData();
         }
         else
         {
@@ -43,78 +68,24 @@ public class PhotoLibrary : MonoBehaviour
     }
 
     /// <summary>
-    /// 添加新照片到库中
+    /// 获取所有动物ID列表
     /// </summary>
-    /// <param name="animalId">动物唯一ID</param>
-    /// <param name="path">照片路径</param>
-    /// <param name="stars">星级评分</param>
-    /// <returns>是否添加成功（失败表示照片达到上限）</returns>
-    public bool AddPhoto(string animalId, string path, int stars)
+    public IReadOnlyList<string> GetAnimalIds()
     {
-        if (!photoDatabase.TryGetValue(animalId, out var list))
-        {
-            list = new List<PhotoEntry>();
-            photoDatabase[animalId] = list;
-        }
-
-        if (list.Count >= MaxPerAnimal)
-            return false;  // 已达到上限
-
-        list.Add(new PhotoEntry { path = path, stars = stars });
-        SaveDatabase();
-
-        // 通知监听者数据已更改
-        OnPhotoDatabaseChanged?.Invoke();
-
-        return true;
+        return new List<string>(photoData.animalPhotos.Keys);
     }
 
     /// <summary>
-    /// 删除指定动物的指定照片
+    /// 获取指定动物的照片数量
     /// </summary>
-    public bool DeletePhoto(string animalId, int photoIndex)
+    public int GetPhotoCount(string animalName)
     {
-        if (!photoDatabase.TryGetValue(animalId, out var list) ||
-            photoIndex < 0 || photoIndex >= list.Count)
-            return false;
-
-        // 从文件系统中删除照片
-        try
+        if (photoData.animalPhotos.TryGetValue(animalName, out var photos))
         {
-            if (File.Exists(list[photoIndex].path))
-                File.Delete(list[photoIndex].path);
+            return photos.Count;
         }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"删除照片文件失败: {e.Message}");
-        }
-
-        // 从数据库中移除
-        list.RemoveAt(photoIndex);
-        SaveDatabase();
-
-        // 通知监听者数据已更改
-        OnPhotoDatabaseChanged?.Invoke();
-
-        return true;
+        return 0;
     }
-
-    /// <summary>
-    /// 获取指定动物的所有照片
-    /// </summary>
-    public IReadOnlyList<PhotoEntry> GetPhotos(string animalId) =>
-        photoDatabase.TryGetValue(animalId, out var list) ? list : new List<PhotoEntry>();
-
-    /// <summary>
-    /// 获取动物ID列表
-    /// </summary>
-    public IEnumerable<string> GetAnimalIds() => photoDatabase.Keys;
-
-    /// <summary>
-    /// 获取特定动物的照片数量
-    /// </summary>
-    public int GetPhotoCount(string animalId) =>
-        photoDatabase.TryGetValue(animalId, out var list) ? list.Count : 0;
 
     /// <summary>
     /// 获取总照片数量
@@ -122,70 +93,263 @@ public class PhotoLibrary : MonoBehaviour
     public int GetTotalPhotoCount()
     {
         int count = 0;
-        foreach (var list in photoDatabase.Values)
-            count += list.Count;
+        foreach (var photos in photoData.animalPhotos.Values)
+        {
+            count += photos.Count;
+        }
         return count;
     }
 
     /// <summary>
-    /// 加载照片数据库
+    /// 获取动物的最高星级
     /// </summary>
-    private void LoadDatabase()
+    public int GetMaxStars(string animalName)
     {
-        string path = Path.Combine(Application.persistentDataPath, JsonFile);
-        if (!File.Exists(path)) return;
+        if (!photoData.animalPhotos.TryGetValue(animalName, out var photos) || photos.Count == 0)
+        {
+            return 0;
+        }
 
+        int maxStars = 0;
+        foreach (var photo in photos)
+        {
+            maxStars = Mathf.Max(maxStars, photo.stars);
+        }
+        return maxStars;
+    }
+
+    /// <summary>
+    /// 获取指定动物的照片列表
+    /// </summary>
+    public IReadOnlyList<PhotoEntry> GetPhotos(string animalName)
+    {
+        if (photoData.animalPhotos.TryGetValue(animalName, out var photos))
+        {
+            return photos.AsReadOnly();
+        }
+        return new List<PhotoEntry>().AsReadOnly();
+    }
+
+    /// <summary>
+    /// 添加照片
+    /// </summary>
+    public bool AddPhoto(string animalName, string photoPath, int stars)
+    {
+        if (string.IsNullOrEmpty(animalName) || string.IsNullOrEmpty(photoPath))
+        {
+            Debug.LogError("PhotoLibrary: 添加照片失败，无效的动物名称或照片路径");
+            return false;
+        }
+
+        // 确保动物记录存在
+        if (!photoData.animalPhotos.ContainsKey(animalName))
+        {
+            photoData.animalPhotos[animalName] = new List<PhotoEntry>();
+        }
+
+        var photos = photoData.animalPhotos[animalName];
+
+        // 检查是否达到上限
+        if (photos.Count >= MaxPerAnimal)
+        {
+            Debug.Log($"PhotoLibrary: {animalName}的照片数量已达上限({MaxPerAnimal})");
+            return false;
+        }
+
+        // 添加新照片
+        photos.Add(new PhotoEntry(photoPath, stars));
+
+        // 保存数据
+        SaveData();
+
+        // 触发事件
+        OnPhotoDatabaseChanged?.Invoke();
+
+        return true;
+    }
+
+    /// <summary>
+    /// 删除照片
+    /// </summary>
+    public bool DeletePhoto(string animalName, int photoIndex)
+    {
+        if (!photoData.animalPhotos.TryGetValue(animalName, out var photos))
+        {
+            return false;
+        }
+
+        if (photoIndex < 0 || photoIndex >= photos.Count)
+        {
+            return false;
+        }
+
+        // 获取照片路径
+        string photoPath = photos[photoIndex].path;
+
+        // 从列表中移除
+        photos.RemoveAt(photoIndex);
+
+        // 如果照片列表为空，移除动物记录
+        if (photos.Count == 0)
+        {
+            photoData.animalPhotos.Remove(animalName);
+        }
+
+        // 尝试删除文件
         try
         {
-            string json = File.ReadAllText(path);
-            photoDatabase = JsonConvert.DeserializeObject<Dictionary<string, List<PhotoEntry>>>(json)
-                          ?? new Dictionary<string, List<PhotoEntry>>();
+            if (File.Exists(photoPath))
+            {
+                File.Delete(photoPath);
+            }
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
-            Debug.LogError($"加载照片数据库失败: {e.Message}");
-            photoDatabase = new Dictionary<string, List<PhotoEntry>>();
+            Debug.LogWarning($"PhotoLibrary: 删除照片文件失败: {e.Message}");
+        }
+
+        // 保存数据
+        SaveData();
+
+        // 触发事件
+        OnPhotoDatabaseChanged?.Invoke();
+
+        return true;
+    }
+
+    /// <summary>
+    /// 替换照片
+    /// </summary>
+    public bool ReplacePhoto(string animalName, int photoIndex, string newPhotoPath, int stars)
+    {
+        if (!photoData.animalPhotos.TryGetValue(animalName, out var photos))
+        {
+            return false;
+        }
+
+        if (photoIndex < 0 || photoIndex >= photos.Count)
+        {
+            return false;
+        }
+
+        // 获取旧照片路径
+        string oldPhotoPath = photos[photoIndex].path;
+
+        // 删除旧文件
+        try
+        {
+            if (File.Exists(oldPhotoPath))
+            {
+                File.Delete(oldPhotoPath);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"PhotoLibrary: 删除旧照片文件失败: {e.Message}");
+        }
+
+        // 替换照片数据
+        photos[photoIndex] = new PhotoEntry(newPhotoPath, stars);
+
+        // 保存数据
+        SaveData();
+
+        // 触发事件
+        OnPhotoDatabaseChanged?.Invoke();
+
+        return true;
+    }
+
+    /// <summary>
+    /// 保存数据到文件
+    /// </summary>
+    private void SaveData()
+    {
+        try
+        {
+            string json = JsonUtility.ToJson(photoData);
+            File.WriteAllText(dataFilePath, json);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"PhotoLibrary: 保存数据失败: {e.Message}");
         }
     }
 
     /// <summary>
-    /// 保存照片数据库
+    /// 从文件加载数据
     /// </summary>
-    private void SaveDatabase()
+    private void LoadData()
     {
-        string path = Path.Combine(Application.persistentDataPath, JsonFile);
         try
         {
-            string json = JsonConvert.SerializeObject(photoDatabase, Formatting.Indented);
-            File.WriteAllText(path, json);
+            if (File.Exists(dataFilePath))
+            {
+                string json = File.ReadAllText(dataFilePath);
+                photoData = JsonUtility.FromJson<PhotoData>(json);
+
+                // 验证所有照片文件是否存在
+                ValidatePhotoFiles();
+            }
+            else
+            {
+                photoData = new PhotoData();
+            }
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
-            Debug.LogError($"保存照片数据库失败: {e.Message}");
+            Debug.LogError($"PhotoLibrary: 加载数据失败: {e.Message}");
+            photoData = new PhotoData();
         }
     }
-    // PhotoLibrary.cs 末尾
-    private readonly Dictionary<string, Sprite> thumbCache = new();
 
-    public Sprite GetThumbnail(string path, int maxSize = 256)
+    /// <summary>
+    /// 验证照片文件是否存在，删除无效条目
+    /// </summary>
+    private void ValidatePhotoFiles()
     {
-        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+        bool dataChanged = false;
+        List<string> animalsToRemove = new List<string>();
 
-        if (thumbCache.TryGetValue(path, out var sp) && sp != null) return sp;
-
-        byte[] bytes = File.ReadAllBytes(path);
-        var tex = new Texture2D(2, 2);
-        if (tex.LoadImage(bytes))
+        foreach (var animalPair in photoData.animalPhotos)
         {
-            float scale = Mathf.Min(1f, maxSize / (float)Mathf.Max(tex.width, tex.height));
-            if (scale < 1f)
-                TextureScale.Bilinear(tex, Mathf.RoundToInt(tex.width * scale), Mathf.RoundToInt(tex.height * scale));
+            string animalName = animalPair.Key;
+            List<PhotoEntry> photos = animalPair.Value;
 
-            sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-            thumbCache[path] = sp;
-            return sp;
+            List<int> indexesToRemove = new List<int>();
+            for (int i = 0; i < photos.Count; i++)
+            {
+                if (!File.Exists(photos[i].path))
+                {
+                    indexesToRemove.Add(i);
+                    dataChanged = true;
+                }
+            }
+
+            // 从后向前删除
+            for (int i = indexesToRemove.Count - 1; i >= 0; i--)
+            {
+                photos.RemoveAt(indexesToRemove[i]);
+            }
+
+            // 如果动物没有照片了，标记为删除
+            if (photos.Count == 0)
+            {
+                animalsToRemove.Add(animalName);
+                dataChanged = true;
+            }
         }
-        return null;
-    }
 
+        // 删除没有照片的动物
+        foreach (string animalName in animalsToRemove)
+        {
+            photoData.animalPhotos.Remove(animalName);
+        }
+
+        // 如果数据有变化，保存
+        if (dataChanged)
+        {
+            SaveData();
+        }
+    }
 }

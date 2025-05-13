@@ -1,16 +1,21 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/AnimalInfo")]
-public class AnimalInfo : ScriptableObject
+/// <summary>
+/// 存储动物的显示信息
+/// </summary>
+[System.Serializable]
+public class AnimalInfo
 {
-    [Tooltip("必须与 AnimalEvent.animalName 完全一致")]
+    [Tooltip("动物唯一ID (与AnimalEvent中的animalName匹配)")]
     public string animalId;
 
-    public Region region = Region.Polar;
+    [Tooltip("显示名称")]
+    public string displayName;
 
-    public string displayName = "???";
-    [TextArea(3, 8)]
+    [Tooltip("区域 (polar/savanna/jungle/tutorial)")]
+    public string region;
+
+    [TextArea(3, 10)]
+    [Tooltip("动物描述")]
     public string description;
 }
-
-public enum Region { Tutorial, Polar, Savanna, Jungle }
