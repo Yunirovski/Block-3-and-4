@@ -164,4 +164,28 @@ public class PhotoLibrary : MonoBehaviour
             Debug.LogError($"±£´æÕÕÆ¬Êý¾Ý¿âÊ§°Ü: {e.Message}");
         }
     }
+    // PhotoLibrary.cs Ä©Î²
+    private readonly Dictionary<string, Sprite> thumbCache = new();
+
+    public Sprite GetThumbnail(string path, int maxSize = 256)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+
+        if (thumbCache.TryGetValue(path, out var sp) && sp != null) return sp;
+
+        byte[] bytes = File.ReadAllBytes(path);
+        var tex = new Texture2D(2, 2);
+        if (tex.LoadImage(bytes))
+        {
+            float scale = Mathf.Min(1f, maxSize / (float)Mathf.Max(tex.width, tex.height));
+            if (scale < 1f)
+                TextureScale.Bilinear(tex, Mathf.RoundToInt(tex.width * scale), Mathf.RoundToInt(tex.height * scale));
+
+            sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            thumbCache[path] = sp;
+            return sp;
+        }
+        return null;
+    }
+
 }
