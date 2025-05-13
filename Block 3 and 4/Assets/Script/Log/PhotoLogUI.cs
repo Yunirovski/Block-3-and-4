@@ -5,26 +5,26 @@ using TMPro;
 
 public class PhotoLogUI : MonoBehaviour
 {
-    /* --------- Inspector 绑定 --------- */
+    /* ---------- Inspector 绑定 ---------- */
 
     [Header("Animal List")]
-    [SerializeField] Transform animalButtonParent;    // ScrollView/Content
-    [SerializeField] GameObject animalButtonPrefab;   // Button 预制体
+    [SerializeField] Transform animalButtonParent;       // ScrollView/Content
+    [SerializeField] GameObject animalButtonPrefab;      // Button 预制体
 
     [Header("Info & Thumbs")]
     [SerializeField] TMP_Text nameText;
     [SerializeField] TMP_Text descText;
-    [SerializeField] Image[] thumbSlots;              // 8 个 Image+Button，顺序随意
+    [SerializeField] Image[] thumbSlots;                 // 8 个 Image+Button
 
     [Header("Popup")]
-    [SerializeField] PhotoPopup popupPrefab;          // 下方第二份脚本生成的 prefab
-    [SerializeField] Transform popupRoot;             // 建议在 LogCanvas 下空物体
+    [SerializeField] PhotoPopup popupPrefab;
+    [SerializeField] Transform popupRoot;
 
-    /* --------- 运行时 --------- */
+    /* ---------- 运行时 ---------- */
 
     string currentAnimalId;
 
-    /* ==================== 生命周期 ==================== */
+    /* ================= 生命周期 ================= */
 
     void OnEnable()
     {
@@ -37,31 +37,42 @@ public class PhotoLogUI : MonoBehaviour
         PhotoLibrary.Instance.OnPhotoDatabaseChanged -= RefreshCurrentAnimal;
     }
 
-    /* ================== 构建左侧动物按钮 ================== */
+    /* ================= 左侧动物列表 ================= */
 
     void BuildAnimalList()
     {
-        foreach (Transform c in animalButtonParent)
-            Destroy(c.gameObject);
+        foreach (Transform c in animalButtonParent) Destroy(c.gameObject);
 
         foreach (string id in PhotoLibrary.Instance.GetAnimalIds())
         {
-            GameObject btnGO = Instantiate(animalButtonPrefab, animalButtonParent);
-            btnGO.GetComponentInChildren<TMP_Text>().text = GetDisplayName(id);
+            GameObject go = Instantiate(animalButtonPrefab, animalButtonParent);
 
-            btnGO.GetComponent<Button>().onClick.AddListener(() =>
+            // -------- Button 组件：根或子物体均可 --------
+            Button uiButton = go.GetComponent<Button>() ?? go.GetComponentInChildren<Button>();
+            if (uiButton == null)
+            {
+                Debug.LogError($"AnimalButton prefab 缺少 Button 组件: {animalButtonPrefab.name}");
+                continue;
+            }
+
+            // -------- 设置文本 --------
+            TMP_Text txt = go.GetComponentInChildren<TMP_Text>(true);
+            if (txt != null) txt.text = GetDisplayName(id);
+
+            // -------- 绑定点击 --------
+            uiButton.onClick.AddListener(() =>
             {
                 currentAnimalId = id;
                 RefreshAnimal(id);
             });
         }
 
-        // 自动点击第一个（如果有）
+        // 自动选第一个
         if (animalButtonParent.childCount > 0)
             animalButtonParent.GetChild(0).GetComponent<Button>().onClick.Invoke();
     }
 
-    /* ================== 刷新右侧缩略图 ================== */
+    /* ================= 右侧照片格子 ================= */
 
     void RefreshCurrentAnimal()
     {
@@ -71,62 +82,55 @@ public class PhotoLogUI : MonoBehaviour
 
     void RefreshAnimal(string animalId)
     {
-        IReadOnlyList<PhotoLibrary.PhotoEntry> photos =
+        IReadOnlyList<PhotoLibrary.PhotoEntry> list =
             PhotoLibrary.Instance.GetPhotos(animalId);
 
-        // 填缩略图
         for (int i = 0; i < thumbSlots.Length; i++)
         {
             Image img = thumbSlots[i];
 
-            if (i < photos.Count)
+            if (i < list.Count)
             {
-                var entry = photos[i];
+                var entry = list[i];
                 img.sprite = PhotoLibrary.Instance.GetThumbnail(entry.path);
                 img.color = Color.white;
 
-                int localIdx = i;   // lambda 捕获
+                int localIndex = i;   // lambda 捕获
                 img.GetComponent<Button>().onClick.RemoveAllListeners();
                 img.GetComponent<Button>().onClick.AddListener(() =>
                 {
-                    ShowPopup(animalId, localIdx, entry.path);
+                    ShowPopup(animalId, localIndex, entry.path);
                 });
             }
             else
             {
                 img.sprite = null;
-                img.color = new Color(1, 1, 1, 0);   // 透明隐藏
+                img.color = new Color(1, 1, 1, 0);
                 img.GetComponent<Button>().onClick.RemoveAllListeners();
             }
         }
 
-        // 名称 / 描述
         nameText.text = GetDisplayName(animalId);
         descText.text = GetDescription(animalId);
     }
 
-    /* ================== 弹出窗口 ================== */
+    /* ================= 弹窗 ================= */
 
     void ShowPopup(string animalId, int photoIdx, string path)
     {
         PhotoPopup pop = Instantiate(popupPrefab, popupRoot);
         pop.Init(path,
-            onDelete: () =>
-            {
-                PhotoCollectionManager.Instance.DeletePhoto(animalId, photoIdx);
-            },
+            onDelete: () => PhotoCollectionManager.Instance.DeletePhoto(animalId, photoIdx),
             onSave: () =>
             {
-                string dir = System.IO.Path.Combine(
-                    Application.persistentDataPath, "saved_photos");
+                string dir = System.IO.Path.Combine(Application.persistentDataPath, "saved_photos");
                 System.IO.Directory.CreateDirectory(dir);
-                string dst = System.IO.Path.Combine(
-                    dir, System.IO.Path.GetFileName(path));
+                string dst = System.IO.Path.Combine(dir, System.IO.Path.GetFileName(path));
                 System.IO.File.Copy(path, dst, overwrite: true);
             });
     }
 
-    /* ================== 工具 ================== */
+    /* ================= 工具 ================= */
 
     string GetDisplayName(string id)
     {
