@@ -14,6 +14,7 @@ public class AnimalInfoDB : MonoBehaviour
 
     private void Awake()
     {
+        DontDestroyOnLoad(gameObject);
         InitializeCache();
     }
 

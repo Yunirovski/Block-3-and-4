@@ -1,5 +1,4 @@
-﻿// Assets/Scripts/Log/LogController.cs
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -28,14 +27,13 @@ public class LogController : MonoBehaviour
 
     [Header("Pause Targets")]
     [Tooltip("日志打开时要临时禁用的脚本（玩家移动、道具系统等）")]
-    public List<Behaviour> scriptsToDisable = new();
+    public List<Behaviour> scriptsToDisable = new List<Behaviour>();
 
     // ────────── 内部状态 ──────────
     int currentTab = 0;          // 0-3
     bool isLogOpen = false;
     float cachedTimeScale = 1f;  // 记住打开前的 Time.timeScale
 
-    // 修改LogController.cs的Start方法，确保设置正确的regionKey
     void Start()
     {
         if (logCanvas != null) logCanvas.enabled = false;
@@ -75,10 +73,7 @@ public class LogController : MonoBehaviour
 
         isLogOpen = true;
         logCanvas.enabled = true;
-        ShowTab(currentTab);
-
-        // — 刷新当前页面的照片显示 —
-        RefreshCurrentTab();
+        ShowTab(currentTab);  // 使用当前标签索引
 
         // — 暂停时间 —
         cachedTimeScale = Time.timeScale;
@@ -112,17 +107,41 @@ public class LogController : MonoBehaviour
             if (b != null) b.enabled = true;
     }
 
+    /// <summary>
+    /// 切换到指定标签页
+    /// </summary>
     public void ShowTab(int idx)
     {
         currentTab = Mathf.Clamp(idx, 0, 3);
 
-        if (tutorialTab) tutorialTab.SetActive(idx == 0);
-        if (polarTab) polarTab.SetActive(idx == 1);
-        if (savannaTab) savannaTab.SetActive(idx == 2);
-        if (jungleTab) jungleTab.SetActive(idx == 3);
+        // 首先禁用所有标签页
+        if (tutorialTab) tutorialTab.SetActive(false);
+        if (polarTab) polarTab.SetActive(false);
+        if (savannaTab) savannaTab.SetActive(false);
+        if (jungleTab) jungleTab.SetActive(false);
+
+        // 然后只激活当前标签页
+        switch (currentTab)
+        {
+            case 0:
+                if (tutorialTab) tutorialTab.SetActive(true);
+                break;
+            case 1:
+                if (polarTab) polarTab.SetActive(true);
+                break;
+            case 2:
+                if (savannaTab) savannaTab.SetActive(true);
+                break;
+            case 3:
+                if (jungleTab) jungleTab.SetActive(true);
+                break;
+        }
 
         // 刷新当前页面的照片显示
         RefreshCurrentTab();
+
+        // 调试日志
+        Debug.Log($"日志标签切换为: {currentTab}");
     }
 
     /// <summary>
@@ -130,20 +149,27 @@ public class LogController : MonoBehaviour
     /// </summary>
     private void RefreshCurrentTab()
     {
+        PhotoLogUI currentLogUI = null;
+
         switch (currentTab)
         {
             case 0:
-                if (tutorialLogUI != null) tutorialLogUI.RefreshDisplay();
+                currentLogUI = tutorialLogUI;
                 break;
             case 1:
-                if (polarLogUI != null) polarLogUI.RefreshDisplay();
+                currentLogUI = polarLogUI;
                 break;
             case 2:
-                if (savannaLogUI != null) savannaLogUI.RefreshDisplay();
+                currentLogUI = savannaLogUI;
                 break;
             case 3:
-                if (jungleLogUI != null) jungleLogUI.RefreshDisplay();
+                currentLogUI = jungleLogUI;
                 break;
+        }
+
+        if (currentLogUI != null && currentLogUI.gameObject.activeInHierarchy)
+        {
+            currentLogUI.RefreshDisplay();
         }
     }
 }

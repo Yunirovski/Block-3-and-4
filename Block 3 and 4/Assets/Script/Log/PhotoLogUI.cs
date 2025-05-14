@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Linq;  // 添加这一行引用
+using System.Linq;
 
 /// <summary>
 /// 负责在日志(Journal)中展示动物照片。
@@ -77,7 +77,20 @@ public class PhotoLogUI : MonoBehaviour
     private void OnEnable()
     {
         // 页面激活时刷新显示
+        Debug.Log($"PhotoLogUI.OnEnable: {regionKey}");
         RefreshDisplay();
+
+        // 重置当前选择的动物为第一个可用的
+        if (displayedAnimals.Count > 0)
+        {
+            currentSelectedAnimal = displayedAnimals[0];
+            SelectAnimal(currentSelectedAnimal);
+        }
+        else
+        {
+            currentSelectedAnimal = "";
+            UpdatePageIndicator("");
+        }
     }
 
     /// <summary>
@@ -101,6 +114,7 @@ public class PhotoLogUI : MonoBehaviour
             currentPages[currentSelectedAnimal] = (currentPage - 1 + totalPages) % totalPages;
 
         UpdateAnimalEntry(currentSelectedAnimal);
+        Debug.Log($"页面切换: {currentSelectedAnimal}, 页码: {currentPages[currentSelectedAnimal] + 1}/{totalPages}");
     }
 
     /// <summary>
@@ -110,7 +124,7 @@ public class PhotoLogUI : MonoBehaviour
     {
         if (pageIndicatorText == null) return;
 
-        if (!PhotoLibrary.Instance.GetAnimalIds().Contains(animalId))
+        if (string.IsNullOrEmpty(animalId) || !PhotoLibrary.Instance.GetAnimalIds().Contains(animalId))
         {
             pageIndicatorText.text = "无照片";
 
@@ -143,9 +157,19 @@ public class PhotoLogUI : MonoBehaviour
     public void RefreshDisplay()
     {
         // 只有当游戏对象激活时才刷新
-        if (!gameObject.activeInHierarchy) return;
+        if (!gameObject.activeInHierarchy)
+        {
+            Debug.Log($"PhotoLogUI.RefreshDisplay: {regionKey} - 未激活，跳过刷新");
+            return;
+        }
 
-        if (PhotoLibrary.Instance == null) return;
+        if (PhotoLibrary.Instance == null)
+        {
+            Debug.LogWarning("PhotoLibrary.Instance为空，可能尚未初始化");
+            return;
+        }
+
+        Debug.Log($"刷新显示: {regionKey} - 开始");
 
         // 获取属于此区域的所有动物ID
         List<string> regionAnimals = new List<string>();
@@ -205,6 +229,15 @@ public class PhotoLogUI : MonoBehaviour
         {
             pageIndicatorText.text = "无照片";
         }
+
+        // 如果有动物但没有选中，选择第一个
+        if (displayedAnimals.Count > 0 && string.IsNullOrEmpty(currentSelectedAnimal))
+        {
+            currentSelectedAnimal = displayedAnimals[0];
+            SelectAnimal(currentSelectedAnimal);
+        }
+
+        Debug.Log($"刷新显示: {regionKey} - 完成，显示 {displayedAnimals.Count} 个动物");
     }
 
     /// <summary>
@@ -243,9 +276,19 @@ public class PhotoLogUI : MonoBehaviour
     /// </summary>
     private void CreateAnimalEntry(string animalId)
     {
-        if (animalEntryPrefab == null || contentParent == null) return;
+        if (animalEntryPrefab == null || contentParent == null)
+        {
+            Debug.LogError($"预制体或父容器为空: animalEntryPrefab={animalEntryPrefab}, contentParent={contentParent}");
+            return;
+        }
 
         GameObject entryObj = Instantiate(animalEntryPrefab, contentParent);
+        if (entryObj == null)
+        {
+            Debug.LogError("无法实例化动物条目预制体");
+            return;
+        }
+
         entryObj.name = "Entry_" + animalId;
 
         // 设置动物名称
@@ -313,6 +356,8 @@ public class PhotoLogUI : MonoBehaviour
 
         // 加载照片
         UpdateAnimalEntry(animalId);
+
+        Debug.Log($"创建动物条目: {animalId}");
     }
 
     /// <summary>
@@ -320,6 +365,12 @@ public class PhotoLogUI : MonoBehaviour
     /// </summary>
     private void SelectAnimal(string animalId)
     {
+        if (string.IsNullOrEmpty(animalId))
+        {
+            Debug.LogWarning("尝试选择空的动物ID");
+            return;
+        }
+
         currentSelectedAnimal = animalId;
         UpdatePageIndicator(animalId);
 
@@ -334,6 +385,8 @@ public class PhotoLogUI : MonoBehaviour
                     : new Color(0.2f, 0.2f, 0.2f, 0.5f);
             }
         }
+
+        Debug.Log($"选择动物: {animalId}");
     }
 
     /// <summary>
@@ -379,10 +432,29 @@ public class PhotoLogUI : MonoBehaviour
             // 添加锁定图标
             GameObject lockIcon = new GameObject("LockIcon");
             lockIcon.transform.SetParent(photoContainer, false);
+
+            // 添加RectTransform
+            RectTransform lockRect = lockIcon.AddComponent<RectTransform>();
+            lockRect.anchorMin = new Vector2(0.5f, 0.5f);
+            lockRect.anchorMax = new Vector2(0.5f, 0.5f);
+            lockRect.sizeDelta = new Vector2(64, 64);
+            lockRect.anchoredPosition = Vector2.zero;
+
+            // 添加图像
             Image lockImage = lockIcon.AddComponent<Image>();
-            lockImage.sprite = Resources.Load<Sprite>("UI/lock_icon");
-            lockImage.rectTransform.sizeDelta = new Vector2(64, 64);
-            lockImage.rectTransform.anchoredPosition = Vector2.zero;
+
+            // 尝试加载锁图标
+            Sprite lockSprite = Resources.Load<Sprite>("UI/lock_icon");
+            if (lockSprite != null)
+            {
+                lockImage.sprite = lockSprite;
+            }
+            else
+            {
+                // 如果没有找到图标，使用默认颜色
+                lockImage.color = new Color(0.8f, 0.2f, 0.2f, 0.7f);
+                Debug.LogWarning("无法加载锁图标，使用默认红色");
+            }
         }
 
         // 隐藏星级
@@ -402,6 +474,8 @@ public class PhotoLogUI : MonoBehaviour
         // 添加到字典和列表
         animalEntries[animalId] = entryObj;
         displayedAnimals.Add(animalId);
+
+        Debug.Log($"创建未解锁动物条目: {animalId}");
     }
 
     /// <summary>
@@ -431,7 +505,11 @@ public class PhotoLogUI : MonoBehaviour
     /// </summary>
     private void UpdateAnimalEntry(string animalId)
     {
-        if (!animalEntries.TryGetValue(animalId, out GameObject entryObj)) return;
+        if (!animalEntries.TryGetValue(animalId, out GameObject entryObj))
+        {
+            Debug.LogWarning($"找不到动物条目: {animalId}");
+            return;
+        }
 
         // 获取照片列表
         var allPhotos = PhotoLibrary.Instance.GetPhotos(animalId);
@@ -525,6 +603,8 @@ public class PhotoLogUI : MonoBehaviour
     /// </summary>
     private void SetStarsVisibility(Transform starsParent, int count)
     {
+        if (starsParent == null) return;
+
         for (int i = 0; i < starsParent.childCount; i++)
         {
             Transform star = starsParent.GetChild(i);
@@ -550,8 +630,17 @@ public class PhotoLogUI : MonoBehaviour
             if (animalId == currentSelectedAnimal)
             {
                 currentSelectedAnimal = displayedAnimals.Count > 0 ? displayedAnimals[0] : "";
-                UpdatePageIndicator(currentSelectedAnimal);
+                if (!string.IsNullOrEmpty(currentSelectedAnimal))
+                {
+                    SelectAnimal(currentSelectedAnimal);
+                }
+                else
+                {
+                    UpdatePageIndicator("");
+                }
             }
+
+            Debug.Log($"移除动物条目: {animalId}");
         }
     }
 
@@ -560,10 +649,21 @@ public class PhotoLogUI : MonoBehaviour
     /// </summary>
     private void ShowPhotoPopup(string animalId, int photoIndex)
     {
-        if (photoPopupPrefab == null) return;
+        if (photoPopupPrefab == null)
+        {
+            Debug.LogError("照片弹窗预制体为空");
+            return;
+        }
 
         PhotoPopup popup = Instantiate(photoPopupPrefab);
+        if (popup == null)
+        {
+            Debug.LogError("无法实例化照片弹窗");
+            return;
+        }
+
         popup.Initialize(animalId, photoIndex, animalInfoDB);
+        Debug.Log($"显示照片弹窗: {animalId}, 索引: {photoIndex}");
     }
 
     /// <summary>
@@ -596,7 +696,17 @@ public class PhotoLogUI : MonoBehaviour
     /// </summary>
     private IEnumerator LoadThumbnail(string path, Image targetImage)
     {
-        if (string.IsNullOrEmpty(path) || targetImage == null) yield break;
+        if (string.IsNullOrEmpty(path))
+        {
+            Debug.LogWarning("照片路径为空");
+            yield break;
+        }
+
+        if (targetImage == null)
+        {
+            Debug.LogWarning("目标图像组件为空");
+            yield break;
+        }
 
         // 重置图像
         targetImage.sprite = null;
@@ -613,7 +723,7 @@ public class PhotoLogUI : MonoBehaviour
 
             if (request.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"加载照片缩略图失败: {request.error}");
+                Debug.LogError($"加载照片缩略图失败: {request.error}, 路径: {path}");
                 targetImage.color = new Color(0.8f, 0.2f, 0.2f, 0.5f); // 显示错误颜色
                 yield break;
             }
@@ -622,19 +732,27 @@ public class PhotoLogUI : MonoBehaviour
             Texture2D texture = ((UnityEngine.Networking.DownloadHandlerTexture)request.downloadHandler).texture;
             if (texture != null)
             {
-                // 缩小纹理以提升性能
-                int thumbnailSize = 256;
-                TextureScale.Bilinear(texture, thumbnailSize, thumbnailSize);
+                try
+                {
+                    // 缩小纹理以提升性能
+                    int thumbnailSize = 256;
+                    TextureScale.Bilinear(texture, thumbnailSize, thumbnailSize);
 
-                Sprite sprite = Sprite.Create(
-                    texture,
-                    new Rect(0, 0, texture.width, texture.height),
-                    Vector2.one * 0.5f
-                );
+                    Sprite sprite = Sprite.Create(
+                        texture,
+                        new Rect(0, 0, texture.width, texture.height),
+                        Vector2.one * 0.5f
+                    );
 
-                // 设置图像
-                targetImage.sprite = sprite;
-                targetImage.preserveAspect = true;
+                    // 设置图像
+                    targetImage.sprite = sprite;
+                    targetImage.preserveAspect = true;
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"处理纹理失败: {e.Message}");
+                    targetImage.color = new Color(0.9f, 0.6f, 0.2f, 0.5f); // 黄色警告
+                }
             }
         }
     }

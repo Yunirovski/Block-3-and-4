@@ -647,6 +647,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   photoGrid: {fileID: 6996290705149793093}
-  photoItemPrefab: {fileID: 0}
+  photoItemPrefab: {fileID: 5791384557945621649, guid: b2a375cd18907514fbdc64388339e1a8, type: 3}
   titleText: {fileID: 8751041021433555928}
   cancelButton: {fileID: 5161397888670595077}
