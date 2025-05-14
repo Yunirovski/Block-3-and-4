@@ -31,6 +31,11 @@ public class InventorySystem : MonoBehaviour
     int pendingIndex;
     bool ringOpen;
 
+    // 添加缓存字段
+    private bool[] _cachedUnlockArray = null;
+    private float _lastUnlockArrayUpdateTime = 0f;
+    private float _unlockArrayUpdateInterval = 1f; // 每秒更新一次
+
     void Start()
     {
         Debug.Log("InventorySystem: Start被调用");
@@ -265,16 +270,21 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    // 修改解锁布尔数组方法，添加额外的安全检查
+    // 修改解锁布尔数组方法，减少调用频率
     bool[] BuildUnlockArray()
     {
-        // 默认解锁状态，如果找不到ProgressionManager则使用此状态
+        // 如果缓存存在且未过期，直接返回缓存
+        if (_cachedUnlockArray != null && Time.time - _lastUnlockArrayUpdateTime < _unlockArrayUpdateInterval)
+        {
+            return _cachedUnlockArray;
+        }
+
+        // 以下是原来的代码，获取解锁状态
         bool hasGrapple = false;
         bool hasSkateboard = false;
         bool hasDartGun = false;
         bool hasMagicWand = false;
 
-        // 尝试从ProgressionManager获取解锁状态
         var pm = FindProgressionManager();
         if (pm != null)
         {
@@ -283,25 +293,30 @@ public class InventorySystem : MonoBehaviour
             hasDartGun = pm.HasDartGun;
             hasMagicWand = pm.HasMagicWand;
 
-            Debug.Log($"InventorySystem: 从ProgressionManager获取解锁状态 - 抓钩:{hasGrapple}, 滑板:{hasSkateboard}, 麻醉枪:{hasDartGun}, 魔法棒:{hasMagicWand}");
+            // 只在状态变化或缓存刷新时输出日志
+            if (_cachedUnlockArray == null ||
+                _cachedUnlockArray[2] != hasGrapple ||
+                _cachedUnlockArray[3] != hasSkateboard ||
+                _cachedUnlockArray[4] != hasDartGun ||
+                _cachedUnlockArray[5] != hasMagicWand)
+            {
+                Debug.Log($"InventorySystem: 从ProgressionManager获取解锁状态 - 抓钩:{hasGrapple}, 滑板:{hasSkateboard}, 麻醉枪:{hasDartGun}, 魔法棒:{hasMagicWand}");
+            }
         }
         else
         {
-            Debug.LogWarning("InventorySystem: 无法获取ProgressionManager，尝试从PlayerPrefs加载解锁状态");
-
-            // 如果找不到ProgressionManager，尝试从PlayerPrefs读取保存的状态
+            // 如果找不到ProgressionManager，尝试从PlayerPrefs读取
             if (PlayerPrefs.HasKey("HasGrapple"))
             {
                 hasGrapple = PlayerPrefs.GetInt("HasGrapple") == 1;
                 hasSkateboard = PlayerPrefs.GetInt("HasSkateboard") == 1;
                 hasDartGun = PlayerPrefs.GetInt("HasDartGun") == 1;
                 hasMagicWand = PlayerPrefs.GetInt("HasMagicWand") == 1;
-
-                Debug.Log($"InventorySystem: 从PlayerPrefs恢复解锁状态 - 抓钩:{hasGrapple}, 滑板:{hasSkateboard}, 麻醉枪:{hasDartGun}, 魔法棒:{hasMagicWand}");
             }
         }
 
-        return new[]
+        // 创建新的数组
+        _cachedUnlockArray = new[]
         {
             true,              // 0 相机
             true,              // 1 食物
@@ -310,6 +325,11 @@ public class InventorySystem : MonoBehaviour
             hasDartGun,        // 4 麻醉枪
             hasMagicWand       // 5 魔法棒
         };
+
+        // 更新上次刷新时间
+        _lastUnlockArrayUpdateTime = Time.time;
+
+        return _cachedUnlockArray;
     }
 
     // 添加一个安全的方法来获取ProgressionManager实例
