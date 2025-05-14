@@ -65,14 +65,61 @@ public class ProgressionManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
-        else { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Debug.Log($"ProgressionManager: 发现重复实例，禁用此组件 {gameObject.name}");
+            this.enabled = false;
+            return;
+        }
 
-        // 手动解锁
-        if (ManualUnlockGrapple && !HasGrapple) UnlockGrapple();
-        if (ManualUnlockSkateboard && !HasSkateboard) UnlockSkateboard();
-        if (ManualUnlockDartGun && !HasDartGun) UnlockDartGun();
-        if (ManualUnlockMagicWand && !HasMagicWand) UnlockMagicWand();
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+        Debug.Log("ProgressionManager: 单例实例已初始化");
+    }
+
+    private void Start()
+    {
+        Debug.Log("ProgressionManager: Start被调用，准备进行手动解锁检查");
+        // 延迟进行手动解锁，确保其他系统已初始化
+        Invoke("CheckManualUnlock", 0.5f);
+    }
+
+    private void CheckManualUnlock()
+    {
+        Debug.Log("ProgressionManager: 开始检查手动解锁标志");
+
+        // 手动解锁逻辑移到这里，确保所有相关系统已初始化
+        if (ManualUnlockGrapple)
+        {
+            Debug.Log("ProgressionManager: 检测到抓钩手动解锁标志为true");
+            if (!HasGrapple) UnlockGrapple();
+        }
+
+        if (ManualUnlockSkateboard)
+        {
+            Debug.Log("ProgressionManager: 检测到滑板手动解锁标志为true");
+            if (!HasSkateboard) UnlockSkateboard();
+        }
+
+        if (ManualUnlockDartGun)
+        {
+            Debug.Log("ProgressionManager: 检测到麻醉枪手动解锁标志为true");
+            if (!HasDartGun) UnlockDartGun();
+        }
+
+        if (ManualUnlockMagicWand)
+        {
+            Debug.Log("ProgressionManager: 检测到魔法棒手动解锁标志为true");
+            if (!HasMagicWand) UnlockMagicWand();
+        }
+
+        // 检查道具项是否有效，如果无效则输出错误日志
+        if (ManualUnlockGrapple && grappleItem == null) Debug.LogError("无法解锁抓钩: grappleItem为null");
+        if (ManualUnlockSkateboard && skateboardItem == null) Debug.LogError("无法解锁滑板: skateboardItem为null");
+        if (ManualUnlockDartGun && dartGunItem == null) Debug.LogError("无法解锁麻醉枪: dartGunItem为null");
+        if (ManualUnlockMagicWand && magicWandItem == null) Debug.LogError("无法解锁魔法棒: magicWandItem为null");
+
+        Debug.Log("ProgressionManager: 手动解锁检查完成");
     }
 
     /// <summary>
@@ -138,35 +185,74 @@ public class ProgressionManager : MonoBehaviour
 
     void UnlockGrapple()
     {
+        if (grappleItem == null)
+        {
+            Debug.LogError("无法解锁抓钩: grappleItem为null");
+            return;
+        }
+
         HasGrapple = true;
         InventoryCycler.RegisterItem(grappleItem);
         ShowPopup($"已收集 {grappleStarsNeeded} ★，解锁抓钩！按 I 装备");
+        Debug.Log("解锁抓钩成功!");
     }
 
     void UnlockSkateboard()
     {
+        if (skateboardItem == null)
+        {
+            Debug.LogError("无法解锁滑板: skateboardItem为null");
+            return;
+        }
+
         HasSkateboard = true;
         InventoryCycler.RegisterItem(skateboardItem);
         ShowPopup($"已收集 {skateboardStarsNeeded} ★，解锁滑板！按 I 装备");
+        Debug.Log("解锁滑板成功!");
     }
 
     void UnlockDartGun()
     {
+        if (dartGunItem == null)
+        {
+            Debug.LogError("无法解锁麻醉枪: dartGunItem为null");
+            return;
+        }
+
         HasDartGun = true;
         InventoryCycler.RegisterItem(dartGunItem);
         ShowPopup($"已收集 {dartGunStarsNeeded} ★，解锁麻醉枪！按 I 装备");
+        Debug.Log("解锁麻醉枪成功!");
     }
 
     void UnlockMagicWand()
     {
+        if (magicWandItem == null)
+        {
+            Debug.LogError("无法解锁魔法棒: magicWandItem为null");
+            return;
+        }
+
         HasMagicWand = true;
         InventoryCycler.RegisterItem(magicWandItem);
         ShowPopup($"已收集 {magicWandStarsNeeded} ★，魔法棒已解锁！按 I 装备");
+        Debug.Log("解锁魔法棒成功!");
     }
 
     void ShowPopup(string msg)
     {
         if (popupPrefab == null) Debug.Log(msg);
         else Instantiate(popupPrefab).Show(msg);
+    }
+
+    private void OnDisable()
+    {
+        // 只有在组件被禁用且为当前实例时，清除静态引用
+        if (Instance == this && !this.enabled)
+        {
+            Debug.Log("ProgressionManager: 单例实例被禁用");
+            // 不清除静态引用，保持实例
+            // Instance = null; 
+        }
     }
 }

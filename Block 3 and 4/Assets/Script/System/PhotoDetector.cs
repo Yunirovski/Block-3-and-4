@@ -21,7 +21,21 @@ public class PhotoDetector : MonoBehaviour
     public int multiTargetPenalty = 1;                  // 每多 1 只 −1★
 
     public static PhotoDetector Instance { get; private set; }
-    void Awake() { if (Instance == null) Instance = this; else Destroy(gameObject); }
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Debug.Log($"PhotoDetector: 发现重复实例，禁用此组件 {gameObject.name}");
+            // 不销毁游戏对象，只禁用组件
+            this.enabled = false;
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+        Debug.Log("PhotoDetector: 单例实例已初始化");
+    }
 
     /* ===================================================================== */
     /*              主评分：给单只动物打分（0-4★）                           */
@@ -95,5 +109,16 @@ public class PhotoDetector : MonoBehaviour
         foreach (var p in vis) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
         Rect r = new(min, max - min);
         return r.width * r.height / (Screen.width * Screen.height);
+    }
+
+    private void OnDisable()
+    {
+        // 只有在组件被禁用且为当前实例时，清除静态引用
+        if (Instance == this && !this.enabled)
+        {
+            Debug.Log("PhotoDetector: 单例实例被禁用");
+            // 不清除静态引用，保持实例
+            // Instance = null; 
+        }
     }
 }
