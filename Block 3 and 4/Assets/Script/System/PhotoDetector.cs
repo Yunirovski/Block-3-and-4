@@ -6,6 +6,27 @@ public struct PhotoResult { public int stars; }
 
 public class PhotoDetector : MonoBehaviour
 {
+    private static PhotoDetector _instance;
+
+    public static PhotoDetector Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindObjectOfType<PhotoDetector>();
+
+                if (_instance == null)
+                {
+                    GameObject go = new GameObject("PhotoDetector");
+                    _instance = go.AddComponent<PhotoDetector>();
+                    Debug.Log("PhotoDetector: 自动创建实例");
+                }
+            }
+            return _instance;
+        }
+    }
+
     /* ─── Inspector ─── */
     [Header("Size score (屏幕面积百分比)")]
     [Range(0, 1)] public float minSizePct = 0.15f;  // ≤ 给 0/1★
@@ -20,11 +41,11 @@ public class PhotoDetector : MonoBehaviour
     [Header("Multi-target penalty (由 CameraItem 使用)")]
     public int multiTargetPenalty = 1;                  // 每多 1 只 −1★
 
-    public static PhotoDetector Instance { get; private set; }
-
     void Awake()
     {
-        if (Instance != null && Instance != this)
+        Debug.Log($"PhotoDetector: Awake被调用 - {gameObject.name}");
+
+        if (_instance != null && _instance != this)
         {
             Debug.Log($"PhotoDetector: 发现重复实例，禁用此组件 {gameObject.name}");
             // 不销毁游戏对象，只禁用组件
@@ -32,7 +53,7 @@ public class PhotoDetector : MonoBehaviour
             return;
         }
 
-        Instance = this;
+        _instance = this;
         DontDestroyOnLoad(gameObject);
         Debug.Log("PhotoDetector: 单例实例已初始化");
     }
@@ -42,51 +63,59 @@ public class PhotoDetector : MonoBehaviour
     /* ===================================================================== */
     public int ScoreSingle(Camera cam, Bounds b)
     {
-        // —— 投影 8 角，仅保留 z>0 —— //
-        List<Vector3> vis = new();
-        for (int i = 0; i < 8; i++)
+        try
         {
-            Vector3 sign = new(((i & 1) == 0 ? -1 : 1),
-                               ((i & 2) == 0 ? -1 : 1),
-                               ((i & 4) == 0 ? -1 : 1));
-            Vector3 sp = cam.WorldToScreenPoint(b.center + Vector3.Scale(b.extents, sign));
-            if (sp.z > 0) vis.Add(sp);
+            // —— 投影 8 角，仅保留 z>0 —— //
+            List<Vector3> vis = new List<Vector3>();
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 sign = new Vector3(((i & 1) == 0 ? -1 : 1),
+                                   ((i & 2) == 0 ? -1 : 1),
+                                   ((i & 4) == 0 ? -1 : 1));
+                Vector3 sp = cam.WorldToScreenPoint(b.center + Vector3.Scale(b.extents, sign));
+                if (sp.z > 0) vis.Add(sp);
+            }
+            if (vis.Count == 0) return 0; // 全在镜后
+
+            float sw = Screen.width, sh = Screen.height;
+
+            // —— 可见包围盒 & 面积 —— //
+            Vector2 min = vis[0], max = vis[0];
+            foreach (var p in vis) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
+            Rect r = new Rect(min, max - min);
+            float areaPct = r.width * r.height / (sw * sh);
+
+            int sizeScore =
+                areaPct >= minSizePct && areaPct <= idealSizePct ? 2 :
+                areaPct >= minSizePct * 0.5f && areaPct <= idealSizePct * 1.2f ? 1 : 0;
+
+            // —— 位置分：距黄金分割点 —— //
+            Vector2 c = r.center;
+            Vector2[] sweet =
+            {
+                new Vector2(sw*0.333f, sh*0.333f),
+                new Vector2(sw*0.667f, sh*0.333f),
+                new Vector2(sw*0.333f, sh*0.667f),
+                new Vector2(sw*0.667f, sh*0.667f)
+            };
+            float best = float.MaxValue;
+            foreach (var p in sweet) best = Mathf.Min(best, Vector2.Distance(c, p));
+            float norm = best / Mathf.Sqrt(sw * sw + sh * sh);      // 0-~0.71
+            int posScore = norm <= centerTolerance ? 1 : 0;
+
+            // —— Corner bonus —— //
+            int inside = 0;
+            Rect screen = new Rect(0, 0, sw, sh);
+            foreach (var p in vis) if (screen.Contains(p)) inside++;
+            int cornerBonus = inside / (float)vis.Count >= cornerPctNeeded ? 1 : 0;
+
+            return sizeScore + posScore + cornerBonus;          // 0-4★
         }
-        if (vis.Count == 0) return 0; // 全在镜后
-
-        float sw = Screen.width, sh = Screen.height;
-
-        // —— 可见包围盒 & 面积 —— //
-        Vector2 min = vis[0], max = vis[0];
-        foreach (var p in vis) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
-        Rect r = new(min, max - min);
-        float areaPct = r.width * r.height / (sw * sh);
-
-        int sizeScore =
-            areaPct >= minSizePct && areaPct <= idealSizePct ? 2 :
-            areaPct >= minSizePct * 0.5f && areaPct <= idealSizePct * 1.2f ? 1 : 0;
-
-        // —— 位置分：距黄金分割点 —— //
-        Vector2 c = r.center;
-        Vector2[] sweet =
+        catch (System.Exception e)
         {
-            new(sw*0.333f, sh*0.333f),
-            new(sw*0.667f, sh*0.333f),
-            new(sw*0.333f, sh*0.667f),
-            new(sw*0.667f, sh*0.667f)
-        };
-        float best = float.MaxValue;
-        foreach (var p in sweet) best = Mathf.Min(best, Vector2.Distance(c, p));
-        float norm = best / Mathf.Sqrt(sw * sw + sh * sh);      // 0-~0.71
-        int posScore = norm <= centerTolerance ? 1 : 0;
-
-        // —— Corner bonus —— //
-        int inside = 0;
-        Rect screen = new(0, 0, sw, sh);
-        foreach (var p in vis) if (screen.Contains(p)) inside++;
-        int cornerBonus = inside / (float)vis.Count >= cornerPctNeeded ? 1 : 0;
-
-        return sizeScore + posScore + cornerBonus;          // 0-4★
+            Debug.LogError($"PhotoDetector: 评分时出错: {e.Message}");
+            return 1; // 返回最低分数以避免游戏崩溃
+        }
     }
 
     /* ===================================================================== */
@@ -94,31 +123,45 @@ public class PhotoDetector : MonoBehaviour
     /* ===================================================================== */
     public float GetAreaPercent(Camera cam, Bounds b)
     {
-        List<Vector3> vis = new();
-        for (int i = 0; i < 8; i++)
+        try
         {
-            Vector3 sign = new(((i & 1) == 0 ? -1 : 1),
-                               ((i & 2) == 0 ? -1 : 1),
-                               ((i & 4) == 0 ? -1 : 1));
-            Vector3 sp = cam.WorldToScreenPoint(b.center + Vector3.Scale(b.extents, sign));
-            if (sp.z > 0) vis.Add(sp);
-        }
-        if (vis.Count == 0) return 0f;
+            List<Vector3> vis = new List<Vector3>();
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 sign = new Vector3(((i & 1) == 0 ? -1 : 1),
+                                   ((i & 2) == 0 ? -1 : 1),
+                                   ((i & 4) == 0 ? -1 : 1));
+                Vector3 sp = cam.WorldToScreenPoint(b.center + Vector3.Scale(b.extents, sign));
+                if (sp.z > 0) vis.Add(sp);
+            }
+            if (vis.Count == 0) return 0f;
 
-        Vector2 min = vis[0], max = vis[0];
-        foreach (var p in vis) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
-        Rect r = new(min, max - min);
-        return r.width * r.height / (Screen.width * Screen.height);
+            Vector2 min = vis[0], max = vis[0];
+            foreach (var p in vis) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
+            Rect r = new Rect(min, max - min);
+            return r.width * r.height / (Screen.width * Screen.height);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"PhotoDetector: 计算面积占比时出错: {e.Message}");
+            return 0f;
+        }
     }
 
     private void OnDisable()
     {
-        // 只有在组件被禁用且为当前实例时，清除静态引用
-        if (Instance == this && !this.enabled)
+        Debug.Log($"PhotoDetector: OnDisable被调用 - {gameObject.name}");
+    }
+
+    private void OnDestroy()
+    {
+        Debug.Log($"PhotoDetector: OnDestroy被调用 - {gameObject.name}");
+
+        // 只有当当前实例被销毁时才清除静态引用
+        if (_instance == this)
         {
-            Debug.Log("PhotoDetector: 单例实例被禁用");
-            // 不清除静态引用，保持实例
-            // Instance = null; 
+            Debug.Log("PhotoDetector: 单例实例被销毁");
+            _instance = null;
         }
     }
 }

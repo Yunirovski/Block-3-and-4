@@ -10,7 +10,26 @@ using TMPro;
 /// </summary>
 public class PhotoCollectionManager : MonoBehaviour
 {
-    public static PhotoCollectionManager Instance { get; private set; }
+    private static PhotoCollectionManager _instance;
+
+    public static PhotoCollectionManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindObjectOfType<PhotoCollectionManager>();
+
+                if (_instance == null)
+                {
+                    GameObject go = new GameObject("PhotoCollectionManager");
+                    _instance = go.AddComponent<PhotoCollectionManager>();
+                    Debug.Log("PhotoCollectionManager: 自动创建实例");
+                }
+            }
+            return _instance;
+        }
+    }
 
     [Header("UI References")]
     [Tooltip("用于显示照片收集摘要的UI文本")]
@@ -18,14 +37,16 @@ public class PhotoCollectionManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        Debug.Log($"PhotoCollectionManager: Awake被调用 - {gameObject.name}");
+
+        if (_instance != null && _instance != this)
         {
             Debug.Log($"PhotoCollectionManager: 发现重复实例，禁用此组件 {gameObject.name}");
             this.enabled = false;
             return;
         }
 
-        Instance = this;
+        _instance = this;
         DontDestroyOnLoad(gameObject);
         Debug.Log("PhotoCollectionManager: 单例实例已初始化");
     }
@@ -34,17 +55,30 @@ public class PhotoCollectionManager : MonoBehaviour
     {
         Debug.Log("PhotoCollectionManager: Start被调用，准备订阅PhotoLibrary事件");
 
-        // 订阅PhotoLibrary的数据变化事件
-        if (PhotoLibrary.Instance != null)
+        // 尝试多次查找PhotoLibrary，因为它可能还没初始化
+        StartCoroutine(FindPhotoLibraryWithRetry(5));
+    }
+
+    // 使用协程带重试机制查找PhotoLibrary
+    private System.Collections.IEnumerator FindPhotoLibraryWithRetry(int maxRetries)
+    {
+        int retries = 0;
+        while (retries < maxRetries)
         {
-            PhotoLibrary.Instance.OnPhotoDatabaseChanged += UpdateCollectionText;
-            UpdateCollectionText(); // 初始更新
-            Debug.Log("PhotoCollectionManager: 成功订阅PhotoLibrary事件");
+            if (PhotoLibrary.Instance != null)
+            {
+                PhotoLibrary.Instance.OnPhotoDatabaseChanged += UpdateCollectionText;
+                UpdateCollectionText(); // 初始更新
+                Debug.Log("PhotoCollectionManager: 成功订阅PhotoLibrary事件");
+                yield break;
+            }
+
+            Debug.Log($"PhotoCollectionManager: 未找到PhotoLibrary，等待重试 ({retries + 1}/{maxRetries})");
+            retries++;
+            yield return new WaitForSeconds(0.5f); // 等待半秒后重试
         }
-        else
-        {
-            Debug.LogError("PhotoCollectionManager: 未找到PhotoLibrary实例");
-        }
+
+        Debug.LogError("PhotoCollectionManager: 经过多次尝试仍未找到PhotoLibrary实例");
     }
 
     /// <summary>
@@ -58,21 +92,29 @@ public class PhotoCollectionManager : MonoBehaviour
             return false;
         }
 
-        // 委托给PhotoLibrary执行实际添加操作
-        bool success = PhotoLibrary.Instance.AddPhoto(animalName, photoPath, stars);
-
-        // 如果照片达到上限，返回失败
-        if (!success)
+        try
         {
-            Debug.Log($"照片添加失败: {animalName}的照片数量已达上限({PhotoLibrary.MaxPerAnimal})");
-        }
-        else
-        {
-            Debug.Log($"成功添加照片: {animalName}, 路径: {photoPath}, 星级: {stars}");
-        }
+            // 委托给PhotoLibrary执行实际添加操作
+            bool success = PhotoLibrary.Instance.AddPhoto(animalName, photoPath, stars);
 
-        // 不需要在这里调用UpdateCollectionText，因为PhotoLibrary会触发事件
-        return success;
+            // 如果照片达到上限，返回失败
+            if (!success)
+            {
+                Debug.Log($"照片添加失败: {animalName}的照片数量已达上限({PhotoLibrary.MaxPerAnimal})");
+            }
+            else
+            {
+                Debug.Log($"成功添加照片: {animalName}, 路径: {photoPath}, 星级: {stars}");
+            }
+
+            // 不需要在这里调用UpdateCollectionText，因为PhotoLibrary会触发事件
+            return success;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"PhotoCollectionManager: 添加照片时发生错误: {e.Message}");
+            return false;
+        }
     }
 
     /// <summary>
@@ -86,20 +128,28 @@ public class PhotoCollectionManager : MonoBehaviour
             return false;
         }
 
-        // 委托给PhotoLibrary执行删除操作
-        bool success = PhotoLibrary.Instance.DeletePhoto(animalName, photoIndex);
-
-        if (success)
+        try
         {
-            Debug.Log($"成功删除照片: {animalName}, 索引: {photoIndex}");
-        }
-        else
-        {
-            Debug.LogError($"删除照片失败: {animalName}, 索引: {photoIndex}");
-        }
+            // 委托给PhotoLibrary执行删除操作
+            bool success = PhotoLibrary.Instance.DeletePhoto(animalName, photoIndex);
 
-        // 不需要在这里调用UpdateCollectionText，因为PhotoLibrary会触发事件
-        return success;
+            if (success)
+            {
+                Debug.Log($"成功删除照片: {animalName}, 索引: {photoIndex}");
+            }
+            else
+            {
+                Debug.LogError($"删除照片失败: {animalName}, 索引: {photoIndex}");
+            }
+
+            // 不需要在这里调用UpdateCollectionText，因为PhotoLibrary会触发事件
+            return success;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"PhotoCollectionManager: 删除照片时发生错误: {e.Message}");
+            return false;
+        }
     }
 
     /// <summary>
@@ -113,7 +163,15 @@ public class PhotoCollectionManager : MonoBehaviour
             return new List<PhotoLibrary.PhotoEntry>();
         }
 
-        return PhotoLibrary.Instance.GetPhotos(animalName);
+        try
+        {
+            return PhotoLibrary.Instance.GetPhotos(animalName);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"PhotoCollectionManager: 获取照片列表时发生错误: {e.Message}");
+            return new List<PhotoLibrary.PhotoEntry>();
+        }
     }
 
     /// <summary>
@@ -133,38 +191,71 @@ public class PhotoCollectionManager : MonoBehaviour
             return;
         }
 
-        var sb = new StringBuilder();
-        sb.AppendLine("照片收集:");
-
-        foreach (string animalId in PhotoLibrary.Instance.GetAnimalIds())
+        try
         {
-            int count = PhotoLibrary.Instance.GetPhotoCount(animalId);
-            sb.AppendLine($"{animalId}: {count}/{PhotoLibrary.MaxPerAnimal} 张");
+            var sb = new StringBuilder();
+            sb.AppendLine("照片收集:");
+
+            foreach (string animalId in PhotoLibrary.Instance.GetAnimalIds())
+            {
+                int count = PhotoLibrary.Instance.GetPhotoCount(animalId);
+                sb.AppendLine($"{animalId}: {count}/{PhotoLibrary.MaxPerAnimal} 张");
+            }
+
+            int total = PhotoLibrary.Instance.GetTotalPhotoCount();
+            sb.AppendLine($"总计: {total} 张照片");
+
+            collectionText.text = sb.ToString();
+            Debug.Log("PhotoCollectionManager: UI文本已更新");
         }
-
-        int total = PhotoLibrary.Instance.GetTotalPhotoCount();
-        sb.AppendLine($"总计: {total} 张照片");
-
-        collectionText.text = sb.ToString();
-        Debug.Log("PhotoCollectionManager: UI文本已更新");
+        catch (System.Exception e)
+        {
+            Debug.LogError($"PhotoCollectionManager: 更新UI文本时发生错误: {e.Message}");
+        }
     }
 
     private void OnDisable()
     {
-        // 只有在组件被禁用且为当前实例时，清除静态引用
-        if (Instance == this && !this.enabled)
-        {
-            Debug.Log("PhotoCollectionManager: 单例实例被禁用");
+        Debug.Log($"PhotoCollectionManager: OnDisable被调用 - {gameObject.name}");
 
-            // 取消订阅事件以防止空引用异常
-            if (PhotoLibrary.Instance != null)
+        // 取消订阅事件以防止空引用异常
+        if (PhotoLibrary.Instance != null)
+        {
+            try
             {
                 PhotoLibrary.Instance.OnPhotoDatabaseChanged -= UpdateCollectionText;
                 Debug.Log("PhotoCollectionManager: 已取消订阅PhotoLibrary事件");
             }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"PhotoCollectionManager: 取消订阅事件时发生错误: {e.Message}");
+            }
+        }
+    }
 
-            // 不清除静态引用，保持实例
-            // Instance = null;
+    private void OnDestroy()
+    {
+        Debug.Log($"PhotoCollectionManager: OnDestroy被调用 - {gameObject.name}");
+
+        // 取消订阅事件以防止空引用异常
+        if (PhotoLibrary.Instance != null)
+        {
+            try
+            {
+                PhotoLibrary.Instance.OnPhotoDatabaseChanged -= UpdateCollectionText;
+                Debug.Log("PhotoCollectionManager: 已取消订阅PhotoLibrary事件");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"PhotoCollectionManager: 取消订阅事件时发生错误: {e.Message}");
+            }
+        }
+
+        // 只有当当前实例被销毁时才清除静态引用
+        if (_instance == this)
+        {
+            Debug.Log("PhotoCollectionManager: 单例实例被销毁");
+            _instance = null;
         }
     }
 }

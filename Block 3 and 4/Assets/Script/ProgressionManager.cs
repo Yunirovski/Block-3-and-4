@@ -11,7 +11,26 @@ using UnityEngine;
 /// </summary>
 public class ProgressionManager : MonoBehaviour
 {
-    public static ProgressionManager Instance { get; private set; }
+    private static ProgressionManager _instance;
+    public static ProgressionManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindObjectOfType<ProgressionManager>();
+
+                if (_instance == null)
+                {
+                    GameObject go = new GameObject("ProgressionManager");
+                    _instance = go.AddComponent<ProgressionManager>();
+                    go.AddComponent<SurvivalComponent>();
+                    Debug.Log("ProgressionManager: 自动创建实例");
+                }
+            }
+            return _instance;
+        }
+    }
 
     [Header("Bridge Unlock")]
     public int savannaThreshold = 12;
@@ -48,8 +67,17 @@ public class ProgressionManager : MonoBehaviour
     [Header("Optional Popup Prefab")]
     public PopupController popupPrefab;
 
+    // 备份静态数据，防止实例销毁时丢失
+    private static Dictionary<string, int> _savedBestStars = new Dictionary<string, int>();
+    private static int _savedTotalStars = 0;
+    private static int _savedUniqueAnimals = 0;
+    private static bool _savedHasGrapple = false;
+    private static bool _savedHasSkateboard = false;
+    private static bool _savedHasDartGun = false;
+    private static bool _savedHasMagicWand = false;
+
     // —— 内部进度数据 —— //
-    readonly Dictionary<string, int> bestStars = new();
+    readonly Dictionary<string, int> bestStars = new Dictionary<string, int>();
     public IReadOnlyDictionary<string, int> BestStars => bestStars;
 
     public int TotalStars { get; private set; }
@@ -65,16 +93,28 @@ public class ProgressionManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this)
+        Debug.Log($"ProgressionManager: Awake被调用 - {gameObject.name}");
+
+        if (_instance != null && _instance != this)
         {
             Debug.Log($"ProgressionManager: 发现重复实例，禁用此组件 {gameObject.name}");
             this.enabled = false;
             return;
         }
 
-        Instance = this;
+        _instance = this;
+
+        // 确保有效性
+        if (GetComponent<SurvivalComponent>() == null)
+        {
+            gameObject.AddComponent<SurvivalComponent>();
+        }
+
         DontDestroyOnLoad(gameObject);
         Debug.Log("ProgressionManager: 单例实例已初始化");
+
+        // 加载已保存的状态
+        RestoreSavedData();
     }
 
     private void Start()
@@ -82,6 +122,79 @@ public class ProgressionManager : MonoBehaviour
         Debug.Log("ProgressionManager: Start被调用，准备进行手动解锁检查");
         // 延迟进行手动解锁，确保其他系统已初始化
         Invoke("CheckManualUnlock", 0.5f);
+    }
+
+    // 从静态变量恢复数据
+    private void RestoreSavedData()
+    {
+        // 先从静态变量恢复数据
+        if (_savedBestStars.Count > 0)
+        {
+            bestStars.Clear();
+            foreach (var pair in _savedBestStars)
+            {
+                bestStars[pair.Key] = pair.Value;
+            }
+
+            TotalStars = _savedTotalStars;
+            UniqueAnimals = _savedUniqueAnimals;
+            HasGrapple = _savedHasGrapple;
+            HasSkateboard = _savedHasSkateboard;
+            HasDartGun = _savedHasDartGun;
+            HasMagicWand = _savedHasMagicWand;
+
+            Debug.Log($"ProgressionManager: 从静态变量恢复数据 - 星星总数:{TotalStars}");
+        }
+        // 如果静态变量没有数据，尝试从PlayerPrefs加载
+        else
+        {
+            LoadSavedStates();
+        }
+    }
+
+    // 将当前数据保存到静态变量
+    private void SaveCurrentData()
+    {
+        _savedBestStars = new Dictionary<string, int>(bestStars);
+        _savedTotalStars = TotalStars;
+        _savedUniqueAnimals = UniqueAnimals;
+        _savedHasGrapple = HasGrapple;
+        _savedHasSkateboard = HasSkateboard;
+        _savedHasDartGun = HasDartGun;
+        _savedHasMagicWand = HasMagicWand;
+
+        Debug.Log($"ProgressionManager: 数据已保存到静态变量 - 星星总数:{TotalStars}");
+
+        // 同时保存解锁状态到PlayerPrefs
+        SaveUnlockStatesToPrefs();
+    }
+
+    // 添加新方法来保存解锁状态到PlayerPrefs
+    private void SaveUnlockStatesToPrefs()
+    {
+        PlayerPrefs.SetInt("HasGrapple", HasGrapple ? 1 : 0);
+        PlayerPrefs.SetInt("HasSkateboard", HasSkateboard ? 1 : 0);
+        PlayerPrefs.SetInt("HasDartGun", HasDartGun ? 1 : 0);
+        PlayerPrefs.SetInt("HasMagicWand", HasMagicWand ? 1 : 0);
+        PlayerPrefs.SetInt("TotalStars", TotalStars);
+        PlayerPrefs.Save();
+
+        Debug.Log($"ProgressionManager: 解锁状态已保存到PlayerPrefs - 抓钩:{HasGrapple}, 滑板:{HasSkateboard}, 麻醉枪:{HasDartGun}, 魔法棒:{HasMagicWand}");
+    }
+
+    // 加载已保存的状态
+    private void LoadSavedStates()
+    {
+        if (PlayerPrefs.HasKey("HasGrapple"))
+        {
+            HasGrapple = PlayerPrefs.GetInt("HasGrapple") == 1;
+            HasSkateboard = PlayerPrefs.GetInt("HasSkateboard") == 1;
+            HasDartGun = PlayerPrefs.GetInt("HasDartGun") == 1;
+            HasMagicWand = PlayerPrefs.GetInt("HasMagicWand") == 1;
+            TotalStars = PlayerPrefs.GetInt("TotalStars", 0);
+
+            Debug.Log($"ProgressionManager: 从PlayerPrefs加载解锁状态 - 抓钩:{HasGrapple}, 滑板:{HasSkateboard}, 麻醉枪:{HasDartGun}, 魔法棒:{HasMagicWand}, 星星:{TotalStars}");
+        }
     }
 
     private void CheckManualUnlock()
@@ -120,6 +233,9 @@ public class ProgressionManager : MonoBehaviour
         if (ManualUnlockMagicWand && magicWandItem == null) Debug.LogError("无法解锁魔法棒: magicWandItem为null");
 
         Debug.Log("ProgressionManager: 手动解锁检查完成");
+
+        // 保存当前状态
+        SaveCurrentData();
     }
 
     /// <summary>
@@ -156,6 +272,9 @@ public class ProgressionManager : MonoBehaviour
         // 检查桥梁和道具解锁
         CheckBridgeUnlock();
         CheckItemUnlocks();
+
+        // 保存当前状态
+        SaveCurrentData();
     }
 
     void CheckBridgeUnlock()
@@ -192,9 +311,21 @@ public class ProgressionManager : MonoBehaviour
         }
 
         HasGrapple = true;
-        InventoryCycler.RegisterItem(grappleItem);
+        try
+        {
+            InventoryCycler.RegisterItem(grappleItem);
+            Debug.Log("解锁抓钩成功: 已注册到InventoryCycler!");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"注册抓钩到InventoryCycler失败: {e.Message}");
+        }
+
         ShowPopup($"已收集 {grappleStarsNeeded} ★，解锁抓钩！按 I 装备");
         Debug.Log("解锁抓钩成功!");
+
+        // 保存状态
+        SaveCurrentData();
     }
 
     void UnlockSkateboard()
@@ -206,9 +337,21 @@ public class ProgressionManager : MonoBehaviour
         }
 
         HasSkateboard = true;
-        InventoryCycler.RegisterItem(skateboardItem);
+        try
+        {
+            InventoryCycler.RegisterItem(skateboardItem);
+            Debug.Log("解锁滑板成功: 已注册到InventoryCycler!");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"注册滑板到InventoryCycler失败: {e.Message}");
+        }
+
         ShowPopup($"已收集 {skateboardStarsNeeded} ★，解锁滑板！按 I 装备");
         Debug.Log("解锁滑板成功!");
+
+        // 保存状态
+        SaveCurrentData();
     }
 
     void UnlockDartGun()
@@ -220,9 +363,21 @@ public class ProgressionManager : MonoBehaviour
         }
 
         HasDartGun = true;
-        InventoryCycler.RegisterItem(dartGunItem);
+        try
+        {
+            InventoryCycler.RegisterItem(dartGunItem);
+            Debug.Log("解锁麻醉枪成功: 已注册到InventoryCycler!");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"注册麻醉枪到InventoryCycler失败: {e.Message}");
+        }
+
         ShowPopup($"已收集 {dartGunStarsNeeded} ★，解锁麻醉枪！按 I 装备");
         Debug.Log("解锁麻醉枪成功!");
+
+        // 保存状态
+        SaveCurrentData();
     }
 
     void UnlockMagicWand()
@@ -234,9 +389,21 @@ public class ProgressionManager : MonoBehaviour
         }
 
         HasMagicWand = true;
-        InventoryCycler.RegisterItem(magicWandItem);
+        try
+        {
+            InventoryCycler.RegisterItem(magicWandItem);
+            Debug.Log("解锁魔法棒成功: 已注册到InventoryCycler!");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"注册魔法棒到InventoryCycler失败: {e.Message}");
+        }
+
         ShowPopup($"已收集 {magicWandStarsNeeded} ★，魔法棒已解锁！按 I 装备");
         Debug.Log("解锁魔法棒成功!");
+
+        // 保存状态
+        SaveCurrentData();
     }
 
     void ShowPopup(string msg)
@@ -247,12 +414,47 @@ public class ProgressionManager : MonoBehaviour
 
     private void OnDisable()
     {
-        // 只有在组件被禁用且为当前实例时，清除静态引用
-        if (Instance == this && !this.enabled)
+        Debug.Log($"ProgressionManager: OnDisable被调用 - {gameObject.name}");
+
+        // 保存当前状态
+        SaveCurrentData();
+    }
+
+    private void OnDestroy()
+    {
+        Debug.Log($"ProgressionManager: OnDestroy被调用 - {gameObject.name}");
+
+        // 保存当前状态
+        SaveCurrentData();
+
+        // 只有当当前实例被销毁时才清除静态引用
+        if (_instance == this)
         {
-            Debug.Log("ProgressionManager: 单例实例被禁用");
-            // 不清除静态引用，保持实例
-            // Instance = null; 
+            Debug.Log("ProgressionManager: 单例实例被销毁，但静态数据已保存");
+            _instance = null;
+        }
+    }
+
+    // 添加OnApplicationQuit确保游戏退出时也保存数据
+    private void OnApplicationQuit()
+    {
+        Debug.Log("ProgressionManager: 应用程序退出，保存数据");
+        SaveCurrentData();
+    }
+
+    // 添加一个组件确保游戏对象不会被销毁
+    public class SurvivalComponent : MonoBehaviour
+    {
+        private void Awake()
+        {
+            // 确保持久化
+            DontDestroyOnLoad(gameObject);
+            Debug.Log($"SurvivalComponent: Awake在 {gameObject.name}");
+        }
+
+        private void OnDestroy()
+        {
+            Debug.LogWarning($"SurvivalComponent: 检测到尝试销毁 {gameObject.name}，这可能导致ProgressionManager不可用");
         }
     }
 }

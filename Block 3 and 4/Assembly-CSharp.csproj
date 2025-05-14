@@ -110,6 +110,7 @@
     <Compile Include="Assets\Script\InventoryCycler.cs" />
     <Compile Include="Assets\Script\Log\ReplacePhotoSelector.cs" />
     <Compile Include="Assets\Script\System\TextureScale.cs" />
+    <Compile Include="Assets\Script\System\GameManager.cs" />
     <Compile Include="Assets\Script\System\CurrencyManager.cs" />
   </ItemGroup>
   <ItemGroup>
