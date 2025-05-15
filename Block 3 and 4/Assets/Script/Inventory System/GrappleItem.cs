@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿// Assets/Scripts/Items/GrappleItem.cs
+using UnityEngine;
 
 [CreateAssetMenu(menuName = "Items/GrappleItem")]
 public class GrappleItem : BaseItem
@@ -8,15 +9,15 @@ public class GrappleItem : BaseItem
     public float pullSpeed = 5f;
 
     [Header("钩爪可视化")]
-    [Tooltip("抓钩模型Prefab，由美术提供")]
+    [Tooltip("抓钩模型 Prefab，由美术提供")]
     public GameObject hookPrefab;
-    [Tooltip("钩爪飞行速度(m/s)")]
+    [Tooltip("钩爪飞行速度 (m/s)")]
     public float hookTravelSpeed = 50f;
-    [Tooltip("绳索材质，用于LineRenderer")]
+    [Tooltip("绳索材质，用于 LineRenderer")]
     public Material ropeMaterial;
 
     [Header("音效")]
-    [Tooltip("抓钩开枪音效")]
+    [Tooltip("抓钩开铅音效")]
     public AudioClip grappleFireSound;
     [Tooltip("音效音量")]
     [Range(0f, 1f)] public float soundVolume = 0.8f;
@@ -26,19 +27,17 @@ public class GrappleItem : BaseItem
     GrappleController _grappler;
     AudioSource _audioSource;
 
-    // 添加一个标志来追踪当前是否可以发射抓钩
-    private bool _canFire = true;
-
     public override void OnSelect(GameObject model)
     {
         _cam = Camera.main;
         if (_cam == null) { Debug.LogError("找不到主相机"); return; }
 
-        // 假设GrappleController挂在相机的父对象上（玩家身上）
+        // 假设 GrappleController 挂在相机的父对象上（玩家身上）
         _grappler = _cam.GetComponentInParent<GrappleController>();
         if (_grappler == null)
         {
-            Debug.LogError("玩家物体上缺少GrappleController组件");
+            Debug.LogError("玩家物体上缺少 GrappleController 组件");
+            UIManager.Instance.UpdateCameraDebugText("抓钩控制器未找到");
             return;
         }
 
@@ -53,72 +52,45 @@ public class GrappleItem : BaseItem
         // 注入钩爪可视化资源
         _grappler.InitializeHook(hookPrefab, hookTravelSpeed, ropeMaterial);
 
-        // 添加到抓钩目标点到达事件的监听
-        _grappler.onGrappleComplete += OnGrappleComplete;
-
-        // 初始化为可发射状态
-        _canFire = true;
-    }
-
-    // 添加一个新的方法，当抓钩到达目标点时调用
-    private void OnGrappleComplete()
-    {
-        // 抓钩已到达目标点，现在可以发射下一次了
-        _canFire = true;
-        Debug.Log("抓钩已到达目标点，可以发射下一次了");
+        UIManager.Instance.UpdateCameraDebugText("抓钩就绪，点击发射");
     }
 
     public override void OnUse()
     {
-        if (_grappler == null || _cam == null) return;
-
-        // 检查是否可以发射
-        if (!_canFire)
+        if (_grappler == null || _cam == null)
         {
-            Debug.Log("抓钩尚未到达目标点，无法发射");
+            UIManager.Instance.UpdateCameraDebugText("抓钩系统未准备好");
             return;
         }
 
-        // 播放开枪音效
+        // 播放开铅音效
         if (grappleFireSound != null && _audioSource != null)
         {
             _audioSource.PlayOneShot(grappleFireSound, soundVolume);
         }
 
+        // 从屏幕中心发射射线
         Ray ray = _cam.ScreenPointToRay(
             new Vector3(Screen.width / 2f, Screen.height / 2f)
         );
+
+        // 尝试命中
         if (Physics.Raycast(ray, out RaycastHit hit, maxDistance))
         {
+            // 检查是否命中静态物体（可抓取表面）
             if (hit.collider.gameObject.isStatic)
             {
-                // 发射抓钩，并将发射状态设为false
                 _grappler.StartGrapple(hit.point, pullSpeed);
-                _canFire = false;
-                Debug.Log("抓钩已发射，等待到达目标点");
+                UIManager.Instance.UpdateCameraDebugText("抓钩附着成功");
             }
             else
             {
-                Debug.Log("命中目标非静态，不可附着");
+                UIManager.Instance.UpdateCameraDebugText("命中目标非静态，不可附着");
             }
         }
         else
         {
-            Debug.Log("射程内未命中任何表面");
+            UIManager.Instance.UpdateCameraDebugText("射程内未命中任何表面");
         }
-    }
-
-    public override void OnDeselect()
-    {
-        // 取消监听事件
-        if (_grappler != null)
-        {
-            _grappler.onGrappleComplete -= OnGrappleComplete;
-            // 结束当前的抓钩状态
-            _grappler.EndGrapple();
-        }
-
-        // 重置状态
-        _canFire = true;
     }
 }

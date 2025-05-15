@@ -12,16 +12,6 @@ public class CameraItem : BaseItem
     [Tooltip("两次拍照的最短冷却时间（秒）")]
     public float shootCooldown = 1f;
 
-    [Header("Injected UI")]
-    [Tooltip("常规 HUD Canvas")]
-    public Canvas mainCanvas;
-    [Tooltip("相机取景 HUD Canvas")]
-    public Canvas cameraCanvas;
-    [Tooltip("取景模式下的提示/冷却文本 (挂在 cameraCanvas 下)")]
-    public TMP_Text debugText;
-    [Tooltip("取景模式下的结果文本 (挂在 cameraCanvas 下)")]
-    public TMP_Text resultText;
-
     [Header("Audio")]
     [Tooltip("拍照快门音效")]
     public AudioClip shutterSound;
@@ -35,14 +25,9 @@ public class CameraItem : BaseItem
     float nextShotTime;
     int photoCnt;
 
-    public void Init(Camera c, Canvas main, Canvas camHud, TMP_Text dbg, TMP_Text res)
+    public void Init(Camera c)
     {
         cam = c;
-        mainCanvas = main;
-        cameraCanvas = camHud;
-        debugText = dbg;
-        resultText = res;
-        ResetUI();
 
         if (cam != null && audioSource == null)
         {
@@ -64,7 +49,11 @@ public class CameraItem : BaseItem
         currentModel = null;
     }
 
-    public override void OnReady() => debugText?.SetText("按 Q 进入相机模式");
+    public override void OnReady()
+    {
+        // 通过UIManager更新提示文本
+        UIManager.Instance.UpdateCameraDebugText("按 Q 进入相机模式");
+    }
 
     public override void OnUnready()
     {
@@ -101,10 +90,8 @@ public class CameraItem : BaseItem
         if (currentModel != null)
             currentModel.SetActive(false);
 
-        if (mainCanvas) mainCanvas.enabled = false;
-        if (cameraCanvas) cameraCanvas.enabled = true;
-        debugText?.SetText("Camera ON");
-        resultText?.SetText("");
+        // 使用UIManager进入相机模式
+        UIManager.Instance.EnterCameraMode();
     }
 
     void ExitCameraMode()
@@ -115,16 +102,17 @@ public class CameraItem : BaseItem
         if (currentModel != null)
             currentModel.SetActive(true);
 
-        if (cameraCanvas) cameraCanvas.enabled = false;
-        if (mainCanvas) mainCanvas.enabled = true;
-        debugText?.SetText("Camera OFF");
+        // 使用UIManager退出相机模式
+        UIManager.Instance.ExitCameraMode();
     }
 
     void ResetUI()
     {
         isCamMode = false;
-        if (cameraCanvas) cameraCanvas.enabled = false;
-        if (mainCanvas) mainCanvas.enabled = true;
+
+        // 通过UIManager重置UI状态
+        UIManager.Instance.SetCameraHUDVisible(false);
+        UIManager.Instance.SetMainHUDVisible(true);
     }
 
     void TryShoot()
@@ -132,13 +120,13 @@ public class CameraItem : BaseItem
         if (Time.time < nextShotTime)
         {
             float remain = nextShotTime - Time.time;
-            debugText?.SetText($"冷却 {remain:F1}s");
+            UIManager.Instance.UpdateCameraDebugText($"冷却 {remain:F1}s");
             return;
         }
 
         if (ConsumableManager.Instance == null || !ConsumableManager.Instance.UseFilm())
         {
-            debugText?.SetText("胶卷不足");
+            UIManager.Instance.UpdateCameraDebugText("胶卷不足");
             return;
         }
 
@@ -185,7 +173,7 @@ public class CameraItem : BaseItem
         string path = Path.Combine(Application.persistentDataPath, fname);
         File.WriteAllBytes(path, tex.EncodeToPNG());
         photoCnt++;
-        debugText?.SetText($"已保存 {fname}");
+        UIManager.Instance.UpdateCameraDebugText($"已保存 {fname}");
 
         var animals = Object.FindObjectsOfType<AnimalEvent>();
         var planes = GeometryUtility.CalculateFrustumPlanes(cam);
@@ -224,7 +212,7 @@ public class CameraItem : BaseItem
 
         if (bestAE == null)
         {
-            resultText?.SetText("未检测到任何动物");
+            UIManager.Instance.UpdateCameraResultText("未检测到任何动物");
             return;
         }
 
@@ -242,25 +230,17 @@ public class CameraItem : BaseItem
             final = Mathf.Clamp(final + 1, 1, 5);
 
         bestAE.TriggerEvent(path, final);
-        resultText?.SetText($"{bestAE.animalName}: {final}★ (近:{nearCount} 扣:{penalty})");
+        UIManager.Instance.UpdateCameraResultText($"{bestAE.animalName}: {final}★ (近:{nearCount} 扣:{penalty})");
 
         if (PhotoCollectionManager.Instance != null)
         {
             bool added = PhotoCollectionManager.Instance.AddPhoto(bestAE.animalName, path, final);
             if (!added)
             {
-                resultText?.SetText($"{resultText.text}\n照片已达上限({PhotoLibrary.MaxPerAnimal})");
+                UIManager.Instance.UpdateCameraResultText($"{UIManager.Instance.cameraResultText.text}\n照片已达上限({PhotoLibrary.MaxPerAnimal})");
 
                 // 显示照片已达上限弹窗
-                var alertPrefab = Resources.Load<GameObject>("Prefabs/FullPageAlertPopup");
-                if (alertPrefab != null)
-                {
-                    var alert = Instantiate(alertPrefab).GetComponent<FullPageAlertPopup>();
-                    if (alert != null)
-                    {
-                        alert.Initialize(bestAE.animalName, path, final);
-                    }
-                }
+                UIManager.Instance.ShowPhotoFullAlert(bestAE.animalName, path, final);
             }
         }
     }

@@ -1,6 +1,7 @@
 ﻿// Assets/Scripts/Systems/ProgressionManager.cs
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 /// <summary>
@@ -8,29 +9,11 @@ using UnityEngine;
 /// • 在 Inspector 设置各道具所需星星数量
 /// • 在 Inspector 勾上"ManualUnlockX"，即可在启动时直接解锁对应道具
 /// • 通过拍照收集星星，自动解锁对应道具
+/// • 支持进度持久化保存与加载
 /// </summary>
 public class ProgressionManager : MonoBehaviour
 {
-    private static ProgressionManager _instance;
-    public static ProgressionManager Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                _instance = FindObjectOfType<ProgressionManager>();
-
-                if (_instance == null)
-                {
-                    GameObject go = new GameObject("ProgressionManager");
-                    _instance = go.AddComponent<ProgressionManager>();
-                    go.AddComponent<SurvivalComponent>();
-                    Debug.Log("ProgressionManager: 自动创建实例");
-                }
-            }
-            return _instance;
-        }
-    }
+    public static ProgressionManager Instance { get; private set; }
 
     [Header("Bridge Unlock")]
     public int savannaThreshold = 12;
@@ -64,20 +47,16 @@ public class ProgressionManager : MonoBehaviour
     [Tooltip("勾选后启动时直接解锁魔法棒")]
     public bool ManualUnlockMagicWand = false;
 
-    [Header("Optional Popup Prefab")]
-    public PopupController popupPrefab;
-
-    // 备份静态数据，防止实例销毁时丢失
-    private static Dictionary<string, int> _savedBestStars = new Dictionary<string, int>();
-    private static int _savedTotalStars = 0;
-    private static int _savedUniqueAnimals = 0;
-    private static bool _savedHasGrapple = false;
-    private static bool _savedHasSkateboard = false;
-    private static bool _savedHasDartGun = false;
-    private static bool _savedHasMagicWand = false;
+    [Header("Save Settings")]
+    [Tooltip("是否启用自动保存")]
+    public bool enableAutoSave = true;
+    [Tooltip("自动保存间隔（秒）")]
+    public float autoSaveInterval = 60f;
+    [Tooltip("存档文件名")]
+    public string saveFileName = "player_progress.json";
 
     // —— 内部进度数据 —— //
-    readonly Dictionary<string, int> bestStars = new Dictionary<string, int>();
+    private Dictionary<string, int> bestStars = new Dictionary<string, int>();
     public IReadOnlyDictionary<string, int> BestStars => bestStars;
 
     public int TotalStars { get; private set; }
@@ -88,154 +67,92 @@ public class ProgressionManager : MonoBehaviour
     public bool HasDartGun { get; private set; }
     public bool HasMagicWand { get; private set; }
 
+    // 存档路径
+    private string SaveFilePath => Path.Combine(Application.persistentDataPath, saveFileName);
+
+    // 自动保存计时器
+    private float autoSaveTimer = 0f;
+
+    // 是否已初始化
+    private bool isInitialized = false;
+
     /// <summary>动物星级更新事件 (animalKey, newStars)</summary>
     public event Action<string, int> OnAnimalStarUpdated;
 
+    /// <summary>游戏进度保存完成事件</summary>
+    public event Action OnProgressSaved;
+
+    /// <summary>游戏进度加载完成事件</summary>
+    public event Action OnProgressLoaded;
+
+    [Serializable]
+    private class SaveData
+    {
+        public Dictionary<string, int> bestStars = new Dictionary<string, int>();
+        public int totalStars;
+        public int uniqueAnimals;
+        public bool hasGrapple;
+        public bool hasSkateboard;
+        public bool hasDartGun;
+        public bool hasMagicWand;
+        public bool savannaUnlocked;
+        public bool jungleUnlocked;
+    }
+
     void Awake()
     {
-        Debug.Log($"ProgressionManager: Awake被调用 - {gameObject.name}");
-
-        if (_instance != null && _instance != this)
+        if (Instance == null)
         {
-            Debug.Log($"ProgressionManager: 发现重复实例，禁用此组件 {gameObject.name}");
-            this.enabled = false;
-            return;
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
-
-        _instance = this;
-
-        // 确保有效性
-        if (GetComponent<SurvivalComponent>() == null)
-        {
-            gameObject.AddComponent<SurvivalComponent>();
-        }
-
-        DontDestroyOnLoad(gameObject);
-        Debug.Log("ProgressionManager: 单例实例已初始化");
-
-        // 加载已保存的状态
-        RestoreSavedData();
-    }
-
-    private void Start()
-    {
-        Debug.Log("ProgressionManager: Start被调用，准备进行手动解锁检查");
-        // 延迟进行手动解锁，确保其他系统已初始化
-        Invoke("CheckManualUnlock", 0.5f);
-    }
-
-    // 从静态变量恢复数据
-    private void RestoreSavedData()
-    {
-        // 先从静态变量恢复数据
-        if (_savedBestStars.Count > 0)
-        {
-            bestStars.Clear();
-            foreach (var pair in _savedBestStars)
-            {
-                bestStars[pair.Key] = pair.Value;
-            }
-
-            TotalStars = _savedTotalStars;
-            UniqueAnimals = _savedUniqueAnimals;
-            HasGrapple = _savedHasGrapple;
-            HasSkateboard = _savedHasSkateboard;
-            HasDartGun = _savedHasDartGun;
-            HasMagicWand = _savedHasMagicWand;
-
-            Debug.Log($"ProgressionManager: 从静态变量恢复数据 - 星星总数:{TotalStars}");
-        }
-        // 如果静态变量没有数据，尝试从PlayerPrefs加载
         else
         {
-            LoadSavedStates();
+            Destroy(gameObject);
+            return;
         }
     }
 
-    // 将当前数据保存到静态变量
-    private void SaveCurrentData()
+    void Start()
     {
-        _savedBestStars = new Dictionary<string, int>(bestStars);
-        _savedTotalStars = TotalStars;
-        _savedUniqueAnimals = UniqueAnimals;
-        _savedHasGrapple = HasGrapple;
-        _savedHasSkateboard = HasSkateboard;
-        _savedHasDartGun = HasDartGun;
-        _savedHasMagicWand = HasMagicWand;
+        // 加载游戏进度
+        LoadProgress();
 
-        Debug.Log($"ProgressionManager: 数据已保存到静态变量 - 星星总数:{TotalStars}");
+        // 手动解锁（仅在编辑器中起效）
+        if (Application.isEditor)
+        {
+            if (ManualUnlockGrapple && !HasGrapple) UnlockGrapple();
+            if (ManualUnlockSkateboard && !HasSkateboard) UnlockSkateboard();
+            if (ManualUnlockDartGun && !HasDartGun) UnlockDartGun();
+            if (ManualUnlockMagicWand && !HasMagicWand) UnlockMagicWand();
+        }
 
-        // 同时保存解锁状态到PlayerPrefs
-        SaveUnlockStatesToPrefs();
+        // 检查区域解锁状态
+        if (savannaBridge != null)
+            savannaBridge.SetActive(TotalStars >= savannaThreshold);
+        if (jungleBridge != null)
+            jungleBridge.SetActive(TotalStars >= jungleThreshold);
+
+        // 更新ScoreManager
+        if (ScoreManager.Instance != null)
+            ScoreManager.Instance.SetStars(TotalStars);
+
+        // 标记初始化完成
+        isInitialized = true;
     }
 
-    // 添加新方法来保存解锁状态到PlayerPrefs
-    private void SaveUnlockStatesToPrefs()
+    void Update()
     {
-        PlayerPrefs.SetInt("HasGrapple", HasGrapple ? 1 : 0);
-        PlayerPrefs.SetInt("HasSkateboard", HasSkateboard ? 1 : 0);
-        PlayerPrefs.SetInt("HasDartGun", HasDartGun ? 1 : 0);
-        PlayerPrefs.SetInt("HasMagicWand", HasMagicWand ? 1 : 0);
-        PlayerPrefs.SetInt("TotalStars", TotalStars);
-        PlayerPrefs.Save();
-
-        Debug.Log($"ProgressionManager: 解锁状态已保存到PlayerPrefs - 抓钩:{HasGrapple}, 滑板:{HasSkateboard}, 麻醉枪:{HasDartGun}, 魔法棒:{HasMagicWand}");
-    }
-
-    // 加载已保存的状态
-    private void LoadSavedStates()
-    {
-        if (PlayerPrefs.HasKey("HasGrapple"))
+        // 处理自动保存
+        if (enableAutoSave)
         {
-            HasGrapple = PlayerPrefs.GetInt("HasGrapple") == 1;
-            HasSkateboard = PlayerPrefs.GetInt("HasSkateboard") == 1;
-            HasDartGun = PlayerPrefs.GetInt("HasDartGun") == 1;
-            HasMagicWand = PlayerPrefs.GetInt("HasMagicWand") == 1;
-            TotalStars = PlayerPrefs.GetInt("TotalStars", 0);
-
-            Debug.Log($"ProgressionManager: 从PlayerPrefs加载解锁状态 - 抓钩:{HasGrapple}, 滑板:{HasSkateboard}, 麻醉枪:{HasDartGun}, 魔法棒:{HasMagicWand}, 星星:{TotalStars}");
+            autoSaveTimer += Time.deltaTime;
+            if (autoSaveTimer >= autoSaveInterval)
+            {
+                SaveProgress();
+                autoSaveTimer = 0f;
+            }
         }
-    }
-
-    private void CheckManualUnlock()
-    {
-        Debug.Log("ProgressionManager: 开始检查手动解锁标志");
-
-        // 手动解锁逻辑移到这里，确保所有相关系统已初始化
-        if (ManualUnlockGrapple)
-        {
-            Debug.Log("ProgressionManager: 检测到抓钩手动解锁标志为true");
-            if (!HasGrapple) UnlockGrapple();
-        }
-
-        if (ManualUnlockSkateboard)
-        {
-            Debug.Log("ProgressionManager: 检测到滑板手动解锁标志为true");
-            if (!HasSkateboard) UnlockSkateboard();
-        }
-
-        if (ManualUnlockDartGun)
-        {
-            Debug.Log("ProgressionManager: 检测到麻醉枪手动解锁标志为true");
-            if (!HasDartGun) UnlockDartGun();
-        }
-
-        if (ManualUnlockMagicWand)
-        {
-            Debug.Log("ProgressionManager: 检测到魔法棒手动解锁标志为true");
-            if (!HasMagicWand) UnlockMagicWand();
-        }
-
-        // 检查道具项是否有效，如果无效则输出错误日志
-        if (ManualUnlockGrapple && grappleItem == null) Debug.LogError("无法解锁抓钩: grappleItem为null");
-        if (ManualUnlockSkateboard && skateboardItem == null) Debug.LogError("无法解锁滑板: skateboardItem为null");
-        if (ManualUnlockDartGun && dartGunItem == null) Debug.LogError("无法解锁麻醉枪: dartGunItem为null");
-        if (ManualUnlockMagicWand && magicWandItem == null) Debug.LogError("无法解锁魔法棒: magicWandItem为null");
-
-        Debug.Log("ProgressionManager: 手动解锁检查完成");
-
-        // 保存当前状态
-        SaveCurrentData();
     }
 
     /// <summary>
@@ -273,8 +190,11 @@ public class ProgressionManager : MonoBehaviour
         CheckBridgeUnlock();
         CheckItemUnlocks();
 
-        // 保存当前状态
-        SaveCurrentData();
+        // 获得新星星后保存进度
+        if (isInitialized && enableAutoSave)
+        {
+            SaveProgress();
+        }
     }
 
     void CheckBridgeUnlock()
@@ -304,157 +224,213 @@ public class ProgressionManager : MonoBehaviour
 
     void UnlockGrapple()
     {
-        if (grappleItem == null)
-        {
-            Debug.LogError("无法解锁抓钩: grappleItem为null");
-            return;
-        }
-
         HasGrapple = true;
-        try
-        {
-            InventoryCycler.RegisterItem(grappleItem);
-            Debug.Log("解锁抓钩成功: 已注册到InventoryCycler!");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"注册抓钩到InventoryCycler失败: {e.Message}");
-        }
-
+        InventoryCycler.RegisterItem(grappleItem);
         ShowPopup($"已收集 {grappleStarsNeeded} ★，解锁抓钩！按 I 装备");
-        Debug.Log("解锁抓钩成功!");
-
-        // 保存状态
-        SaveCurrentData();
+        if (isInitialized && enableAutoSave) SaveProgress();
     }
 
     void UnlockSkateboard()
     {
-        if (skateboardItem == null)
-        {
-            Debug.LogError("无法解锁滑板: skateboardItem为null");
-            return;
-        }
-
         HasSkateboard = true;
-        try
-        {
-            InventoryCycler.RegisterItem(skateboardItem);
-            Debug.Log("解锁滑板成功: 已注册到InventoryCycler!");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"注册滑板到InventoryCycler失败: {e.Message}");
-        }
-
+        InventoryCycler.RegisterItem(skateboardItem);
         ShowPopup($"已收集 {skateboardStarsNeeded} ★，解锁滑板！按 I 装备");
-        Debug.Log("解锁滑板成功!");
-
-        // 保存状态
-        SaveCurrentData();
+        if (isInitialized && enableAutoSave) SaveProgress();
     }
 
     void UnlockDartGun()
     {
-        if (dartGunItem == null)
-        {
-            Debug.LogError("无法解锁麻醉枪: dartGunItem为null");
-            return;
-        }
-
         HasDartGun = true;
-        try
-        {
-            InventoryCycler.RegisterItem(dartGunItem);
-            Debug.Log("解锁麻醉枪成功: 已注册到InventoryCycler!");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"注册麻醉枪到InventoryCycler失败: {e.Message}");
-        }
-
+        InventoryCycler.RegisterItem(dartGunItem);
         ShowPopup($"已收集 {dartGunStarsNeeded} ★，解锁麻醉枪！按 I 装备");
-        Debug.Log("解锁麻醉枪成功!");
-
-        // 保存状态
-        SaveCurrentData();
+        if (isInitialized && enableAutoSave) SaveProgress();
     }
 
     void UnlockMagicWand()
     {
-        if (magicWandItem == null)
-        {
-            Debug.LogError("无法解锁魔法棒: magicWandItem为null");
-            return;
-        }
-
         HasMagicWand = true;
-        try
-        {
-            InventoryCycler.RegisterItem(magicWandItem);
-            Debug.Log("解锁魔法棒成功: 已注册到InventoryCycler!");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"注册魔法棒到InventoryCycler失败: {e.Message}");
-        }
-
+        InventoryCycler.RegisterItem(magicWandItem);
         ShowPopup($"已收集 {magicWandStarsNeeded} ★，魔法棒已解锁！按 I 装备");
-        Debug.Log("解锁魔法棒成功!");
-
-        // 保存状态
-        SaveCurrentData();
+        if (isInitialized && enableAutoSave) SaveProgress();
     }
 
     void ShowPopup(string msg)
     {
-        if (popupPrefab == null) Debug.Log(msg);
-        else Instantiate(popupPrefab).Show(msg);
-    }
-
-    private void OnDisable()
-    {
-        Debug.Log($"ProgressionManager: OnDisable被调用 - {gameObject.name}");
-
-        // 保存当前状态
-        SaveCurrentData();
-    }
-
-    private void OnDestroy()
-    {
-        Debug.Log($"ProgressionManager: OnDestroy被调用 - {gameObject.name}");
-
-        // 保存当前状态
-        SaveCurrentData();
-
-        // 只有当当前实例被销毁时才清除静态引用
-        if (_instance == this)
+        // 使用UIManager显示弹窗
+        if (UIManager.Instance != null)
         {
-            Debug.Log("ProgressionManager: 单例实例被销毁，但静态数据已保存");
-            _instance = null;
+            UIManager.Instance.ShowPopup(msg);
+        }
+        else
+        {
+            Debug.Log($"ProgressionManager: {msg}");
         }
     }
 
-    // 添加OnApplicationQuit确保游戏退出时也保存数据
+    /// <summary>
+    /// 保存游戏进度
+    /// </summary>
+    public void SaveProgress()
+    {
+        try
+        {
+            // 创建存档数据
+            SaveData saveData = new SaveData
+            {
+                bestStars = new Dictionary<string, int>(bestStars),
+                totalStars = TotalStars,
+                uniqueAnimals = UniqueAnimals,
+                hasGrapple = HasGrapple,
+                hasSkateboard = HasSkateboard,
+                hasDartGun = HasDartGun,
+                hasMagicWand = HasMagicWand,
+                savannaUnlocked = savannaBridge != null && savannaBridge.activeSelf,
+                jungleUnlocked = jungleBridge != null && jungleBridge.activeSelf
+            };
+
+            // 序列化为JSON
+            string jsonData = JsonUtility.ToJson(saveData, true);
+
+            // 写入文件
+            File.WriteAllText(SaveFilePath, jsonData);
+
+            Debug.Log($"游戏进度已保存到: {SaveFilePath}");
+            OnProgressSaved?.Invoke();
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"保存游戏进度失败: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 加载游戏进度
+    /// </summary>
+    public void LoadProgress()
+    {
+        if (!File.Exists(SaveFilePath))
+        {
+            Debug.Log("没有找到存档文件，使用默认设置");
+            InitializeDefaultProgress();
+            return;
+        }
+
+        try
+        {
+            // 读取文件
+            string jsonData = File.ReadAllText(SaveFilePath);
+
+            // 反序列化
+            SaveData saveData = JsonUtility.FromJson<SaveData>(jsonData);
+
+            // 应用存档数据
+            bestStars = new Dictionary<string, int>(saveData.bestStars);
+            TotalStars = saveData.totalStars;
+            UniqueAnimals = saveData.uniqueAnimals;
+            HasGrapple = saveData.hasGrapple;
+            HasSkateboard = saveData.hasSkateboard;
+            HasDartGun = saveData.hasDartGun;
+            HasMagicWand = saveData.hasMagicWand;
+
+            // 重新注册已解锁的物品
+            if (HasGrapple && grappleItem != null)
+                InventoryCycler.RegisterItem(grappleItem);
+            if (HasSkateboard && skateboardItem != null)
+                InventoryCycler.RegisterItem(skateboardItem);
+            if (HasDartGun && dartGunItem != null)
+                InventoryCycler.RegisterItem(dartGunItem);
+            if (HasMagicWand && magicWandItem != null)
+                InventoryCycler.RegisterItem(magicWandItem);
+
+            Debug.Log($"成功加载游戏进度: {TotalStars}颗星星, {UniqueAnimals}种动物");
+            OnProgressLoaded?.Invoke();
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"加载游戏进度失败: {e.Message}");
+            InitializeDefaultProgress();
+        }
+    }
+
+    /// <summary>
+    /// 初始化默认进度
+    /// </summary>
+    private void InitializeDefaultProgress()
+    {
+        bestStars = new Dictionary<string, int>();
+        TotalStars = 0;
+        UniqueAnimals = 0;
+        HasGrapple = false;
+        HasSkateboard = false;
+        HasDartGun = false;
+        HasMagicWand = false;
+    }
+
+    /// <summary>
+    /// 重置所有进度（通常用于"新游戏"）
+    /// </summary>
+    public void ResetProgress()
+    {
+        // 确认对话框
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowConfirmation(
+                "重置进度",
+                "确定要重置所有游戏进度吗？这将删除所有收集的星星和解锁的物品。此操作不可撤销！",
+                () => {
+                    // 确认重置
+                    PerformProgressReset();
+                },
+                null // 取消不执行任何操作
+            );
+        }
+        else
+        {
+            PerformProgressReset();
+        }
+    }
+
+    /// <summary>
+    /// 执行进度重置
+    /// </summary>
+    private void PerformProgressReset()
+    {
+        // 重置内部数据
+        InitializeDefaultProgress();
+
+        // 更新UI
+        if (ScoreManager.Instance != null)
+            ScoreManager.Instance.SetStars(0);
+
+        // 禁用桥梁
+        if (savannaBridge != null)
+            savannaBridge.SetActive(false);
+        if (jungleBridge != null)
+            jungleBridge.SetActive(false);
+
+        // 保存重置后的状态
+        SaveProgress();
+
+        // 显示提示
+        ShowPopup("游戏进度已重置");
+    }
+
+    /// <summary>
+    /// 在游戏退出前保存进度
+    /// </summary>
     private void OnApplicationQuit()
     {
-        Debug.Log("ProgressionManager: 应用程序退出，保存数据");
-        SaveCurrentData();
+        SaveProgress();
     }
 
-    // 添加一个组件确保游戏对象不会被销毁
-    public class SurvivalComponent : MonoBehaviour
+    /// <summary>
+    /// 在游戏暂停时保存进度
+    /// </summary>
+    private void OnApplicationPause(bool pauseStatus)
     {
-        private void Awake()
+        if (pauseStatus)
         {
-            // 确保持久化
-            DontDestroyOnLoad(gameObject);
-            Debug.Log($"SurvivalComponent: Awake在 {gameObject.name}");
-        }
-
-        private void OnDestroy()
-        {
-            Debug.LogWarning($"SurvivalComponent: 检测到尝试销毁 {gameObject.name}，这可能导致ProgressionManager不可用");
+            SaveProgress();
         }
     }
 }

@@ -38,7 +38,10 @@ public class SkateboardItem : BaseItem
         // 查找移动控制
         _mover = Object.FindObjectOfType<player_move2>();
         if (_mover == null)
+        {
             Debug.LogError("SkateboardItem: 找不到 player_move2");
+            UIManager.Instance.UpdateCameraDebugText("滑板错误: 找不到移动控制器");
+        }
         else
             _cc = _mover.GetComponent<CharacterController>();
 
@@ -47,6 +50,8 @@ public class SkateboardItem : BaseItem
         _targetMultiplier = 1f;
         _coastRemaining = 0f;
         _isSkating = false;
+
+        UIManager.Instance.UpdateCameraDebugText("滑板准备就绪，按 Q 开始滑行");
     }
 
     public override void OnDeselect()
@@ -70,6 +75,7 @@ public class SkateboardItem : BaseItem
                 // 开始滑行
                 _targetMultiplier = speedMultiplier;
                 _coastRemaining = coastDistance;
+                UIManager.Instance.UpdateCameraDebugText("滑板已启动");
             }
             else
             {
@@ -78,6 +84,7 @@ public class SkateboardItem : BaseItem
                 _targetMultiplier = 1f;
                 _coastRemaining = 0f;
                 _mover.ModifySpeed(1f);
+                UIManager.Instance.UpdateCameraDebugText("滑板已停止");
                 return;
             }
         }
@@ -128,6 +135,7 @@ public class SkateboardItem : BaseItem
                 _currentMultiplier = 1f;
                 _targetMultiplier = 1f;
                 _mover.ModifySpeed(1f);
+                UIManager.Instance.UpdateCameraDebugText("滑板已停止（惯性结束）");
             }
         }
     }

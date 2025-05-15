@@ -1561,11 +1561,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemAnchor: {fileID: 1473197921}
   footAnchor: {fileID: 84977087}
-  radialUI: {fileID: 2127922837}
-  mainHUDCanvas: {fileID: 787990330}
-  cameraHUDCanvas: {fileID: 5095868207399004671}
-  debugTextTMP: {fileID: 1184771359}
-  detectTextTMP: {fileID: 0}
   itemAnimator: {fileID: 0}
   switchTrigger: SwitchItem
   availableItems:
@@ -2961,6 +2956,7 @@ GameObject:
   m_Component:
   - component: {fileID: 396027401}
   - component: {fileID: 396027403}
+  - component: {fileID: 396027404}
   m_Layer: 0
   m_Name: UiRoot
   m_TagString: Untagged
@@ -2999,6 +2995,30 @@ MonoBehaviour:
   totalText: {fileID: 997529542}
   filmText: {fileID: 2000285919}
   foodText: {fileID: 2125554756}
+--- !u!114 &396027404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 396027400}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54939223ea58ed54dac53789803d2f1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mainHUDCanvas: {fileID: 787990330}
+  cameraHUDCanvas: {fileID: 5095868207399004671}
+  radialInventoryUI: {fileID: 2127922837}
+  resourceHUD: {fileID: 0}
+  cameraDebugText: {fileID: 0}
+  cameraResultText: {fileID: 0}
+  popupPrefab: {fileID: 0}
+  confirmationDialogPrefab: {fileID: 0}
+  fullPageAlertPopupPrefab: {fileID: 0}
+  replacePhotoSelectorPrefab: {fileID: 0}
+  cooldownIndicator: {fileID: 0}
+  cooldownText: {fileID: 0}
 --- !u!1 &403677555
 GameObject:
   m_ObjectHideFlags: 0
@@ -3583,7 +3603,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.0001477578}
+  m_AnchoredPosition: {x: 0, y: 0.000025576779}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &500963041
@@ -6417,7 +6437,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 403677556}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.99595475
+  m_Size: 0.99904287
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -11488,7 +11508,9 @@ MonoBehaviour:
   ManualUnlockSkateboard: 1
   ManualUnlockDartGun: 1
   ManualUnlockMagicWand: 1
-  popupPrefab: {fileID: 0}
+  enableAutoSave: 1
+  autoSaveInterval: 60
+  saveFileName: player_progress.json
 --- !u!4 &1952691958
 Transform:
   m_ObjectHideFlags: 0
