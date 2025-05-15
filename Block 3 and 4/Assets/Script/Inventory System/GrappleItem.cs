@@ -5,16 +5,18 @@ using UnityEngine;
 public class GrappleItem : BaseItem
 {
     [Header("抓钩参数")]
-    public float maxDistance = 20f;
-    public float pullSpeed = 5f;
+    public float maxDistance = 30f;  // 增加了最大距离
+    public float pullSpeed = 12f;    // 增加了拉力
 
     [Header("钩爪可视化")]
     [Tooltip("抓钩模型 Prefab，由美术提供")]
     public GameObject hookPrefab;
     [Tooltip("钩爪飞行速度 (m/s)")]
-    public float hookTravelSpeed = 50f;
+    public float hookTravelSpeed = 70f;  // 增加了飞行速度
     [Tooltip("绳索材质，用于 LineRenderer")]
     public Material ropeMaterial;
+    [Tooltip("钩爪和绳索的颜色")]
+    public Color ropeColor = new Color(0.545f, 0.271f, 0.075f);  // 棕色
 
     [Header("音效")]
     [Tooltip("抓钩开铅音效")]
@@ -30,7 +32,11 @@ public class GrappleItem : BaseItem
     public override void OnSelect(GameObject model)
     {
         _cam = Camera.main;
-        if (_cam == null) { Debug.LogError("找不到主相机"); return; }
+        if (_cam == null)
+        {
+            Debug.LogError("找不到主相机");
+            return;
+        }
 
         // 假设 GrappleController 挂在相机的父对象上（玩家身上）
         _grappler = _cam.GetComponentInParent<GrappleController>();
@@ -50,7 +56,11 @@ public class GrappleItem : BaseItem
         }
 
         // 注入钩爪可视化资源
-        _grappler.InitializeHook(hookPrefab, hookTravelSpeed, ropeMaterial);
+        _grappler.hookPrefab = hookPrefab;
+        _grappler.hookSpeed = hookTravelSpeed;
+        _grappler.ropeMaterial = ropeMaterial;
+        _grappler.ropeColor = ropeColor;
+        _grappler.Initialize();
 
         UIManager.Instance.UpdateCameraDebugText("抓钩就绪，点击发射");
     }
@@ -91,6 +101,15 @@ public class GrappleItem : BaseItem
         else
         {
             UIManager.Instance.UpdateCameraDebugText("射程内未命中任何表面");
+        }
+    }
+
+    public override void OnDeselect()
+    {
+        // 确保抓钩在切换物品时被取消，防止钩爪残留
+        if (_grappler != null)
+        {
+            _grappler.StopGrapple();
         }
     }
 }

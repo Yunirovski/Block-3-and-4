@@ -1,153 +1,248 @@
+ï»¿// Assets/Scripts/Player/GrappleController.cs
+using System.Collections;
 using UnityEngine;
-using System;  // Ìí¼Ó´ËĞĞÒÔÖ§³ÖAction
 
-[RequireComponent(typeof(CharacterController))]
 public class GrappleController : MonoBehaviour
 {
-    [Header("×¥¹³ÒÆ¶¯²ÎÊı")]
-    [Tooltip("Íæ¼ÒÏò¹³×ÓÒÆ¶¯µÄËÙ¶È(m/s)")]
-    public float defaultPullSpeed = 5f;
-    [Tooltip("¾àÀëÄ¿±êµãÍ£Ö¹À­³¶(m)")]
-    public float stopDistance = 1f;
+    // å…¬å¼€å±æ€§ï¼ˆä»GrappleItemè®¾ç½®ï¼‰
+    [HideInInspector] public GameObject hookPrefab;
+    [HideInInspector] public float hookSpeed = 70f;
+    [HideInInspector] public Material ropeMaterial;
+    [HideInInspector] public Color ropeColor = new Color(0.545f, 0.271f, 0.075f);
 
-    [Header("¹³×¦¿ÉÊÓ»¯£¨Íâ²¿¿É¸³Öµ£©")]
-    [Tooltip("×¥¹³ÊµÌåÄ£ĞÍPrefab£¬·ÇUIµ«¿¼ÂÇĞÔÄÜ")]
-    public GameObject hookPrefab;
-    [Tooltip("¹³×¦·ÉĞĞËÙ¶È(m/s)")]
-    public float hookTravelSpeed = 50f;
-    [Tooltip("ÉşË÷²ÄÖÊ£¬ÓÃÓÚLineRenderer")]
-    public Material ropeMaterial;
+    // ç»„ä»¶å¼•ç”¨
+    private CharacterController controller;
+    private LineRenderer lineRenderer;
+    private GameObject hookInstance;
 
-    // ÄÚ²¿×´Ì¬
-    CharacterController _cc;
-    GameObject _currentHook;
-    LineRenderer _ropeRenderer;
-    bool _hookFlying;
-    bool _isGrappling;
-    Vector3 _hookStartPoint;
-    Vector3 _hookTargetPoint;
-    Vector3 _grapplePoint;
-    float _pullSpeed;
+    // æŠ“é’©çŠ¶æ€
+    private bool isGrappling = false;
+    private bool isHookFlying = false;
+    private Vector3 grapplePoint;
+    private float currentPullSpeed = 10f;
+    private float grappleTimeLimit = 15f; // å®‰å…¨é™åˆ¶ï¼šæœ€é•¿æŠ“é’©æ—¶é—´
+    private float grappleTimer = 0f;
 
-    // Ìí¼ÓÒ»¸öÊÂ¼ş£¬µ±×¥¹³µ½´ïÄ¿±êµãÊ±´¥·¢
-    public event Action onGrappleComplete;
-
-    void Awake()
+    // åˆå§‹åŒ–æ–¹æ³•
+    public void Initialize()
     {
-        _cc = GetComponent<CharacterController>();
+        // ç¡®ä¿æœ‰CharacterController
+        controller = GetComponent<CharacterController>();
+        if (controller == null)
+        {
+            controller = gameObject.AddComponent<CharacterController>();
+            Debug.Log("GrappleController: æ·»åŠ äº†ç¼ºå¤±çš„CharacterControllerç»„ä»¶");
+        }
+
+        // ç¡®ä¿æœ‰LineRenderer
+        if (lineRenderer == null)
+        {
+            lineRenderer = gameObject.AddComponent<LineRenderer>();
+            lineRenderer.positionCount = 2;
+            lineRenderer.startWidth = 0.05f;
+            lineRenderer.endWidth = 0.05f;
+            lineRenderer.material = ropeMaterial;
+            lineRenderer.startColor = ropeColor;
+            lineRenderer.endColor = ropeColor;
+            lineRenderer.enabled = false;
+            Debug.Log("GrappleController: è®¾ç½®äº†LineRenderer");
+        }
+        else if (ropeMaterial != null)
+        {
+            lineRenderer.material = ropeMaterial;
+            lineRenderer.startColor = ropeColor;
+            lineRenderer.endColor = ropeColor;
+        }
+
+        Debug.Log("GrappleController: åˆå§‹åŒ–å®Œæˆ");
     }
 
     void Update()
     {
-        // ¡ª¡ª ¹³×¦Å×³ö½×¶Î ¡ª¡ª //
-        if (_hookFlying)
+        // å¦‚æœæ­£åœ¨æŠ“é’©ä¸­ï¼Œæ›´æ–°è®¡æ—¶å™¨
+        if (isGrappling || isHookFlying)
         {
-            // ¹³×¦³¯Ä¿±ê·ÉĞĞ
-            _currentHook.transform.position = Vector3.MoveTowards(
-                _currentHook.transform.position,
-                _hookTargetPoint,
-                hookTravelSpeed * Time.deltaTime);
+            grappleTimer += Time.deltaTime;
 
-            // ¸üĞÂÉş×ÓÁ½¶Ëµã
-            _ropeRenderer.SetPosition(0, _hookStartPoint);
-            _ropeRenderer.SetPosition(1, _currentHook.transform.position);
-
-            // ¼ì²âÊÇ·ñµ½´ïÄ¿±êÇĞ»»µ½À­³¶½×¶Î
-            if (Vector3.Distance(_currentHook.transform.position, _hookTargetPoint) < 0.1f)
+            // å¦‚æœè¶…æ—¶ï¼Œåœæ­¢æŠ“é’©
+            if (grappleTimer > grappleTimeLimit)
             {
-                _hookFlying = false;
-                _isGrappling = true;
-
-                // ´¥·¢×¥¹³µ½´ïÄ¿±êµãÊÂ¼ş
-                onGrappleComplete?.Invoke();
-            }
-            return;
-        }
-
-        // ¡ª¡ª À­³¶Íæ¼Ò½×¶Î ¡ª¡ª //
-        if (_isGrappling)
-        {
-            Vector3 delta = _grapplePoint - transform.position;
-            delta.y = 0; // Ö»Ë®Æ½À­
-            float dist = delta.magnitude;
-
-            // ¾àÀë×ã¹»½üÊ±½áÊø×¥¹³
-            if (dist <= stopDistance)
-            {
-                EndGrapple();
+                Debug.Log("GrappleController: æŠ“é’©è¶…æ—¶ï¼Œè‡ªåŠ¨åœæ­¢");
+                StopGrapple();
                 return;
             }
 
-            // ÒÆ¶¯Íæ¼Ò
-            Vector3 move = delta.normalized * _pullSpeed * Time.deltaTime;
-            _cc.Move(move);
+            // æ›´æ–°ç»³ç´¢ä½ç½®
+            UpdateRopePositions();
+        }
 
-            // ¸üĞÂÉşË÷Æğµã£¨ËæÍæ¼Ò¸ß¶È£©
-            _ropeRenderer.SetPosition(0, transform.position + Vector3.up * _cc.height * 0.5f);
-            // ÖÕµã±£³Ö¹³×¦Î»ÖÃ
-            _ropeRenderer.SetPosition(1, _currentHook.transform.position);
+        // å¦‚æœé’©å­æ­£åœ¨é£è¡Œ
+        if (isHookFlying && hookInstance != null)
+        {
+            MoveHookTowardsTarget();
+        }
+        // å¦‚æœæ­£åœ¨æŠ“å–
+        else if (isGrappling)
+        {
+            PullPlayerTowardsTarget();
         }
     }
 
-    /// <summary>
-    /// Íâ²¿µ÷ÓÃ£ºÅäÖÃ¹³×¦Ä£ĞÍ¡¢ËÙ¶ÈºÍÉşË÷²ÄÖÊ
-    /// </summary>
-    public void InitializeHook(GameObject hookPrefab, float hookSpeed, Material ropeMat)
-    {
-        this.hookPrefab = hookPrefab;
-        this.hookTravelSpeed = hookSpeed;
-        this.ropeMaterial = ropeMat;
-    }
-
-    /// <summary>
-    /// Íâ²¿µ÷ÓÃ£º¿ªÊ¼Ò»´Î×¥¹³Âß¼­
-    /// </summary>
+    // å¼€å§‹æŠ“é’©
     public void StartGrapple(Vector3 hitPoint, float pullSpeed)
     {
-        _grapplePoint = hitPoint;
-        _pullSpeed = pullSpeed > 0f ? pullSpeed : defaultPullSpeed;
+        // å¦‚æœå·²ç»åœ¨æŠ“é’©ï¼Œå…ˆåœæ­¢
+        if (isGrappling || isHookFlying)
+        {
+            StopGrapple();
+        }
 
-        // ¼ÆËã¹³×¦´ÓÍæ¼Ò"ÊÖ"Î»ÖÃ·¢Éä³öÀ´µÄÆğµã
-        _hookStartPoint = transform.position + Vector3.up * (_cc.height * 0.5f);
+        Debug.Log($"å¼€å§‹æŠ“é’©åˆ°ä½ç½®: {hitPoint}, æ‹‰åŠ›: {pullSpeed}");
 
-        // ÊµÀı»¯¹³×¦Ä£ĞÍ
+        // è®¾ç½®å‚æ•°
+        grapplePoint = hitPoint;
+        currentPullSpeed = pullSpeed;
+        grappleTimer = 0f;
+
+        // åˆ›å»ºé’©å­å®ä¾‹
         if (hookPrefab != null)
         {
-            _currentHook = Instantiate(hookPrefab, _hookStartPoint, Quaternion.identity);
+            // ä»ç›¸æœºä½ç½®å‘å°„é’©å­
+            Vector3 startPosition = Camera.main.transform.position;
+            hookInstance = Instantiate(hookPrefab, startPosition, Quaternion.identity);
+
+            // è®¾ç½®é’©å­é¢œè‰²
+            Renderer hookRenderer = hookInstance.GetComponent<Renderer>();
+            if (hookRenderer != null)
+            {
+                Material[] mats = hookRenderer.materials;
+                foreach (Material mat in mats)
+                {
+                    mat.color = ropeColor;
+                }
+                hookRenderer.materials = mats;
+            }
+
+            // å¼€å§‹é’©å­é£è¡Œ
+            isHookFlying = true;
+
+            // å¯ç”¨ç»³ç´¢
+            if (lineRenderer != null)
+            {
+                lineRenderer.enabled = true;
+            }
+
+            Debug.Log("åˆ›å»ºäº†é’©å­ï¼Œå¼€å§‹é£è¡Œ");
         }
         else
         {
-            // ÈôÃ»Ö¸¶¨Ä£ĞÍ£¬ÓÃÒ»¸öĞ¡Çò´úÌæ
-            _currentHook = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            _currentHook.transform.position = _hookStartPoint;
-            _currentHook.transform.localScale = Vector3.one * 0.2f;
+            Debug.LogError("é’©å­é¢„åˆ¶ä½“ä¸ºç©ºï¼Œæ— æ³•åˆ›å»ºé’©å­");
         }
-
-        // ´´½¨ÉşË÷
-        _ropeRenderer = _currentHook.AddComponent<LineRenderer>();
-        _ropeRenderer.positionCount = 2;
-        _ropeRenderer.material = ropeMaterial;
-        _ropeRenderer.startWidth = 0.05f;
-        _ropeRenderer.endWidth = 0.05f;
-
-        // ¿ªÊ¼Å×³ö½×¶Î
-        _hookTargetPoint = hitPoint;
-        _hookFlying = true;
-        _isGrappling = false;
     }
 
-    /// <summary>
-    /// Íâ²¿ÄÚ²¿¾ù¿Éµ÷ÓÃ£º½áÊø×¥¹³ÉşË÷
-    /// </summary>
-    public void EndGrapple()
+    // åœæ­¢æŠ“é’©
+    public void StopGrapple()
     {
-        _hookFlying = false;
-        _isGrappling = false;
-        if (_currentHook != null) Destroy(_currentHook);
-        if (_ropeRenderer != null) Destroy(_ropeRenderer);
+        isGrappling = false;
+        isHookFlying = false;
 
-        // ´¥·¢×¥¹³Íê³ÉÊÂ¼ş£¨Èç¹ûÊÇÕı³£½áÊø£©
-        // ×¢Òâ£ºÕâÀï¿ÉÄÜĞèÒªÇø·ÖÊÇÕı³£½áÊø»¹ÊÇÖĞ¶Ï£¬È¡¾öÓÚ¾ßÌåĞèÇó
-        onGrappleComplete?.Invoke();
+        // ç¦ç”¨ç»³ç´¢
+        if (lineRenderer != null)
+        {
+            lineRenderer.enabled = false;
+        }
+
+        // é”€æ¯é’©å­
+        if (hookInstance != null)
+        {
+            Destroy(hookInstance);
+            hookInstance = null;
+            Debug.Log("é”€æ¯äº†é’©å­å®ä¾‹");
+        }
+
+        Debug.Log("åœæ­¢æŠ“é’©");
+    }
+
+    // æ›´æ–°ç»³ç´¢ä½ç½®
+    private void UpdateRopePositions()
+    {
+        if (lineRenderer == null || Camera.main == null) return;
+
+        // è®¾ç½®ç»³ç´¢èµ·ç‚¹ï¼ˆç©å®¶æ‰‹éƒ¨ä½ç½®ï¼‰
+        Vector3 handPosition = Camera.main.transform.position +
+                              Camera.main.transform.right * 0.2f -
+                              Camera.main.transform.up * 0.1f;
+
+        lineRenderer.SetPosition(0, handPosition);
+
+        // è®¾ç½®ç»³ç´¢ç»ˆç‚¹ï¼ˆé’©å­ä½ç½®ï¼‰
+        if (hookInstance != null)
+        {
+            lineRenderer.SetPosition(1, hookInstance.transform.position);
+        }
+        else
+        {
+            lineRenderer.SetPosition(1, grapplePoint);
+        }
+    }
+
+    // ç§»åŠ¨é’©å­åˆ°ç›®æ ‡ç‚¹
+    private void MoveHookTowardsTarget()
+    {
+        if (hookInstance == null) return;
+
+        // è®¡ç®—æ–¹å‘å’Œè·ç¦»
+        Vector3 direction = (grapplePoint - hookInstance.transform.position).normalized;
+        float distanceThisFrame = hookSpeed * Time.deltaTime;
+        float distanceToTarget = Vector3.Distance(hookInstance.transform.position, grapplePoint);
+
+        // å¦‚æœåˆ°è¾¾ç›®æ ‡
+        if (distanceToTarget <= distanceThisFrame)
+        {
+            // åˆ°è¾¾ç›®æ ‡ç‚¹
+            hookInstance.transform.position = grapplePoint;
+            isHookFlying = false;
+            isGrappling = true;
+            Debug.Log("é’©å­åˆ°è¾¾ç›®æ ‡ï¼Œå¼€å§‹æ‹‰åŠ¨ç©å®¶");
+        }
+        else
+        {
+            // ç»§ç»­ç§»åŠ¨é’©å­
+            hookInstance.transform.position += direction * distanceThisFrame;
+
+            // æ—‹è½¬é’©å­
+            if (direction != Vector3.zero)
+            {
+                hookInstance.transform.rotation = Quaternion.LookRotation(direction);
+            }
+        }
+    }
+
+    // æ‹‰åŠ¨ç©å®¶åˆ°é’©å­ä½ç½®
+    private void PullPlayerTowardsTarget()
+    {
+        if (controller == null) return;
+
+        // è®¡ç®—æ–¹å‘
+        Vector3 playerPosition = transform.position;
+        Vector3 direction = (grapplePoint - playerPosition).normalized;
+
+        // å¢å¼ºå‚ç›´æ‹‰åŠ›
+        Vector3 pullDirection = direction * currentPullSpeed;
+        if (pullDirection.y > 0)
+        {
+            pullDirection.y *= 1.5f; // å¢å¼ºå‘ä¸Šæ‹‰åŠ›
+        }
+
+        // ç§»åŠ¨ç©å®¶
+        controller.Move(pullDirection * Time.deltaTime);
+
+        // å¦‚æœåˆ°è¾¾ç›®æ ‡ç‚¹é™„è¿‘ï¼Œåœæ­¢æŠ“é’©
+        float distanceToTarget = Vector3.Distance(transform.position, grapplePoint);
+        if (distanceToTarget < 2.0f)
+        {
+            Debug.Log("ç©å®¶åˆ°è¾¾ç›®æ ‡ç‚¹é™„è¿‘ï¼Œåœæ­¢æŠ“é’©");
+            StopGrapple();
+        }
     }
 }
