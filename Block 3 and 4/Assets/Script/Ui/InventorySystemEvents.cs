@@ -1,3 +1,4 @@
+// Assets/Scripts/Inventory System/InventorySystemEvents.cs
 using System;
 
 /// <summary>

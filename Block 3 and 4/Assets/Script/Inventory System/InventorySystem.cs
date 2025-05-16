@@ -1,5 +1,4 @@
-﻿
-// Assets/Scripts/Inventory System/InventorySystem.cs
+﻿// Assets/Scripts/Inventory System/InventorySystem.cs
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;

@@ -1,3 +1,4 @@
+// Assets/Scripts/UI/UIManager.cs
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -14,48 +15,48 @@ public class UIManager : MonoBehaviour
     [Header("画布引用")]
     [Tooltip("主界面画布")]
     public Canvas mainHUDCanvas;
-    
+
     [Tooltip("相机模式画布")]
     public Canvas cameraHUDCanvas;
 
     [Header("物品栏UI")]
     [Tooltip("圆形物品选择UI")]
     public RadialInventoryUI radialInventoryUI;
-    
+
     [Tooltip("资源显示HUD")]
     public ResourceHUD resourceHUD;
 
     [Header("相机UI")]
     [Tooltip("相机模式调试文本")]
     public TMP_Text cameraDebugText;
-    
+
     [Tooltip("相机模式结果文本")]
     public TMP_Text cameraResultText;
 
     [Header("弹窗预制体")]
     [Tooltip("简单弹窗预制体")]
     public PopupController popupPrefab;
-    
+
     [Tooltip("确认对话框预制体")]
     public ConfirmationDialog confirmationDialogPrefab;
-    
+
     [Tooltip("照片已满警告预制体")]
     public FullPageAlertPopup fullPageAlertPopupPrefab;
-    
+
     [Tooltip("照片替换选择器预制体")]
     public ReplacePhotoSelector replacePhotoSelectorPrefab;
 
     [Header("物品冷却UI")]
     [Tooltip("冷却指示器图像")]
     public Image cooldownIndicator;
-    
+
     [Tooltip("冷却文本")]
     public TMP_Text cooldownText;
 
     // UI状态标记
     private bool isInventoryOpen = false;
     private bool isCameraMode = false;
-    
+
     // 物品冷却计时器
     private float currentCooldownTime = 0f;
     private float maxCooldownTime = 0f;
@@ -79,18 +80,18 @@ public class UIManager : MonoBehaviour
         // 初始化UI状态
         if (cooldownIndicator != null)
             cooldownIndicator.gameObject.SetActive(false);
-            
+
         if (cameraHUDCanvas != null)
             cameraHUDCanvas.enabled = false;
     }
-    
+
     private void Update()
     {
         // 更新物品冷却UI
         if (isCooldownActive)
         {
             currentCooldownTime -= Time.deltaTime;
-            
+
             if (currentCooldownTime <= 0)
             {
                 // 冷却结束
@@ -107,7 +108,7 @@ public class UIManager : MonoBehaviour
                 {
                     cooldownIndicator.fillAmount = currentCooldownTime / maxCooldownTime;
                 }
-                
+
                 if (cooldownText != null)
                 {
                     cooldownText.text = currentCooldownTime.ToString("F1") + "s";
@@ -192,16 +193,65 @@ public class UIManager : MonoBehaviour
         isCooldownActive = true;
         currentCooldownTime = duration;
         maxCooldownTime = duration;
-        
+
         if (cooldownIndicator != null)
         {
             cooldownIndicator.gameObject.SetActive(true);
             cooldownIndicator.fillAmount = 1.0f;
         }
-        
+
         if (cooldownText != null)
         {
             cooldownText.text = duration.ToString("F1") + "s";
+        }
+    }
+
+    #endregion
+
+    #region 资源HUD管理
+
+    // 资源HUD引用
+    private ResourceHUD resourceHUDInstance;
+
+    /// <summary>
+    /// 注册ResourceHUD实例
+    /// </summary>
+    public void RegisterResourceHUD(ResourceHUD hud)
+    {
+        resourceHUDInstance = hud;
+        resourceHUD = hud;  // 更新Inspector引用
+    }
+
+    /// <summary>
+    /// 注销ResourceHUD实例
+    /// </summary>
+    public void UnregisterResourceHUD(ResourceHUD hud)
+    {
+        if (resourceHUDInstance == hud)
+        {
+            resourceHUDInstance = null;
+        }
+    }
+
+    /// <summary>
+    /// 刷新资源HUD显示
+    /// </summary>
+    public void RefreshResourceHUD()
+    {
+        if (resourceHUDInstance != null)
+        {
+            resourceHUDInstance.Refresh();
+        }
+    }
+
+    /// <summary>
+    /// 更新特定资源文本
+    /// </summary>
+    public void UpdateResourceText(string type, string value)
+    {
+        if (resourceHUDInstance != null)
+        {
+            resourceHUDInstance.UpdateText(type, value);
         }
     }
 
@@ -227,7 +277,7 @@ public class UIManager : MonoBehaviour
     public void ExitCameraMode()
     {
         if (!isCameraMode) return;
-        
+
         isCameraMode = false;
         SetCameraHUDVisible(false);
         SetMainHUDVisible(true);
@@ -274,7 +324,7 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("弹窗预制体未设置");
             return null;
         }
-        
+
         PopupController popup = Instantiate(popupPrefab);
         popup.Show(message);
         return popup;
@@ -283,7 +333,7 @@ public class UIManager : MonoBehaviour
     /// <summary>
     /// 显示确认对话框
     /// </summary>
-    public ConfirmationDialog ShowConfirmation(string title, string message, 
+    public ConfirmationDialog ShowConfirmation(string title, string message,
                                               Action onConfirm, Action onCancel)
     {
         if (confirmationDialogPrefab == null)
@@ -291,7 +341,7 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("确认对话框预制体未设置");
             return null;
         }
-        
+
         ConfirmationDialog dialog = Instantiate(confirmationDialogPrefab);
         dialog.Initialize(title, message, onConfirm, onCancel);
         return dialog;
@@ -307,7 +357,7 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("照片已满警告预制体未设置");
             return null;
         }
-        
+
         FullPageAlertPopup alert = Instantiate(fullPageAlertPopupPrefab);
         alert.Initialize(animalId, photoPath, stars);
         return alert;
@@ -316,7 +366,7 @@ public class UIManager : MonoBehaviour
     /// <summary>
     /// 显示照片替换选择器
     /// </summary>
-    public ReplacePhotoSelector ShowReplaceSelector(string animalId, string photoPath, 
+    public ReplacePhotoSelector ShowReplaceSelector(string animalId, string photoPath,
                                                    int stars, Action onComplete)
     {
         if (replacePhotoSelectorPrefab == null)
@@ -324,7 +374,7 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("照片替换选择器预制体未设置");
             return null;
         }
-        
+
         ReplacePhotoSelector selector = Instantiate(replacePhotoSelectorPrefab);
         selector.Initialize(animalId, photoPath, stars, onComplete);
         return selector;
