@@ -1,72 +1,63 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
 
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(AudioSource))]
 public class player_move2 : MonoBehaviour, IMoveController
 {
     [Header("Movement Settings")]
-    public float walkSpeed = 10f;      // Walk speed
-    public float runSpeed = 20f;       // Run speed
-    public float crouchSpeed = 2f;     // Crouch movement speed
-    public float jumpHeight = 4f;      // Jump height
-    public float gravity = -12f;       // Gravity force
+    public float walkSpeed = 5f;
+    public float runSpeed = 10f;
+    public float crouchSpeed = 2f;
+    public float jumpHeight = 1.5f;
+    public float gravity = -12f;
 
     [Header("Mouse Settings")]
-    public float mouseSensitivity = 2f;    // Mouse look sensitivity
-    public float verticalLookLimit = 80f;  // Up/down look limit
-    public Transform cameraTransform;      // Reference to the camera
+    public float mouseSensitivity = 2f;
+    public float verticalLookLimit = 80f;
+    public Transform cameraTransform;
 
     [Header("Crouch Settings")]
-    public float crouchHeight = 1f;        // CharacterController height when crouching
-    public float normalHeight = 2f;        // Height when standing
+    public float crouchHeight = 1f;
+    public float normalHeight = 2f;
     public float crouchTransitionSpeed = 5f;
 
     [Header("Footstep Settings")]
-    public AudioSource footstepAudioSource;  // Dedicated AudioSource for footsteps
+    public AudioSource footstepAudioSource;
 
-    [Header("Footstep Clips - Default/Fallback")]
-    public AudioClip[] defaultFootsteps;
+    [Header("Loop Footstep Clips")]
+    public AudioClip walkLoopClip;
+    public AudioClip runLoopClip;
+    public AudioClip crouchLoopClip;
 
-    [Header("Terrain Layer Footstep Clips")]
-    public TerrainLayerAudioPair[] terrainLayerFootsteps;  // Different sounds for different terrain layers
+    [Header("Jump & Landing Sounds")]
+    public AudioClip jumpClip;
+    public AudioClip landClip;
+    [Tooltip("Minimum time in air before a landing sound is played")]
+    public float minAirTimeForLandSound = 0.2f;
 
-    [Header("Footstep Timing")]
-    public float walkStepInterval = 0.5f;    // Time between steps when walking
-    public float runStepInterval = 0.3f;     // Time between steps when running
-    public float crouchStepInterval = 0.8f;  // Time between steps when crouching
+    [Header("Extra Audio")]
+    public AudioSource effectAudioSource;
 
     [Header("Audio Settings")]
     [Range(0f, 1f)] public float stepVolume = 0.7f;
-    public float pitchMin = 0.9f;           // Minimum random pitch
-    public float pitchMax = 1.1f;           // Maximum random pitch
+    public float pitchMin = 0.9f;
+    public float pitchMax = 1.1f;
 
-    // Internal state
     private CharacterController controller;
-    private Vector3 velocity;              // Vertical velocity for gravity/jump
-    private float verticalRotation = 0f;   // Camera pitch
+    private Vector3 velocity;
+    private float verticalRotation = 0f;
     private bool isCrouching = false;
+    private bool wasGroundedLastFrame = true;
+    private bool isInAir = false;
+    private float airTimeCounter = 0f;
 
-    // For IMoveController
     private float baseWalkSpeed;
     private float baseRunSpeed;
-
-    // Footstep system
-    private float stepTimer = 0f;
-    private Dictionary<string, AudioClip[]> terrainLayerSounds;
-
-    [System.Serializable]
-    public struct TerrainLayerAudioPair
-    {
-        public string terrainLayerName;  // This should match the TerrainLayer asset name
-        public AudioClip[] footstepClips;
-    }
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
 
-        // Setup audio
         if (footstepAudioSource == null)
         {
             footstepAudioSource = GetComponent<AudioSource>();
@@ -76,30 +67,19 @@ public class player_move2 : MonoBehaviour, IMoveController
             }
         }
 
-        // Initialize terrain layer sound dictionary
-        InitializeTerrainLayerSounds();
+        if (effectAudioSource == null)
+        {
+            effectAudioSource = gameObject.AddComponent<AudioSource>();
+            effectAudioSource.playOnAwake = false;
+        }
 
-        // Lock cursor
+        footstepAudioSource.loop = true;
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
-        // Store base speeds for ModifySpeed
         baseWalkSpeed = walkSpeed;
         baseRunSpeed = runSpeed;
-    }
-
-    void InitializeTerrainLayerSounds()
-    {
-        terrainLayerSounds = new Dictionary<string, AudioClip[]>();
-
-        // Add terrain layer-specific sounds to dictionary
-        foreach (var pair in terrainLayerFootsteps)
-        {
-            if (!string.IsNullOrEmpty(pair.terrainLayerName) && pair.footstepClips != null && pair.footstepClips.Length > 0)
-            {
-                terrainLayerSounds[pair.terrainLayerName.ToLower()] = pair.footstepClips;
-            }
-        }
     }
 
     void Update()
@@ -109,6 +89,7 @@ public class player_move2 : MonoBehaviour, IMoveController
         HandleJump();
         HandleCrouchToggle();
         HandleFootsteps();
+        DetectLanding();
     }
 
     private void HandleLook()
@@ -116,10 +97,8 @@ public class player_move2 : MonoBehaviour, IMoveController
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        // Rotate character horizontally
         transform.Rotate(Vector3.up * mouseX);
 
-        // Rotate camera vertically
         verticalRotation -= mouseY;
         verticalRotation = Mathf.Clamp(verticalRotation, -verticalLookLimit, verticalLookLimit);
         cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
@@ -129,14 +108,11 @@ public class player_move2 : MonoBehaviour, IMoveController
     {
         float inputX = Input.GetAxis("Horizontal");
         float inputZ = Input.GetAxis("Vertical");
-        bool isRunning = Input.GetButton("Fire3"); // Shift
-        float speed = isCrouching
-            ? crouchSpeed
-            : (isRunning ? runSpeed : walkSpeed);
+        bool isRunning = Input.GetButton("Fire3");
+        float speed = isCrouching ? crouchSpeed : (isRunning ? runSpeed : walkSpeed);
 
         Vector3 move = (transform.right * inputX + transform.forward * inputZ) * speed;
 
-        // Gravity
         if (controller.isGrounded && velocity.y < 0f)
             velocity.y = -2f;
         velocity.y += gravity * Time.deltaTime;
@@ -150,9 +126,7 @@ public class player_move2 : MonoBehaviour, IMoveController
         if (controller.isGrounded && Input.GetButtonDown("Jump"))
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-
-            // Play jump sound on takeoff
-            PlayFootstepSound(true);
+            PlayEffectOneShot(jumpClip);
         }
     }
 
@@ -162,165 +136,87 @@ public class player_move2 : MonoBehaviour, IMoveController
             isCrouching = !isCrouching;
 
         float targetHeight = isCrouching ? crouchHeight : normalHeight;
+        float previousHeight = controller.height;
+
         controller.height = Mathf.MoveTowards(
             controller.height,
             targetHeight,
-            crouchTransitionSpeed * Time.deltaTime);
+            crouchTransitionSpeed * Time.deltaTime
+        );
 
-        // Adjust center so feet stay on ground
         Vector3 center = controller.center;
-        center.y = controller.height / 2f;
+        center.y += (controller.height - previousHeight) / 2f;
         controller.center = center;
     }
 
     private void HandleFootsteps()
     {
-        // Only play footsteps if on ground and moving
-        if (!controller.isGrounded) return;
+        if (!controller.isGrounded)
+        {
+            StopFootstepLoop();
+            return;
+        }
 
         float horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z).magnitude;
-        if (horizontalVelocity < 0.1f) return;  // Not moving enough to make footsteps
-
-        // Update step timer
-        stepTimer += Time.deltaTime;
-
-        // Determine step interval based on movement type
-        float currentStepInterval;
-        if (isCrouching)
-            currentStepInterval = crouchStepInterval;
-        else if (Input.GetButton("Fire3"))  // Running
-            currentStepInterval = runStepInterval;
-        else
-            currentStepInterval = walkStepInterval;
-
-        // Play footstep when timer expires
-        if (stepTimer >= currentStepInterval)
+        if (horizontalVelocity < 0.1f)
         {
-            PlayFootstepSound();
-            stepTimer = 0f;
+            StopFootstepLoop();
+            return;
+        }
+
+        AudioClip targetClip = isCrouching ? crouchLoopClip :
+                               (Input.GetButton("Fire3") ? runLoopClip : walkLoopClip);
+
+        if (footstepAudioSource.clip != targetClip)
+        {
+            footstepAudioSource.clip = targetClip;
+            footstepAudioSource.loop = true;
+            footstepAudioSource.volume = stepVolume;
+            footstepAudioSource.pitch = Random.Range(pitchMin, pitchMax);
+            footstepAudioSource.Play();
+        }
+        else if (!footstepAudioSource.isPlaying)
+        {
+            footstepAudioSource.Play();
         }
     }
 
-    private void PlayFootstepSound(bool forcePlay = false)
+    private void StopFootstepLoop()
     {
-        // Detect terrain layer
-        string terrainLayerName = GetCurrentTerrainLayer();
-
-        // Get appropriate sound clip
-        AudioClip[] clips = GetFootstepClipsForTerrainLayer(terrainLayerName);
-        if (clips == null || clips.Length == 0)
+        if (footstepAudioSource.isPlaying)
         {
-            return;  // No sound to play
+            footstepAudioSource.Stop();
         }
-
-        // Choose random clip
-        AudioClip clipToPlay = clips[Random.Range(0, clips.Length)];
-
-        // Set audio properties
-        footstepAudioSource.clip = clipToPlay;
-        footstepAudioSource.volume = stepVolume;
-        footstepAudioSource.pitch = Random.Range(pitchMin, pitchMax);
-
-        // Play the sound
-        footstepAudioSource.Play();
     }
 
-    private string GetCurrentTerrainLayer()
+    private void DetectLanding()
     {
-        // First try to detect if we're on terrain
-        Vector3 rayOrigin = transform.position + Vector3.up * 0.1f;
-        RaycastHit hit;
-
-        if (Physics.Raycast(rayOrigin, Vector3.down, out hit, 2f))
+        if (!controller.isGrounded)
         {
-            // Check if we hit a terrain
-            Terrain terrain = hit.collider.GetComponent<Terrain>();
-            if (terrain != null)
+            isInAir = true;
+            airTimeCounter += Time.deltaTime;
+        }
+        else if (isInAir)
+        {
+            if (airTimeCounter >= minAirTimeForLandSound)
             {
-                // Get the dominant terrain layer at the hit position
-                return GetDominantTerrainLayer(terrain, hit.point);
+                PlayEffectOneShot(landClip);
             }
-
-            // If not on terrain, check for regular surface material
-            if (hit.collider.GetComponent<Renderer>() != null)
-            {
-                Material mat = hit.collider.GetComponent<Renderer>().material;
-                if (mat != null)
-                {
-                    // Try to match material name to terrain layer name
-                    string materialName = mat.name.Replace(" (Instance)", "").ToLower();
-                    if (terrainLayerSounds.ContainsKey(materialName))
-                    {
-                        return materialName;
-                    }
-                }
-            }
+            isInAir = false;
+            airTimeCounter = 0f;
         }
 
-        return "default";  // Default if nothing else found
+        wasGroundedLastFrame = controller.isGrounded;
     }
 
-    private string GetDominantTerrainLayer(Terrain terrain, Vector3 worldPosition)
+    private void PlayEffectOneShot(AudioClip clip)
     {
-        TerrainData terrainData = terrain.terrainData;
-        Vector3 terrainPosition = worldPosition - terrain.GetPosition();
-
-        // Convert world position to terrain local coordinates
-        Vector3 normalizedPos = new Vector3(
-            terrainPosition.x / terrainData.size.x,
-            terrainPosition.y / terrainData.size.y,
-            terrainPosition.z / terrainData.size.z
-        );
-
-        // Get the alphamap coordinate
-        int mapX = (int)(normalizedPos.x * terrainData.alphamapWidth);
-        int mapZ = (int)(normalizedPos.z * terrainData.alphamapHeight);
-
-        // Clamp coordinates
-        mapX = Mathf.Clamp(mapX, 0, terrainData.alphamapWidth - 1);
-        mapZ = Mathf.Clamp(mapZ, 0, terrainData.alphamapHeight - 1);
-
-        // Get the splatmap data at this position
-        float[,,] splatmaps = terrainData.GetAlphamaps(mapX, mapZ, 1, 1);
-
-        // Find the dominant layer
-        float maxMix = 0;
-        int maxIndex = 0;
-
-        for (int i = 0; i < terrainData.terrainLayers.Length; i++)
+        if (clip != null && effectAudioSource != null)
         {
-            if (splatmaps[0, 0, i] > maxMix)
-            {
-                maxMix = splatmaps[0, 0, i];
-                maxIndex = i;
-            }
+            effectAudioSource.PlayOneShot(clip, stepVolume);
         }
-
-        // Return the name of the dominant terrain layer
-        TerrainLayer dominantLayer = terrainData.terrainLayers[maxIndex];
-        if (dominantLayer != null)
-        {
-            // Remove the file extension and make lowercase for matching
-            string layerName = dominantLayer.name.Replace(" ", "").ToLower();
-            return layerName;
-        }
-
-        return "default";
     }
 
-    private AudioClip[] GetFootstepClipsForTerrainLayer(string terrainLayerName)
-    {
-        // First try to find terrain layer-specific sounds
-        if (terrainLayerSounds.TryGetValue(terrainLayerName, out AudioClip[] clips))
-        {
-            return clips;
-        }
-
-        // Fall back to default footsteps
-        return defaultFootsteps;
-    }
-
-    // IMoveController implementation
     public void ModifySpeed(float multiplier)
     {
         walkSpeed = baseWalkSpeed * multiplier;

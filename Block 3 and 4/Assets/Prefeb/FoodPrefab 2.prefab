@@ -143,5 +143,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2e19cd773083fd4ca9d67ecc417ef93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  foodType: 2
+  foodType: 1
   lifetime: 300

@@ -6,13 +6,11 @@ using TMPro;
 
 public class InventorySystem : MonoBehaviour
 {
-    [Header("Anchors / UI")]
-    public Transform itemAnchor;          // 手持模型父节点
-    public RadialInventoryUI radialUI;    // 圆形工具环 UI
-    public Canvas mainHUDCanvas;          // 常规 HUD Canvas
-    public Canvas cameraHUDCanvas;        // 相机取景 HUD Canvas
-    public TMP_Text debugTextTMP;         // 通用提示文本
-    public TMP_Text detectTextTMP;        // 相机结果文本
+    [Header("Anchors")]
+    [Tooltip("手持模型父节点")]
+    public Transform itemAnchor;
+    [Tooltip("脚下模型父节点，用于滑板等脚下道具")]
+    public Transform footAnchor;
 
     [Header("Animator (可选)")]
     public Animator itemAnimator;
@@ -21,7 +19,7 @@ public class InventorySystem : MonoBehaviour
     [Header("Item List (Cam→Food→Hook→Board→Gun→Wand)")]
     public List<BaseItem> availableItems; // 必须填 6 个
 
-    // 内部状态
+    // —— 内部状态 —— 
     BaseItem currentItem;
     GameObject currentModel;
     int currentIndex;
@@ -30,6 +28,12 @@ public class InventorySystem : MonoBehaviour
 
     void Start()
     {
+        // 确保UIManager引用已经设置
+        if (UIManager.Instance == null)
+        {
+            Debug.LogError("UIManager未找到，请确保场景中有UIManager实例");
+        }
+
         EquipSlot(0);
     }
 
@@ -48,23 +52,32 @@ public class InventorySystem : MonoBehaviour
         {
             cam.HandleInput();
         }
+        // 滑板专属每帧更新
+        else if (currentItem is SkateboardItem skate)
+        {
+            skate.HandleUpdate();
+        }
     }
 
-    // —— I键呼出/松开工具环 —— 
+    // —— I 键呼出/松开工具环 —— 
     void HandleRing()
     {
         if (Input.GetKeyDown(KeyCode.I))
         {
             ringOpen = true;
-            radialUI.SetUnlockedStates(BuildUnlockArray(), currentIndex);
-            radialUI.Show();
+
+            // 使用UIManager显示物品环
+            UIManager.Instance.ShowInventoryRadial(BuildUnlockArray(), currentIndex);
         }
         else if (Input.GetKeyUp(KeyCode.I))
         {
             ringOpen = false;
-            radialUI.Hide();
 
-            int sel = radialUI.CurrentIndex;
+            // 使用UIManager隐藏物品环
+            UIManager.Instance.HideInventoryRadial();
+
+            // 获取选择的物品索引
+            int sel = UIManager.Instance.GetSelectedInventorySlot();
             if (sel == 1) RefreshSlot1List();
             if (sel >= 0 && sel != currentIndex)
                 BeginSwitch(sel);
@@ -73,12 +86,12 @@ public class InventorySystem : MonoBehaviour
         if (ringOpen)
         {
             float scroll = Input.GetAxis("Mouse ScrollWheel");
-            if (scroll > 0.01f) radialUI.Step(+1);
-            else if (scroll < -0.01f) radialUI.Step(-1);
+            if (scroll > 0.01f) UIManager.Instance.StepInventorySelection(+1);
+            else if (scroll < -0.01f) UIManager.Instance.StepInventorySelection(-1);
         }
     }
 
-    // —— 数字键 1-6 兜底切换 —— 
+    // —— 数字键 1-6 切换 —— 
     void HandleNumberKeys()
     {
         bool[] unlocked = BuildUnlockArray();
@@ -93,13 +106,19 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    // —— 左键直接 Use —— 
+    // —— 鼠标左键 Use —— 
     void HandleUse()
     {
         if (currentItem == null) return;
+
+        // 检查是否处于相机模式
+        bool isCameraMode = UIManager.Instance.IsCameraMode();
+
         bool overUI = EventSystem.current.IsPointerOverGameObject();
         bool allow = !(currentItem is CameraItem) ? !overUI : true;
-        if (Input.GetMouseButtonDown(0) && allow)
+
+        // 在相机模式下，CameraItem自己处理输入
+        if (Input.GetMouseButtonDown(0) && allow && !isCameraMode)
             currentItem.OnUse();
     }
 
@@ -120,7 +139,6 @@ public class InventorySystem : MonoBehaviour
     }
 
     // —— 真正装备新槽 —— 
-    // 在 InventorySystem.cs 中修复 EquipSlot 方法
     void EquipSlot(int idx)
     {
         // 清理旧物
@@ -128,48 +146,50 @@ public class InventorySystem : MonoBehaviour
         currentItem?.OnDeselect();
         if (currentModel) Destroy(currentModel);
 
-        // 记录新索引
+        // 记录新索引 & 道具
         currentIndex = idx;
         currentItem = availableItems[idx];
 
-        // 实例化模型 - 优先使用 prefab，否则创建立方体占位符
+        // 选择父节点：滑板用 footAnchor，其它用 itemAnchor
+        Transform parentTf = currentItem is SkateboardItem
+                            ? footAnchor
+                            : itemAnchor;
+
+        // 实例化模型
         if (currentItem.modelPrefab != null)
-        {
-            currentModel = Instantiate(currentItem.modelPrefab, itemAnchor);
-        }
+            currentModel = Instantiate(currentItem.modelPrefab, parentTf);
         else
         {
-            // 如果没有设置 prefab，创建默认立方体
             currentModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            currentModel.transform.SetParent(itemAnchor, false);
+            currentModel.transform.SetParent(parentTf, false);
         }
 
         currentModel.name = currentItem.itemName + "_Model";
 
-        // 应用持握偏移
+        // 应用持握 / 挂载偏移
         currentItem.ApplyHoldTransform(currentModel.transform);
 
         // 回调
         currentItem.OnSelect(currentModel);
         currentItem.OnReady();
 
-        // 注入相机或食物专属引用
+        // 注入相机专属引用
         if (currentItem is CameraItem cam)
         {
-            cam.Init(
-                Camera.main,
-                mainHUDCanvas,
-                cameraHUDCanvas,
-                debugTextTMP,
-                detectTextTMP
-            );
+            cam.Init(Camera.main);
         }
         else if (currentItem is FoodItem food)
         {
-            food.debugText = debugTextTMP;
+            // 使用UIManager更新食物类型文本
+            string foodTypeName = "未设置";
+            if (food.foodTypes.Count > 0 && food.foodTypes[0] != null)
+                foodTypeName = food.foodTypes[0].ToString();
+
+            UIManager.Instance.UpdateFoodTypeText(food.foodTypes[0]);
         }
 
-        debugTextTMP?.SetText($"切换到 {currentItem.itemName}");
+        // 使用UIManager更新调试文本
+        UIManager.Instance.UpdateCameraDebugText($"切换到 {currentItem.itemName}");
     }
 
     // —— 食物槽随 Slot3 列表刷新 —— 
@@ -187,12 +207,12 @@ public class InventorySystem : MonoBehaviour
         var pm = ProgressionManager.Instance;
         return new[]
         {
-            true,                              // 0 相机
-            true,                              // 1 食物
-            pm != null && pm.HasGrapple,       // 2 抓钩
-            pm != null && pm.HasSkateboard,    // 3 滑板
-            pm != null && pm.HasDartGun,       // 4 麻醉枪
-            pm != null && pm.HasMagicWand      // 5 魔法棒
+            true,                                  // 0 相机
+            true,                                  // 1 食物
+            pm != null && pm.HasGrapple,           // 2 抓钩
+            pm != null && pm.HasSkateboard,        // 3 滑板
+            pm != null && pm.HasDartGun,           // 4 麻醉枪
+            pm != null && pm.HasMagicWand          // 5 魔法棒
         };
     }
 }

@@ -15,6 +15,11 @@ MonoBehaviour:
   itemName: 
   modelPrefab: {fileID: 0}
   holdPosition: {x: 0.06, y: -0.04, z: 0.28}
-  holdRotation: {x: 0, y: 90, z: -8}
-  range: 25
-  cooldown: 20
+  holdRotation: {x: 0, y: 90, z: 0}
+  modelScale: {x: 1, y: 1, z: 1}
+  maxDistance: 800
+  cooldown: 1
+  stunDuration: 10
+  rayMaterial: {fileID: 0}
+  rayWidth: 10
+  rayDuration: 0.1

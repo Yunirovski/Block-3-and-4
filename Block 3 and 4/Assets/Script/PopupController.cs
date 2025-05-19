@@ -11,9 +11,16 @@ public class PopupController : MonoBehaviour
     [SerializeField] private TMP_Text messageText;
     [SerializeField] private float lifetime = 3f;
 
+    private void Awake()
+    {
+        Debug.Log($"PopupController: 弹窗创建 - {gameObject.name}");
+    }
+
     /// <summary>显示一条信息；可多次调用重复改文本。</summary>
     public void Show(string msg)
     {
+        Debug.Log($"PopupController: 显示消息 - \"{msg}\"");
+
         if (messageText != null)
             messageText.text = msg;
 
@@ -22,5 +29,10 @@ public class PopupController : MonoBehaviour
         Invoke(nameof(AutoDestroy), lifetime);
     }
 
-    private void AutoDestroy() => Destroy(gameObject);
+    private void AutoDestroy()
+    {
+        Debug.Log($"PopupController: 自动销毁 - {gameObject.name}");
+        // 弹窗实例可以销毁，因为它是临时的，不影响主游戏对象
+        Destroy(gameObject);
+    }
 }

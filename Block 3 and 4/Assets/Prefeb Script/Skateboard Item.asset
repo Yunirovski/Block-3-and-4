@@ -13,8 +13,13 @@ MonoBehaviour:
   m_Name: Skateboard Item
   m_EditorClassIdentifier: 
   itemName: 
-  modelPrefab: {fileID: 2577819530486051075, guid: 8184b99eea57c2345a8d74013fea114e, type: 3}
+  modelPrefab: {fileID: 7976277445592135971, guid: 8184b99eea57c2345a8d74013fea114e, type: 3}
+  holdPosition: {x: 0, y: 0, z: 0}
+  holdRotation: {x: -90, y: 0, z: 0}
+  modelScale: {x: 0, y: 0, z: 0}
+  speedMultiplier: 5
+  accelTime: 2
+  coastDistance: 3
   holdPosition: {x: 0, y: -0.3, z: 0.6}
   holdRotation: {x: -90, y: 0, z: 0}
-  speedMultiplier: 1.3
-  accelTime: 2
+  modelScale: {x: 1, y: 1, z: 1}

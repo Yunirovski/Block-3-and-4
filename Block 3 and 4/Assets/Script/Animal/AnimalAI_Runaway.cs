@@ -1,68 +1,118 @@
-﻿using UnityEngine;
+﻿// Assets/Scripts/Animal/AnimalBehavior.cs
+using UnityEngine;
 
 public class AnimalBehavior : MonoBehaviour
 {
     [Header("Movement Settings")]
-    public float moveSpeed = 3f; // How fast the animal walks
-    public float wanderRadius = 40f; // How far the animal can walk around
-    public float minWanderTime = 2f; // Smallest time before changing direction
-    public float maxWanderTime = 5f; // Longest time before changing direction
+    public float moveSpeed = 3f;
+    public float wanderRadius = 40f;
+    public float minWanderTime = 2f;
+    public float maxWanderTime = 5f;
 
     [Header("Escape Settings")]
-    public float escapeSpeed = 6f; // How fast the animal runs away
-    public float detectionRadius = 20f; // How close the player can get before scaring the animal
-    public float safeDistance = 8f; // How far the animal wants to be from the player
-    public float forcedEscapeDuration = 10f; // Time the animal keeps running, even if player is gone
+    public float escapeSpeed = 6f;
+    public float detectionRadius = 20f;
+    public float safeDistance = 8f;
+    public float forcedEscapeDuration = 10f;
 
     [Header("Model Settings")]
-    public Vector3 modelRotationOffset; // Fix the way the animal faces
+    public Vector3 modelRotationOffset;
 
-    private Vector3 wanderCenter; // Where the animal started walking from
-    private Vector3 targetPosition; // Where the animal wants to walk to
-    private float wanderTimer; // Countdown until next walk direction
-    private float escapeCooldown = 0f; // Countdown while escaping
-    private bool isEscaping; // Is the animal running away now?
-    private bool isReturning; // Is the animal going back to its area?
-    private Transform player; // The player character
+    // —— 昏迷状态 —— 
+    private bool isStunned = false;
+    private float stunTimer = 0f;
 
-    private void Start()
+    // —— 吸引状态 —— 
+    private bool isAttracted = false;
+    private float attractTimer = 0f;
+    private Transform attractTarget = null;
+
+    // —— 逃跑/漫游状态 —— 
+    private Vector3 wanderCenter;
+    private Vector3 targetPosition;
+    private float wanderTimer;
+    private float escapeCooldown = 0f;
+    private bool isEscaping;
+    private bool isReturning;
+
+    private Transform player;
+
+    void Start()
     {
-        wanderCenter = transform.position; // Set start point
-        player = GameObject.FindGameObjectWithTag("Player")?.transform; // Find the player in the game
-        SetNewWanderTarget(); // Pick a place to walk to
+        // 禁用 NavMeshAgent，全部改为手动移动
+        var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null) agent.enabled = false;
+
+        wanderCenter = transform.position;
+        player = GameObject.FindGameObjectWithTag("Player")?.transform;
+        SetNewWanderTarget();
     }
 
-    private void Update()
+    void Update()
     {
-        if (escapeCooldown > 0f)
+        // 1) 昏迷中：只计时
+        if (isStunned)
         {
-            escapeCooldown -= Time.deltaTime; // Count down escape time
+            stunTimer -= Time.deltaTime;
+            if (stunTimer <= 0f) isStunned = false;
+            return;
         }
 
-        // If running or still in escape time, keep running away
+        // 2) 吸引中：水平走向 attractTarget
+        if (isAttracted)
+        {
+            attractTimer -= Time.deltaTime;
+            if (attractTimer <= 0f || attractTarget == null)
+            {
+                isAttracted = false;
+                wanderCenter = transform.position;
+                SetNewWanderTarget();
+            }
+            else
+            {
+                // 水平移动到玩家（摄像机）所在 XZ 平面位置
+                Vector3 targetPos = attractTarget.position;
+                targetPos.y = transform.position.y;
+                transform.position = Vector3.MoveTowards(
+                    transform.position,
+                    targetPos,
+                    moveSpeed * Time.deltaTime);
+
+                // 面向玩家方向
+                Vector3 lookDir = (targetPos - transform.position).normalized;
+                if (lookDir.sqrMagnitude > 0.001f)
+                {
+                    Quaternion rot = Quaternion.LookRotation(lookDir, Vector3.up)
+                                     * Quaternion.Euler(modelRotationOffset);
+                    transform.rotation = Quaternion.Slerp(
+                        transform.rotation, rot, 5f * Time.deltaTime);
+                }
+            }
+            return;
+        }
+
+        // 3) 逃跑优先：更新逃跑计时
+        if (escapeCooldown > 0f) escapeCooldown -= Time.deltaTime;
         if (isEscaping || escapeCooldown > 0f)
         {
             EscapeFromPlayer();
             return;
         }
 
-        // If too far away from home, go back
-        if (!isEscaping && Vector3.Distance(transform.position, wanderCenter) > wanderRadius)
+        // 4) 漫游/返回
+        float distToCenter = Vector3.Distance(transform.position, wanderCenter);
+        if (distToCenter > wanderRadius)
         {
             isReturning = true;
             targetPosition = wanderCenter + (wanderCenter - transform.position).normalized * (wanderRadius * 0.8f);
         }
-        // If close to home, stop returning
-        else if (Vector3.Distance(transform.position, wanderCenter) <= wanderRadius * 0.9f)
+        else if (distToCenter <= wanderRadius * 0.9f)
         {
             isReturning = false;
         }
 
-        // Go back or wander normally
         if (isReturning)
-        {
             ReturnToWanderArea();
-        }
         else
         {
             Wander();
@@ -70,21 +120,42 @@ public class AnimalBehavior : MonoBehaviour
         }
     }
 
+    /// <summary>外部调用：令动物进入昏迷</summary>
+    public void Stun(float duration)
+    {
+        isStunned = true;
+        stunTimer = duration;
+        isEscaping = false;
+        escapeCooldown = 0f;
+        isReturning = false;
+        isAttracted = false;
+    }
+
+    /// <summary>外部调用：令动物被法杖吸引</summary>
+    public void Attract(Transform target, float duration)
+    {
+        if (target == null || duration <= 0f) return;
+        isAttracted = true;
+        attractTarget = target;
+        attractTimer = duration;
+        isStunned = false;
+        isEscaping = false;
+        escapeCooldown = 0f;
+        isReturning = false;
+    }
+
     private void ReturnToWanderArea()
     {
-        // Move to the home area
         transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
 
-        // Face the direction of movement
-        Vector3 direction = targetPosition - transform.position;
-        if (direction != Vector3.zero)
+        Vector3 dir = (targetPosition - transform.position).normalized;
+        if (dir.sqrMagnitude > 0.001f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
-            targetRotation *= Quaternion.Euler(modelRotationOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 5f * Time.deltaTime);
+            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up)
+                             * Quaternion.Euler(modelRotationOffset);
+            transform.rotation = Quaternion.Slerp(transform.rotation, rot, 5f * Time.deltaTime);
         }
 
-        // If reached the target, stop returning and wander again
         if (Vector3.Distance(transform.position, targetPosition) < 0.1f)
         {
             isReturning = false;
@@ -94,47 +165,34 @@ public class AnimalBehavior : MonoBehaviour
 
     private void Wander()
     {
-        // Walk to the target
         transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
 
-        // Turn to face where it’s walking
-        Vector3 direction = targetPosition - transform.position;
-        if (direction != Vector3.zero)
+        Vector3 dir = (targetPosition - transform.position).normalized;
+        if (dir.sqrMagnitude > 0.001f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
-            targetRotation *= Quaternion.Euler(modelRotationOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 5f * Time.deltaTime);
+            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up)
+                             * Quaternion.Euler(modelRotationOffset);
+            transform.rotation = Quaternion.Slerp(transform.rotation, rot, 5f * Time.deltaTime);
         }
 
-        // Count down the timer
         wanderTimer -= Time.deltaTime;
-
-        // Pick a new place to go if timer runs out or target is reached
-        if (Vector3.Distance(transform.position, targetPosition) < 0.1f || wanderTimer <= 0)
-        {
+        if (wanderTimer <= 0f || Vector3.Distance(transform.position, targetPosition) < 0.1f)
             SetNewWanderTarget();
-        }
     }
 
     private void SetNewWanderTarget()
     {
-        // Pick a random spot around the center
-        Vector2 randomCircle = Random.insideUnitCircle * wanderRadius;
-        targetPosition = wanderCenter + new Vector3(randomCircle.x, 0, randomCircle.y);
-        // Set how long to walk there
+        Vector2 rnd = Random.insideUnitCircle * wanderRadius;
+        targetPosition = wanderCenter + new Vector3(rnd.x, 0, rnd.y);
         wanderTimer = Random.Range(minWanderTime, maxWanderTime);
     }
 
     private void CheckForPlayer()
     {
-        // If there is no player, do nothing
         if (player == null) return;
-
-        // Check how far the player is
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        if (distanceToPlayer < detectionRadius)
+        float dist = Vector3.Distance(transform.position, player.position);
+        if (dist < detectionRadius)
         {
-            // Start escaping if the player is too close
             isEscaping = true;
             escapeCooldown = forcedEscapeDuration;
         }
@@ -142,60 +200,49 @@ public class AnimalBehavior : MonoBehaviour
 
     private void EscapeFromPlayer()
     {
-        // If no player, stop escaping
         if (player == null)
         {
             isEscaping = false;
             return;
         }
 
-        // Run away from the player
-        Vector3 escapeDirection = (transform.position - player.position).normalized;
-        Vector3 escapeTarget = transform.position + escapeDirection * safeDistance;
+        Vector3 dir = (transform.position - player.position).normalized;
+        Vector3 fleeTarget = transform.position + dir * safeDistance;
 
-        transform.position = Vector3.MoveTowards(transform.position, escapeTarget, escapeSpeed * Time.deltaTime);
+        transform.position = Vector3.MoveTowards(transform.position, fleeTarget, escapeSpeed * Time.deltaTime);
 
-        // Turn to face where it’s running
-        if (escapeDirection != Vector3.zero)
+        if (dir.sqrMagnitude > 0.001f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(escapeDirection, Vector3.up);
-            targetRotation *= Quaternion.Euler(modelRotationOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10f * Time.deltaTime);
+            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up)
+                             * Quaternion.Euler(modelRotationOffset);
+            transform.rotation = Quaternion.Slerp(transform.rotation, rot, 10f * Time.deltaTime);
         }
 
-        // If far enough and time is up, stop escaping and wander again
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        if (distanceToPlayer >= safeDistance && escapeCooldown <= 0f)
+        float dist = Vector3.Distance(transform.position, player.position);
+        if (dist >= safeDistance && escapeCooldown <= 0f)
         {
             isEscaping = false;
-            wanderCenter = transform.position; // Set new center
+            wanderCenter = transform.position;
             SetNewWanderTarget();
         }
     }
 
     private void OnDrawGizmosSelected()
     {
-        // Show where the animal can walk and detect players (in editor)
-        Vector3 centerToDraw = Application.isPlaying ? wanderCenter : transform.position;
-
+        Vector3 c = Application.isPlaying ? wanderCenter : transform.position;
         Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(centerToDraw, wanderRadius);
-
+        Gizmos.DrawWireSphere(c, wanderRadius);
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, detectionRadius);
     }
 
     private void OnDrawGizmos()
     {
-        // Show walking and detection area as see-through colors (in editor)
-        Vector3 centerToDraw = Application.isPlaying ? wanderCenter : transform.position;
-
+        Vector3 c = Application.isPlaying ? wanderCenter : transform.position;
         Gizmos.color = new Color(0, 1, 0, 0.2f);
-        Gizmos.DrawSphere(centerToDraw, wanderRadius);
-
+        Gizmos.DrawSphere(c, wanderRadius);
         Gizmos.color = new Color(1, 0, 0, 0.2f);
         Gizmos.DrawSphere(transform.position, detectionRadius);
-
         Gizmos.color = Color.blue;
         Gizmos.DrawLine(transform.position, transform.position + transform.forward * 2f);
     }

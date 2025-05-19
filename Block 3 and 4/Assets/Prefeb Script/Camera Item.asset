@@ -14,10 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: 
   modelPrefab: {fileID: 7078114579393280156, guid: bd5def26b793e4c4283b59d48064f922, type: 3}
-  holdPosition: {x: 0, y: -0.06, z: 0.28}
-  holdRotation: {x: 0, y: 90, z: 0}
+  holdPosition: {x: 0.5, y: 0.6, z: 1}
+  holdRotation: {x: 0, y: 0, z: 0}
+  modelScale: {x: 1, y: 1, z: 1}
   shootCooldown: 1
   mainCanvas: {fileID: 0}
   cameraCanvas: {fileID: 0}
   debugText: {fileID: 0}
   resultText: {fileID: 0}
+  shutterSound: {fileID: 8300000, guid: f6eae8222b8b73747b002c546e9921b0, type: 3}

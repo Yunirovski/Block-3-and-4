@@ -14,8 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: 
   modelPrefab: {fileID: 240308904319307836, guid: 86fc7cf335f0c3d419cc3a23b59778ac, type: 3}
-  holdPosition: {x: 0.08, y: -0.05, z: 0.3}
-  holdRotation: {x: 0, y: 90, z: -10}
-  maxDistance: 30
-  pullSpeed: 15
-  cooldown: 4
+  holdPosition: {x: 0.5, y: 0.5, z: 1}
+  holdRotation: {x: -90, y: 0, z: -90}
+  modelScale: {x: 0.1, y: 0.1, z: 0.1}
+  maxDistance: 80
+  pullSpeed: 25
+  hookPrefab: {fileID: 4132503947252268379, guid: 88a0653f8208e154aada1f6a267e8901, type: 3}
+  hookTravelSpeed: 50
+  ropeMaterial: {fileID: 2100000, guid: 39d589e815aee4248a93c6c81a0d296e, type: 2}
+  ropeColor: {r: 0.545, g: 0.271, b: 0.075, a: 1}
+  grappleFireSound: {fileID: 8300000, guid: f903933ea8964a14d8979346f86f8085, type: 3}
+  soundVolume: 0.68
