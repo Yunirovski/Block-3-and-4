@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System;
 using UnityEngine;
 using TMPro;
 
@@ -169,13 +170,23 @@ public class CameraItem : BaseItem
 
     void ProcessShot(Texture2D tex)
     {
-        string fname = $"photo_{photoCnt:D4}.png";
-        string path = Path.Combine(Application.persistentDataPath, fname);
-        File.WriteAllBytes(path, tex.EncodeToPNG());
-        photoCnt++;
-        UIManager.Instance.UpdateCameraDebugText($"已保存 {fname}");
+        // Create directories for animal classifications if they don't exist
+        string baseDir = Application.persistentDataPath;
+        string[] folderNames = new string[] {
+            "Bear", "Deer", "Fox", "Rabbit", "Wolf", "Penguin", "Eagle", "Turtle", "test1", "test2"
+        };
 
-        var animals = Object.FindObjectsOfType<AnimalEvent>();
+        foreach (string folderName in folderNames)
+        {
+            string folderPath = Path.Combine(baseDir, folderName);
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+                Debug.Log($"Created directory: {folderPath}");
+            }
+        }
+
+        var animals = UnityEngine.Object.FindObjectsOfType<AnimalEvent>();
         var planes = GeometryUtility.CalculateFrustumPlanes(cam);
         var pd = PhotoDetector.Instance;
 
@@ -210,37 +221,61 @@ public class CameraItem : BaseItem
             }
         }
 
+        string targetFolder;
+        string uniqueId = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
         if (bestAE == null)
         {
+            // No animal detected, save to test folders
+            targetFolder = UnityEngine.Random.value > 0.5f ? "test1" : "test2";
             UIManager.Instance.UpdateCameraResultText("未检测到任何动物");
-            return;
+        }
+        else
+        {
+            int nearCount = 0;
+            foreach (var kv in cache.Values)
+            {
+                var (stars, dist, area) = kv;
+                if (area >= areaMinPct && dist <= bestDist * distFactor)
+                    nearCount++;
+            }
+
+            int penalty = Mathf.Max(0, nearCount - 1) * pd.multiTargetPenalty;
+            int final = Mathf.Clamp(bestStars - penalty, 1, 4);
+            if (bestAE.isEasterEgg)
+                final = Mathf.Clamp(final + 1, 1, 5);
+
+            // Animal detected, save to its specific folder
+            targetFolder = bestAE.animalName;
+            // If the folder doesn't exist yet, create it
+            string animalFolder = Path.Combine(baseDir, targetFolder);
+            if (!Directory.Exists(animalFolder))
+            {
+                Directory.CreateDirectory(animalFolder);
+                Debug.Log($"Created directory for new animal: {animalFolder}");
+            }
+
+            bestAE.TriggerEvent(Path.Combine(baseDir, targetFolder, $"{targetFolder}_{uniqueId}.png"), final);
+            UIManager.Instance.UpdateCameraResultText($"{bestAE.animalName}: {final}★ (近:{nearCount} 扣:{penalty})");
         }
 
-        int nearCount = 0;
-        foreach (var kv in cache.Values)
+        // Create the filename with animal type prefix
+        string fname = $"{targetFolder}_{uniqueId}.png";
+        string path = Path.Combine(baseDir, targetFolder, fname);
+        File.WriteAllBytes(path, tex.EncodeToPNG());
+        photoCnt++;
+
+        UIManager.Instance.UpdateCameraDebugText($"已保存到 {targetFolder} 文件夹: {fname}");
+
+        if (bestAE != null && PhotoCollectionManager.Instance != null)
         {
-            var (stars, dist, area) = kv;
-            if (area >= areaMinPct && dist <= bestDist * distFactor)
-                nearCount++;
-        }
-
-        int penalty = Mathf.Max(0, nearCount - 1) * pd.multiTargetPenalty;
-        int final = Mathf.Clamp(bestStars - penalty, 1, 4);
-        if (bestAE.isEasterEgg)
-            final = Mathf.Clamp(final + 1, 1, 5);
-
-        bestAE.TriggerEvent(path, final);
-        UIManager.Instance.UpdateCameraResultText($"{bestAE.animalName}: {final}★ (近:{nearCount} 扣:{penalty})");
-
-        if (PhotoCollectionManager.Instance != null)
-        {
-            bool added = PhotoCollectionManager.Instance.AddPhoto(bestAE.animalName, path, final);
+            bool added = PhotoCollectionManager.Instance.AddPhoto(bestAE.animalName, path, cache[bestAE].stars);
             if (!added)
             {
                 UIManager.Instance.UpdateCameraResultText($"{UIManager.Instance.cameraResultText.text}\n照片已达上限({PhotoLibrary.MaxPerAnimal})");
 
                 // 显示照片已达上限弹窗
-                UIManager.Instance.ShowPhotoFullAlert(bestAE.animalName, path, final);
+                UIManager.Instance.ShowPhotoFullAlert(bestAE.animalName, path, cache[bestAE].stars);
             }
         }
     }
