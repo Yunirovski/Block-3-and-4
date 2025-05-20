@@ -61,6 +61,7 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.37f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Script\Button\opensavefolder.cs" />
     <Compile Include="Assets\Script\Animal\AnimalFoodResponse.cs" />
     <Compile Include="Assets\Script\Log\ConfirmationDialog.cs" />
     <Compile Include="Assets\Script\Ui\InventorySystemEvents.cs" />
