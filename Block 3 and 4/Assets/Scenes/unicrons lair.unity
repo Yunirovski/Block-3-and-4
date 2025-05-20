@@ -1266,6 +1266,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 160480732}
   m_CullTransparentMesh: 1
+--- !u!4 &170665094 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+  m_PrefabInstance: {fileID: 759094031}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &186963293
 GameObject:
   m_ObjectHideFlags: 0
@@ -3673,7 +3678,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 59.0005}
+  m_AnchoredPosition: {x: 0, y: 42.009727}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &500963041
@@ -5015,6 +5020,71 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 755246439}
   m_CullTransparentMesh: 1
+--- !u!1001 &759094031
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 850724015}
+    m_Modifications:
+    - target: {fileID: -988770541800283465, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: wanderRadius
+      value: 8.2
+      objectReference: {fileID: 0}
+    - target: {fileID: -988770541800283465, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: detectionRadius
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 906439150234214819, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_Name
+      value: animal_lion 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 26.57814
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -9.496542
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 18.866203
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4365152118233786784, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: ae896dcd1700fdc40a579293b27bc9a8, type: 3}
 --- !u!1 &787990327
 GameObject:
   m_ObjectHideFlags: 0
@@ -5378,6 +5448,7 @@ Transform:
   - {fileID: 1082845944}
   - {fileID: 1432504603}
   - {fileID: 2117059874}
+  - {fileID: 170665094}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &858639970
@@ -5621,17 +5692,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animalFolders:
-  - Bear
-  - Deer
-  - Fox
-  - Rabbit
-  - Wolf
-  - Penguin
-  - Eagle
-  - Turtle
-  testFolders:
-  - test1
-  - test2
+  - Camel
+  - Donkey
+  - Giraffe
+  - Goat
+  - Hippo
+  - Lion
+  - Pigeon
+  - Rhino
+  otherFolders:
+  - nothing
 --- !u!4 &926068690
 Transform:
   m_ObjectHideFlags: 0
@@ -6636,8 +6706,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 403677557}
   m_HandleRect: {fileID: 403677556}
   m_Direction: 2
-  m_Value: -0.0000087932
-  m_Size: 0.8033276
+  m_Value: -0.00023178828
+  m_Size: 0.85845876
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -13818,7 +13888,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3755008946817033986, guid: 888e90d49562faf4386827c5398fad84, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -10.778427
+      value: 22.51
       objectReference: {fileID: 0}
     - target: {fileID: 3755008946817033986, guid: 888e90d49562faf4386827c5398fad84, type: 3}
       propertyPath: m_LocalPosition.y
@@ -13862,7 +13932,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4262357087930834949, guid: 888e90d49562faf4386827c5398fad84, type: 3}
       propertyPath: detectionRadius
-      value: 6.26
+      value: 4.7
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -14063,7 +14133,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4578897246076360597, guid: e3ace2546bbd87f40bcf59a25d9ad2c2, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 3.7715683
+      value: 9.77
       objectReference: {fileID: 0}
     - target: {fileID: 4578897246076360597, guid: e3ace2546bbd87f40bcf59a25d9ad2c2, type: 3}
       propertyPath: m_LocalPosition.y
@@ -14071,7 +14141,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4578897246076360597, guid: e3ace2546bbd87f40bcf59a25d9ad2c2, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 14.129353
+      value: 20.12
       objectReference: {fileID: 0}
     - target: {fileID: 4578897246076360597, guid: e3ace2546bbd87f40bcf59a25d9ad2c2, type: 3}
       propertyPath: m_LocalRotation.w

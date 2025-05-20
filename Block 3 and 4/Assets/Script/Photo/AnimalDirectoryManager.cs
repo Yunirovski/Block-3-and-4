@@ -4,23 +4,23 @@ using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// Manages photo directory structure for different animal types
+/// This helps make folders for different animal photos
 /// </summary>
 public class AnimalDirectoryManager : MonoBehaviour
 {
     public static AnimalDirectoryManager Instance { get; private set; }
 
-    [Header("Directory Configuration")]
-    [Tooltip("List of animal type folders to create")]
+    [Header("Folder Setup")]
+    [Tooltip("List of animal folders to make")]
     public List<string> animalFolders = new List<string>
     {
-        "Bear", "Deer", "Fox", "Rabbit", "Wolf", "Penguin", "Eagle", "Turtle"
+        "Camel", "Donkey", "Giraffe", "Goat", "Hippo", "Lion", "Pigeon", "Rhino"
     };
 
-    [Tooltip("Additional test folders")]
-    public List<string> testFolders = new List<string>
+    [Tooltip("Folder for photos with no animals")]
+    public List<string> otherFolders = new List<string>
     {
-        "test1", "test2"
+        "nothing"
     };
 
     private string baseDirectory;
@@ -43,27 +43,27 @@ public class AnimalDirectoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Creates all required directories for animal photos
+    /// Makes all needed folders for animal photos
     /// </summary>
     private void CreateAllDirectories()
     {
-        // Create animal type directories
+        // Make animal folders
         foreach (string folder in animalFolders)
         {
             CreateDirectory(folder);
         }
 
-        // Create test directories
-        foreach (string folder in testFolders)
+        // Make "nothing" folder
+        foreach (string folder in otherFolders)
         {
             CreateDirectory(folder);
         }
 
-        Debug.Log("AnimalDirectoryManager: All photo directories initialized");
+        Debug.Log("AnimalDirectoryManager: All photo folders are ready");
     }
 
     /// <summary>
-    /// Creates a single directory if it doesn't exist
+    /// Makes one folder if it not here yet
     /// </summary>
     private void CreateDirectory(string folderName)
     {
@@ -71,39 +71,38 @@ public class AnimalDirectoryManager : MonoBehaviour
         if (!Directory.Exists(path))
         {
             Directory.CreateDirectory(path);
-            Debug.Log($"Created directory: {path}");
+            Debug.Log($"Made folder: {path}");
         }
     }
 
     /// <summary>
-    /// Gets the appropriate directory path for an animal type
+    /// Gets the right folder path for an animal type
     /// </summary>
     public string GetDirectoryForAnimal(string animalName)
     {
-        // If the animal type is known, use its directory
+        // If we know this animal, use its folder
         if (animalFolders.Contains(animalName))
         {
             return Path.Combine(baseDirectory, animalName);
         }
 
-        // If it's a new animal type, create a directory for it
+        // If it's a new animal, make a folder for it
         string newPath = Path.Combine(baseDirectory, animalName);
         if (!Directory.Exists(newPath))
         {
             Directory.CreateDirectory(newPath);
-            animalFolders.Add(animalName); // Add to known animals
-            Debug.Log($"Created directory for new animal type: {animalName}");
+            animalFolders.Add(animalName); // Add to our animal list
+            Debug.Log($"Made folder for new animal: {animalName}");
         }
 
         return newPath;
     }
 
     /// <summary>
-    /// Gets a random test directory path
+    /// Gets the folder path for photos with no animals
     /// </summary>
-    public string GetRandomTestDirectory()
+    public string GetNothingDirectory()
     {
-        string testFolder = testFolders[Random.Range(0, testFolders.Count)];
-        return Path.Combine(baseDirectory, testFolder);
+        return Path.Combine(baseDirectory, "nothing");
     }
 }
