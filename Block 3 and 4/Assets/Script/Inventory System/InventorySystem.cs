@@ -7,19 +7,19 @@ using TMPro;
 public class InventorySystem : MonoBehaviour
 {
     [Header("Anchors")]
-    [Tooltip("手持模型父节点")]
+    [Tooltip("Parent node for held models")]
     public Transform itemAnchor;
-    [Tooltip("脚下模型父节点，用于滑板等脚下道具")]
+    [Tooltip("Parent node for foot models, used for skateboard and similar items")]
     public Transform footAnchor;
 
-    [Header("Animator (可选)")]
+    [Header("Animator (Optional)")]
     public Animator itemAnimator;
     public string switchTrigger = "SwitchItem";
 
     [Header("Item List (Cam→Food→Hook→Board→Gun→Wand)")]
-    public List<BaseItem> availableItems; // 必须填 6 个
+    public List<BaseItem> availableItems; // Must include 6 items
 
-    // —— 内部状态 —— 
+    // -- Internal state -- 
     BaseItem currentItem;
     GameObject currentModel;
     int currentIndex;
@@ -28,10 +28,10 @@ public class InventorySystem : MonoBehaviour
 
     void Start()
     {
-        // 确保UIManager引用已经设置
+        // Ensure UIManager reference is set
         if (UIManager.Instance == null)
         {
-            Debug.LogError("UIManager未找到，请确保场景中有UIManager实例");
+            Debug.LogError("UIManager not found, please ensure there is a UIManager instance in the scene");
         }
 
         EquipSlot(0);
@@ -47,36 +47,36 @@ public class InventorySystem : MonoBehaviour
             HandleUse();
         }
 
-        // 相机专属输入：Q键/左键拍照
+        // Camera-specific input: Q key/left click for photos
         if (currentItem is CameraItem cam)
         {
             cam.HandleInput();
         }
-        // 滑板专属每帧更新
+        // Skateboard-specific update
         else if (currentItem is SkateboardItem skate)
         {
             skate.HandleUpdate();
         }
     }
 
-    // —— I 键呼出/松开工具环 —— 
+    // -- Press E to open/release the toolring -- 
     void HandleRing()
     {
-        if (Input.GetKeyDown(KeyCode.I))
+        if (Input.GetKeyDown(KeyCode.E))
         {
             ringOpen = true;
 
-            // 使用UIManager显示物品环
+            // Use UIManager to display the item radial
             UIManager.Instance.ShowInventoryRadial(BuildUnlockArray(), currentIndex);
         }
-        else if (Input.GetKeyUp(KeyCode.I))
+        else if (Input.GetKeyUp(KeyCode.E))
         {
             ringOpen = false;
 
-            // 使用UIManager隐藏物品环
+            // Use UIManager to hide the item radial
             UIManager.Instance.HideInventoryRadial();
 
-            // 获取选择的物品索引
+            // Get the selected item index
             int sel = UIManager.Instance.GetSelectedInventorySlot();
             if (sel == 1) RefreshSlot1List();
             if (sel >= 0 && sel != currentIndex)
@@ -91,7 +91,7 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    // —— 数字键 1-6 切换 —— 
+    // -- Number keys 1-6 for switching -- 
     void HandleNumberKeys()
     {
         bool[] unlocked = BuildUnlockArray();
@@ -106,23 +106,23 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    // —— 鼠标左键 Use —— 
+    // -- Left mouse button for Use -- 
     void HandleUse()
     {
         if (currentItem == null) return;
 
-        // 检查是否处于相机模式
+        // Check if in camera mode
         bool isCameraMode = UIManager.Instance.IsCameraMode();
 
         bool overUI = EventSystem.current.IsPointerOverGameObject();
         bool allow = !(currentItem is CameraItem) ? !overUI : true;
 
-        // 在相机模式下，CameraItem自己处理输入
+        // In camera mode, CameraItem handles its own input
         if (Input.GetMouseButtonDown(0) && allow && !isCameraMode)
             currentItem.OnUse();
     }
 
-    // —— 开始切换 —— 
+    // -- Begin switching -- 
     void BeginSwitch(int idx)
     {
         pendingIndex = idx;
@@ -132,30 +132,30 @@ public class InventorySystem : MonoBehaviour
             OnSwitchAnimationComplete();
     }
 
-    // Animator 事件或无动画时调用
+    // Called by Animator event or when no animation
     public void OnSwitchAnimationComplete()
     {
         EquipSlot(pendingIndex);
     }
 
-    // —— 真正装备新槽 —— 
+    // -- Actually equip the new slot -- 
     void EquipSlot(int idx)
     {
-        // 清理旧物
+        // Clean up old item
         currentItem?.OnUnready();
         currentItem?.OnDeselect();
         if (currentModel) Destroy(currentModel);
 
-        // 记录新索引 & 道具
+        // Record new index & item
         currentIndex = idx;
         currentItem = availableItems[idx];
 
-        // 选择父节点：滑板用 footAnchor，其它用 itemAnchor
+        // Select parent node: skateboard uses footAnchor, others use itemAnchor
         Transform parentTf = currentItem is SkateboardItem
                             ? footAnchor
                             : itemAnchor;
 
-        // 实例化模型
+        // Instantiate model
         if (currentItem.modelPrefab != null)
             currentModel = Instantiate(currentItem.modelPrefab, parentTf);
         else
@@ -166,33 +166,33 @@ public class InventorySystem : MonoBehaviour
 
         currentModel.name = currentItem.itemName + "_Model";
 
-        // 应用持握 / 挂载偏移
+        // Apply hold/mount offset
         currentItem.ApplyHoldTransform(currentModel.transform);
 
-        // 回调
+        // Callbacks
         currentItem.OnSelect(currentModel);
         currentItem.OnReady();
 
-        // 注入相机专属引用
+        // Inject camera-specific reference
         if (currentItem is CameraItem cam)
         {
             cam.Init(Camera.main);
         }
         else if (currentItem is FoodItem food)
         {
-            // 使用UIManager更新食物类型文本
-            string foodTypeName = "未设置";
+            // Use UIManager to update food type text
+            string foodTypeName = "Not set";
             if (food.foodTypes.Count > 0 && food.foodTypes[0] != null)
                 foodTypeName = food.foodTypes[0].ToString();
 
             UIManager.Instance.UpdateFoodTypeText(food.foodTypes[0]);
         }
 
-        // 使用UIManager更新调试文本
-        UIManager.Instance.UpdateCameraDebugText($"切换到 {currentItem.itemName}");
+        // Use UIManager to update debug text
+        UIManager.Instance.UpdateCameraDebugText($"Switched to {currentItem.itemName}");
     }
 
-    // —— 食物槽随 Slot3 列表刷新 —— 
+    // -- Food slot refresh with Slot3 list -- 
     void RefreshSlot1List()
     {
         var list = InventoryCycler.GetSlot3List();
@@ -201,18 +201,18 @@ public class InventorySystem : MonoBehaviour
             availableItems[1] = list[0];
     }
 
-    // —— 解锁布尔数组 —— 
+    // -- Unlock boolean array -- 
     bool[] BuildUnlockArray()
     {
         var pm = ProgressionManager.Instance;
         return new[]
         {
-            true,                                  // 0 相机
-            true,                                  // 1 食物
-            pm != null && pm.HasGrapple,           // 2 抓钩
-            pm != null && pm.HasSkateboard,        // 3 滑板
-            pm != null && pm.HasDartGun,           // 4 麻醉枪
-            pm != null && pm.HasMagicWand          // 5 魔法棒
+            true,                                  // 0 Camera
+            true,                                  // 1 Food
+            pm != null && pm.HasGrapple,           // 2 Grapple
+            pm != null && pm.HasSkateboard,        // 3 Skateboard
+            pm != null && pm.HasDartGun,           // 4 Dart Gun
+            pm != null && pm.HasMagicWand          // 5 Magic Wand
         };
     }
 }
