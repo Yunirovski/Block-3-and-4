@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Script\Button\opensavefolder.cs" />
+    <Compile Include="Assets\Script\book\PhotoBookController.cs" />
     <Compile Include="Assets\Script\Animal\AnimalFoodResponse.cs" />
     <Compile Include="Assets\Script\Log\ConfirmationDialog.cs" />
     <Compile Include="Assets\Script\Ui\InventorySystemEvents.cs" />
