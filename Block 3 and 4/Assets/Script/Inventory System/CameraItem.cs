@@ -1,4 +1,4 @@
-﻿// Assets/Scripts/Items/CameraItem.cs
+﻿// This file helps the camera work in the game
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -28,6 +28,7 @@ public class CameraItem : BaseItem
 
     public void Init(Camera c)
     {
+        // Save camera and add sound player
         cam = c;
 
         if (cam != null && audioSource == null)
@@ -53,7 +54,7 @@ public class CameraItem : BaseItem
     public override void OnReady()
     {
         // Update help text with UI Manager
-        UIManager.Instance.UpdateCameraDebugText("Press Q to use camera");
+        UIManager.Instance.UpdateCameraDebugText("Right-click to use camera");
     }
 
     public override void OnUnready()
@@ -69,7 +70,8 @@ public class CameraItem : BaseItem
 
     public void HandleInput()
     {
-        if (Input.GetKeyDown(KeyCode.Q))
+        // Use right mouse button to toggle camera mode instead of Q key
+        if (Input.GetMouseButtonDown(1))
         {
             if (isCamMode) ExitCameraMode();
             else EnterCameraMode();
@@ -84,6 +86,7 @@ public class CameraItem : BaseItem
 
     void EnterCameraMode()
     {
+        // Turn on camera mode
         isCamMode = true;
         justEntered = true;
         nextShotTime = 0f;
@@ -91,33 +94,36 @@ public class CameraItem : BaseItem
         if (currentModel != null)
             currentModel.SetActive(false);
 
-        // 使用UIManager进入相机模式
+        // Show camera screen
         UIManager.Instance.EnterCameraMode();
     }
 
     void ExitCameraMode()
     {
+        // Turn off camera mode
         if (!isCamMode) return;
         isCamMode = false;
 
         if (currentModel != null)
             currentModel.SetActive(true);
 
-        // 使用UIManager退出相机模式
+        // Hide camera screen
         UIManager.Instance.ExitCameraMode();
     }
 
     void ResetUI()
     {
+        // Reset to normal state
         isCamMode = false;
 
-        // 通过UIManager重置UI状态
+        // Show normal screen
         UIManager.Instance.SetCameraHUDVisible(false);
         UIManager.Instance.SetMainHUDVisible(true);
     }
 
     void TryShoot()
     {
+        // Check if camera is ready
         if (Time.time < nextShotTime)
         {
             float remain = nextShotTime - Time.time;
@@ -125,12 +131,14 @@ public class CameraItem : BaseItem
             return;
         }
 
+        // Check if we have film
         if (ConsumableManager.Instance == null || !ConsumableManager.Instance.UseFilm())
         {
             UIManager.Instance.UpdateCameraDebugText("No film left");
             return;
         }
 
+        // Take the photo
         nextShotTime = Time.time + shootCooldown;
         ScreenshotHelper.Instance.StartCoroutine(CapRoutine());
     }
@@ -165,7 +173,7 @@ public class CameraItem : BaseItem
             canvases[i].enabled = states[i];
 
         ProcessShot(tex);
-        ExitCameraMode();
+        // Removed ExitCameraMode() to keep in camera mode after taking a photo
     }
 
     void ProcessShot(Texture2D tex)
