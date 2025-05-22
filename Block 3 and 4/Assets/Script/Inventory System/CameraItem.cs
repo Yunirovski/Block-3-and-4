@@ -70,18 +70,48 @@ public class CameraItem : BaseItem
 
     public void HandleInput()
     {
-        // Use right mouse button to toggle camera mode instead of Q key
-        if (Input.GetMouseButtonDown(1))
+        // 检查是否在相机模式下
+        if (isCamMode)
         {
-            if (isCamMode) ExitCameraMode();
-            else EnterCameraMode();
-        }
+            // 右键或Q键退出相机模式
+            if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Q))
+            {
+                ExitCameraMode();
+                return;
+            }
 
-        if (isCamMode && Input.GetMouseButtonDown(0))
-        {
-            if (justEntered) { justEntered = false; return; }
-            TryShoot();
+            // 左键拍照
+            if (Input.GetMouseButtonDown(0))
+            {
+                if (justEntered)
+                {
+                    justEntered = false;
+                    return;
+                }
+                TryShoot();
+            }
+
+            // ESC键也可以退出相机模式
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                ExitCameraMode();
+                return;
+            }
         }
+        else
+        {
+            // 不在相机模式时，右键进入相机模式
+            if (Input.GetMouseButtonDown(1))
+            {
+                EnterCameraMode();
+            }
+        }
+    }
+
+    // 确保HandleUpdate也被调用
+    public override void HandleUpdate()
+    {
+        HandleInput();
     }
 
     void EnterCameraMode()
@@ -132,11 +162,13 @@ public class CameraItem : BaseItem
         }
 
         // Check if we have film
+        // 片段：检查胶卷
         if (ConsumableManager.Instance == null || !ConsumableManager.Instance.UseFilm())
         {
             UIManager.Instance.UpdateCameraDebugText("No film left");
             return;
         }
+
 
         // Take the photo
         nextShotTime = Time.time + shootCooldown;

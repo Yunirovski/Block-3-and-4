@@ -1,121 +1,124 @@
 // Assets/Scripts/Items/FoodItem.cs
 using UnityEngine;
-using TMPro;
 using System.Collections.Generic;
 
 /// <summary>
-/// A ScriptableObject representing a multi-type food item:
-/// - Use the [ and ] keys to cycle through available food types.
-/// - When used, spawns the selected food prefab at a specified distance in front of the player's camera.
-/// - Deducts one unit from the ConsumableManager's food stock.
+/// 单一食物 ScriptableObject：使用时在玩家前方生成预制体并扣库存。<br/>
+/// 同时保留旧字段 <c>foodTypes</c>/<c>foodPrefabs</c>/<c>currentIndex</c>
+/// 以兼容 InventorySystem 旧代码（永远只有 1 个元素）。
 /// </summary>
 [CreateAssetMenu(menuName = "Items/FoodItem")]
 public class FoodItem : BaseItem
 {
-    [Header("Types & Prefabs (must match in order)")]
-    [Tooltip("List of all food categories this item can represent.")]
-    public List<FoodType> foodTypes;
+    /* ===================================================================== */
+    /*                        —— 现行配置（精简版） ——                        */
+    /* ===================================================================== */
 
-    [Tooltip("Prefabs corresponding to each entry in foodTypes; indices must align.")]
-    public List<GameObject> foodPrefabs;
+    [Header("Prefab & Spawn")]
+    [Tooltip("要生成的食物预制体")]
+    public GameObject foodPrefab;          // 现在只需要 1 个预制体
 
-    [Header("Spawn Settings")]
-    [Tooltip("Distance (in meters) in front of the camera where the food will be instantiated.")]
+    [Tooltip("在相机前方生成的距离（米）")]
     public float spawnDistance = 2f;
 
-    // 当前选择的食物类型索引
-    private int currentIndex = 0;
+    /* ===================================================================== */
+    /*                       —— 兼容旧代码的“桥接” ——                         */
+    /* ===================================================================== */
 
-    /// <summary>
-    /// Cycles the selected food type, wrapping around at the ends.
-    /// Updates the on-screen debug text and logs the change.
-    /// </summary>
-    /// <param name="forward">
-    /// True to advance to the next type; false to go back to the previous type.
-    /// </param>
-    public void CycleFoodType(bool forward)
+    // —— 旧字段：可在 Inspector 中折叠隐藏，避免误操作 ——
+    [HideInInspector] public List<FoodType> foodTypes = new() { FoodType.Food };
+    [HideInInspector] public List<GameObject> foodPrefabs = new();           // Awake 时自动填充
+    [HideInInspector] public int currentIndex = 0;                            // 永远 = 0
+
+    // 由于 ScriptableObject 的 Awake 并不总是被调用，再加 OnEnable 做保险
+    private void Awake() => EnsureCompatLists();
+    private void OnEnable() => EnsureCompatLists();
+
+    // 确保兼容列表里至少有一个元素
+    private void EnsureCompatLists()
     {
-        // 验证配置
-        if (foodTypes == null || foodPrefabs == null ||
-            foodTypes.Count == 0 || foodPrefabs.Count == 0 ||
-            foodTypes.Count != foodPrefabs.Count)
-        {
-            Debug.LogError("FoodItem configuration error: Type and prefab lists must be non-empty and equal length.");
-            return;
-        }
+        if (foodTypes.Count == 0) foodTypes.Add(FoodType.Food);
 
-        // 计算新索引（循环）
-        currentIndex = (currentIndex + (forward ? 1 : -1) + foodTypes.Count) % foodTypes.Count;
-
-        // 使用UIManager更新UI
-        UIManager.Instance.UpdateFoodTypeText(foodTypes[currentIndex]);
-        Debug.Log($"FoodItem: Switched to {foodTypes[currentIndex]} (index={currentIndex})");
+        if (foodPrefabs.Count == 0 && foodPrefab != null)
+            foodPrefabs.Add(foodPrefab);
     }
 
-    /// <summary>
-    /// Called when the item is equipped/selected in the inventory.
-    /// Displays the currently selected food type in the debug UI.
-    /// </summary>
-    /// <param name="model">The GameObject model instantiated for preview (unused here).</param>
+    /* ===================================================================== */
+    /*                          —— BaseItem 接口 ——                           */
+    /* ===================================================================== */
+
     public override void OnSelect(GameObject model)
     {
-        // 使用UIManager更新当前食物类型
-        UIManager.Instance.UpdateFoodTypeText(foodTypes[currentIndex]);
+        // 仅在 HUD 上显示唯一类型
+        UIManager.Instance.UpdateFoodTypeText(FoodType.Food);
     }
 
-    /// <summary>
-    /// Called when the player uses the item (e.g., left-click).
-    /// Spawns the selected food prefab and updates the ConsumableManager.
-    /// </summary>
     public override void OnUse()
     {
-        // 尝试消耗一单位食物；如果没有剩余则不执行
-        if (!ConsumableManager.Instance.UseFood(foodTypes[currentIndex]))
+        Debug.Log("FoodItem.OnUse: 开始放置食物");
+
+        // 检查 ConsumableManager
+        if (ConsumableManager.Instance == null)
         {
-            UIManager.Instance.UpdateCameraDebugText("没有食物剩余！");
+            Debug.LogError("FoodItem.OnUse: ConsumableManager.Instance 为空");
+            UIManager.Instance?.UpdateCameraDebugText("错误: 消耗品管理器未找到");
             return;
         }
 
-        // 定位主相机以确定生成位置
+        // 扣库存
+        if (!ConsumableManager.Instance.UseFood())
+        {
+            Debug.Log("FoodItem.OnUse: 没有食物库存");
+            UIManager.Instance?.UpdateCameraDebugText("没有食物剩余！");
+            return;
+        }
+
+        // 检查相机
         Camera cam = Camera.main;
         if (cam == null)
         {
-            Debug.LogError("FoodItem.OnUse: Main Camera not found. Cannot spawn food.");
+            Debug.LogError("FoodItem.OnUse: Main Camera not found.");
+            UIManager.Instance?.UpdateCameraDebugText("错误: 找不到主相机");
             return;
         }
 
-        // 计算生成位置：在相机前方spawnDistance米处
+        // 检查食物预制体
+        if (foodPrefab == null)
+        {
+            Debug.LogError("FoodItem.OnUse: foodPrefab 为空！请在Inspector中设置食物预制体");
+            UIManager.Instance?.UpdateCameraDebugText("错误: 食物预制体未设置");
+            return;
+        }
+
+        // 计算生成位置
         Vector3 spawnPos = cam.transform.position + cam.transform.forward * spawnDistance;
 
-        // 获取当前食物类型的预制体
-        GameObject prefab = foodPrefabs[currentIndex];
-        if (prefab == null)
+        // 确保食物不会生成在地面以下
+        spawnPos.y = Mathf.Max(spawnPos.y, 0.5f);
+
+        try
         {
-            Debug.LogError($"FoodItem.OnUse: Prefab at index {currentIndex} is null.");
-            return;
+            // 生成食物
+            GameObject foodInstance = Instantiate(foodPrefab, spawnPos, Quaternion.identity);
+
+            if (foodInstance != null)
+            {
+                Debug.Log($"FoodItem.OnUse: 成功生成食物在位置 {spawnPos}");
+                UIManager.Instance?.UpdateCameraDebugText($"在前方 {spawnDistance}m 处放置食物");
+            }
+            else
+            {
+                Debug.LogError("FoodItem.OnUse: 食物实例化失败");
+                UIManager.Instance?.UpdateCameraDebugText("错误: 食物生成失败");
+            }
         }
-
-        // 在世界中实例化食物物体
-        Instantiate(prefab, spawnPos, Quaternion.identity);
-
-        // 更新UI并记录生成动作
-        UIManager.Instance.UpdateCameraDebugText($"已生成 {foodTypes[currentIndex]} 在前方 {spawnDistance}m 处");
-        Debug.Log($"FoodItem: Instantiated {foodTypes[currentIndex]} at {spawnPos}");
-    }
-
-    /// <summary>
-    /// 处理物品的每帧更新，支持使用快捷键切换食物类型
-    /// </summary>
-    public override void HandleUpdate()
-    {
-        // 使用 [ 和 ] 键切换食物类型
-        if (Input.GetKeyDown(KeyCode.LeftBracket))
+        catch (System.Exception e)
         {
-            CycleFoodType(false); // 上一个
-        }
-        else if (Input.GetKeyDown(KeyCode.RightBracket))
-        {
-            CycleFoodType(true); // 下一个
+            Debug.LogError($"FoodItem.OnUse: 生成食物时发生异常: {e.Message}");
+            UIManager.Instance?.UpdateCameraDebugText($"错误: {e.Message}");
         }
     }
+
+    // 以前用来 [ / ] 切换，现在不再需要
+    public override void HandleUpdate() { }
 }

@@ -15,6 +15,18 @@ public class AnimalBehavior : MonoBehaviour
     public float safeDistance = 8f;
     public float forcedEscapeDuration = 10f;
 
+    [Header("Food Interaction Settings")]
+    [Tooltip("动物性格决定靠近/回避玩家的方式")]
+    public Temperament temperament = Temperament.Neutral;
+    [Tooltip("动物可以侦测食物的半径")]
+    public float foodDetectionRadius = 20f;
+    [Tooltip("Fearful/Hostile 判定玩家距离的阈值")]
+    public float playerSafeDistance = 15f;
+    [Tooltip("吃食物的持续时间（秒）")]
+    public float eatDuration = 5f;
+    [Tooltip("吃完后保持冷静的时间（秒）")]
+    public float graceDuration = 10f;
+
     [Header("Model Settings")]
     public Vector3 modelRotationOffset;
 
@@ -26,6 +38,12 @@ public class AnimalBehavior : MonoBehaviour
     private bool isAttracted = false;
     private float attractTimer = 0f;
     private Transform attractTarget = null;
+
+    // —— 食物交互状态 —— 
+    private enum FoodState { Idle, Approaching, Eating, Grace }
+    private FoodState foodState = FoodState.Idle;
+    private Transform targetFood = null;
+    private float foodTimer = 0f;
 
     // —— 逃跑/漫游状态 —— 
     private Vector3 wanderCenter;
@@ -91,7 +109,14 @@ public class AnimalBehavior : MonoBehaviour
             return;
         }
 
-        // 3) 逃跑优先：更新逃跑计时
+        // 3) 食物交互优先级高于逃跑和漫游
+        HandleFoodInteraction();
+        if (foodState != FoodState.Idle)
+        {
+            return; // 如果在处理食物，不执行其他行为
+        }
+
+        // 4) 逃跑优先：更新逃跑计时
         if (escapeCooldown > 0f) escapeCooldown -= Time.deltaTime;
         if (isEscaping || escapeCooldown > 0f)
         {
@@ -99,7 +124,7 @@ public class AnimalBehavior : MonoBehaviour
             return;
         }
 
-        // 4) 漫游/返回
+        // 5) 漫游/返回
         float distToCenter = Vector3.Distance(transform.position, wanderCenter);
         if (distToCenter > wanderRadius)
         {
@@ -120,6 +145,132 @@ public class AnimalBehavior : MonoBehaviour
         }
     }
 
+    #region 食物交互逻辑
+
+    private void HandleFoodInteraction()
+    {
+        switch (foodState)
+        {
+            case FoodState.Idle:
+                DetectAndReactToFood();
+                break;
+            case FoodState.Approaching:
+                MoveTowardsFood();
+                break;
+            case FoodState.Eating:
+                foodTimer -= Time.deltaTime;
+                if (foodTimer <= 0f)
+                {
+                    foodState = FoodState.Grace;
+                    foodTimer = graceDuration;
+                }
+                break;
+            case FoodState.Grace:
+                foodTimer -= Time.deltaTime;
+                if (foodTimer <= 0f)
+                {
+                    foodState = FoodState.Idle;
+                    // 重新设置漫游中心和目标
+                    wanderCenter = transform.position;
+                    SetNewWanderTarget();
+                }
+                break;
+        }
+    }
+
+    private void DetectAndReactToFood()
+    {
+        // 检测范围内的食物
+        Collider[] colliders = Physics.OverlapSphere(transform.position, foodDetectionRadius);
+
+        foreach (var col in colliders)
+        {
+            var food = col.GetComponent<FoodWorld>();
+            if (food == null) continue; // 只对 FoodWorld 做反应
+
+            // 根据性格决定是否靠近食物
+            float distToPlayer = Vector3.Distance(transform.position,
+                                                player != null ? player.position : Camera.main.transform.position);
+
+            bool shouldApproach = false;
+            switch (temperament)
+            {
+                case Temperament.Neutral:
+                    shouldApproach = true;
+                    break;
+                case Temperament.Fearful:
+                    shouldApproach = distToPlayer > playerSafeDistance;
+                    break;
+                case Temperament.Hostile:
+                    shouldApproach = distToPlayer <= playerSafeDistance;
+                    break;
+            }
+
+            if (shouldApproach)
+            {
+                StartApproachFood(food.transform);
+                return; // 找到一个即可
+            }
+        }
+    }
+
+    private void StartApproachFood(Transform food)
+    {
+        targetFood = food;
+        foodState = FoodState.Approaching;
+
+        // 取消其他状态
+        isEscaping = false;
+        escapeCooldown = 0f;
+        isReturning = false;
+
+        Debug.Log($"{gameObject.name} 开始向食物移动");
+    }
+
+    private void MoveTowardsFood()
+    {
+        if (targetFood == null)
+        {
+            foodState = FoodState.Idle;
+            return;
+        }
+
+        // 移动向食物
+        Vector3 targetPos = targetFood.position;
+        targetPos.y = transform.position.y; // 保持同一水平面
+
+        transform.position = Vector3.MoveTowards(transform.position,
+                                                targetPos,
+                                                moveSpeed * Time.deltaTime);
+
+        // 面向食物
+        Vector3 lookDir = (targetPos - transform.position).normalized;
+        if (lookDir.sqrMagnitude > 0.001f)
+        {
+            Quaternion rot = Quaternion.LookRotation(lookDir, Vector3.up)
+                             * Quaternion.Euler(modelRotationOffset);
+            transform.rotation = Quaternion.Slerp(transform.rotation, rot, 5f * Time.deltaTime);
+        }
+
+        // 检查是否到达食物
+        if (Vector3.Distance(transform.position, targetPos) < 1.5f)
+        {
+            // 开始吃食物
+            foodState = FoodState.Eating;
+            foodTimer = eatDuration;
+
+            // 销毁食物
+            if (targetFood != null)
+            {
+                Destroy(targetFood.gameObject);
+                targetFood = null;
+                Debug.Log($"{gameObject.name} 开始吃食物");
+            }
+        }
+    }
+
+    #endregion
+
     /// <summary>外部调用：令动物进入昏迷</summary>
     public void Stun(float duration)
     {
@@ -129,6 +280,11 @@ public class AnimalBehavior : MonoBehaviour
         escapeCooldown = 0f;
         isReturning = false;
         isAttracted = false;
+
+        // 重置食物状态
+        foodState = FoodState.Idle;
+        targetFood = null;
+        foodTimer = 0f;
     }
 
     /// <summary>外部调用：令动物被法杖吸引</summary>
@@ -142,6 +298,11 @@ public class AnimalBehavior : MonoBehaviour
         isEscaping = false;
         escapeCooldown = 0f;
         isReturning = false;
+
+        // 重置食物状态
+        foodState = FoodState.Idle;
+        targetFood = null;
+        foodTimer = 0f;
     }
 
     private void ReturnToWanderArea()
@@ -195,6 +356,11 @@ public class AnimalBehavior : MonoBehaviour
         {
             isEscaping = true;
             escapeCooldown = forcedEscapeDuration;
+
+            // 取消食物交互
+            foodState = FoodState.Idle;
+            targetFood = null;
+            foodTimer = 0f;
         }
     }
 
@@ -234,6 +400,8 @@ public class AnimalBehavior : MonoBehaviour
         Gizmos.DrawWireSphere(c, wanderRadius);
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, detectionRadius);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, foodDetectionRadius);
     }
 
     private void OnDrawGizmos()
@@ -243,7 +411,12 @@ public class AnimalBehavior : MonoBehaviour
         Gizmos.DrawSphere(c, wanderRadius);
         Gizmos.color = new Color(1, 0, 0, 0.2f);
         Gizmos.DrawSphere(transform.position, detectionRadius);
+        Gizmos.color = new Color(1, 1, 0, 0.1f);
+        Gizmos.DrawSphere(transform.position, foodDetectionRadius);
         Gizmos.color = Color.blue;
         Gizmos.DrawLine(transform.position, transform.position + transform.forward * 2f);
     }
 }
+
+/// <summary>动物性格枚举</summary>
+public enum Temperament { Neutral, Fearful, Hostile }
