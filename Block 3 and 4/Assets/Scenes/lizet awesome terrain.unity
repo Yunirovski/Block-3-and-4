@@ -559,7 +559,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1077499873}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.99993074
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -3108,11 +3108,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e80b63b53cc507341a58a16350bd18a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  quotaText: {fileID: 771448218}
-  totalText: {fileID: 1210636060}
   filmText: {fileID: 902558787}
   foodText: {fileID: 156986988}
-  showFoodTypes: 1
 --- !u!4 &286916854
 Transform:
   m_ObjectHideFlags: 0
@@ -8289,7 +8286,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.0000088467195}
+  m_AnchoredPosition: {x: 0, y: 0.000054357886}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1013491281
