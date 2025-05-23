@@ -66,6 +66,16 @@ public class EnhancedPhotoBookController : MonoBehaviour
     // 缓存加载的照片
     private Dictionary<string, List<Sprite>> loadedPhotos = new Dictionary<string, List<Sprite>>();
 
+    [Header("Photo Refresh Settings")]
+    [Tooltip("每次打开书时刷新照片")]
+    public bool refreshOnOpen = true;
+    [Tooltip("启用自动检测新照片")]
+    public bool enableAutoRefresh = true;
+    [Tooltip("自动检测间隔（秒）")]
+    public float autoRefreshInterval = 2f;
+
+    private float lastRefreshTime = 0f;
+
     void Start()
     {
         // 初始化时关闭书
@@ -88,7 +98,6 @@ public class EnhancedPhotoBookController : MonoBehaviour
 
     void Update()
     {
-        // 按J键打开/关闭书
         if (Input.GetKeyDown(KeyCode.J))
         {
             if (isBookOpen)
@@ -97,25 +106,35 @@ public class EnhancedPhotoBookController : MonoBehaviour
                 OpenBook();
         }
 
-        // 按ESC关闭书
-        if (isBookOpen && Input.GetKeyDown(KeyCode.Escape))
-        {
-            CloseBook();
-        }
-
-        // 在书打开时处理翻页
         if (isBookOpen)
         {
-            // 按A键或左箭头查看上一页
+            // 翻页控制
             if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
             {
                 PreviousPage();
             }
 
-            // 按D键或右箭头查看下一页
             if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
             {
                 NextPage();
+            }
+
+            // 手动刷新当前页面的照片
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                RefreshCurrentPagePhotos();
+            }
+
+            // 自动检测新照片
+            if (enableAutoRefresh && Time.unscaledTime - lastRefreshTime > autoRefreshInterval)
+            {
+                lastRefreshTime = Time.unscaledTime;
+                RefreshCurrentPagePhotos();
+            }
+
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                CloseBook();
             }
         }
     }
@@ -317,22 +336,25 @@ public class EnhancedPhotoBookController : MonoBehaviour
         isBookOpen = true;
         bookCanvas.gameObject.SetActive(true);
 
-        // 暂停游戏
         savedTimeScale = Time.timeScale;
         Time.timeScale = 0;
 
-        // 显示鼠标
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // 禁用特定组件
         foreach (var component in componentsToDisable)
         {
             if (component != null)
                 component.enabled = false;
         }
 
-        // 显示第一页
+        // 如果启用了打开时刷新
+        if (refreshOnOpen)
+        {
+            Debug.Log("打开书本，刷新所有照片...");
+            StartCoroutine(PreloadAllPhotos());
+        }
+
         currentPageIndex = 0;
         ShowPage();
     }
@@ -459,6 +481,15 @@ public class EnhancedPhotoBookController : MonoBehaviour
         if (currentAnimalPage != null && currentAnimalPage.animalName == animalName)
         {
             UpdatePhotosForCurrentPage();
+        }
+    }
+    public void RefreshCurrentPagePhotos()
+    {
+        AnimalPage currentAnimalPage = animalPages.Find(p => p.pageIndex == currentPageIndex);
+        if (currentAnimalPage != null)
+        {
+            Debug.Log($"刷新 {currentAnimalPage.animalName} 的照片...");
+            StartCoroutine(LoadPhotosForAnimal(currentAnimalPage.animalName));
         }
     }
 }

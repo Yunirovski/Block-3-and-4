@@ -6712,6 +6712,9 @@ MonoBehaviour:
   errorSprite: {fileID: 0}
   photoSlotPrefab: {fileID: 6508108447828053168, guid: b2a447a925d38c94fbd7d7c970aaf863, type: 3}
   componentsToDisable: []
+  refreshOnOpen: 1
+  enableAutoRefresh: 1
+  autoRefreshInterval: 2
 --- !u!1 &1223039060
 GameObject:
   m_ObjectHideFlags: 0
@@ -12272,6 +12275,10 @@ PrefabInstance:
     - target: {fileID: -6068824555693435869, guid: e3ace2546bbd87f40bcf59a25d9ad2c2, type: 3}
       propertyPath: m_ProvidesContacts
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -2316230610928769928, guid: e3ace2546bbd87f40bcf59a25d9ad2c2, type: 3}
+      propertyPath: animalName
+      value: camel
       objectReference: {fileID: 0}
     - target: {fileID: 3801128681893858607, guid: e3ace2546bbd87f40bcf59a25d9ad2c2, type: 3}
       propertyPath: m_Name
