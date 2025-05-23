@@ -6621,7 +6621,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   bookCanvas: {fileID: 1223039064}
-  allPages: []
+  allPages:
+  - {fileID: 1299299482}
+  - {fileID: 816586834}
+  - {fileID: 536766389}
+  - {fileID: 2106423243}
+  - {fileID: 1706234487}
+  - {fileID: 712028577}
+  - {fileID: 2049119825}
+  - {fileID: 1603856325}
+  - {fileID: 39434930}
+  - {fileID: 715080591}
+  - {fileID: 1929051267}
   leftButton: {fileID: 1940414349}
   rightButton: {fileID: 457598296}
   animalPages:
