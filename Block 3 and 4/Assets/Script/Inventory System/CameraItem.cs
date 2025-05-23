@@ -92,11 +92,7 @@ public class CameraItem : BaseItem
             }
 
             // ESC键也可以退出相机模式
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                ExitCameraMode();
-                return;
-            }
+           
         }
         else
         {
