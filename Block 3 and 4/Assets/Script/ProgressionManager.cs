@@ -5,57 +5,67 @@ using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// 进度与解锁中心，使用星星总量解锁道具：
-/// • 在 Inspector 设置各道具所需星星数量
-/// • 在 Inspector 勾上"ManualUnlockX"，即可在启动时直接解锁对应道具
-/// • 通过拍照收集星星，自动解锁对应道具
-/// • 支持进度持久化保存与加载
+/// Progress and unlock center. Use stars to unlock items:
+/// • Each animal can get up to 3 stars
+/// • In Inspector, set how many stars are needed for each item
+/// • Tick "ManualUnlockX" to unlock that item when game starts
+/// • Take photos to get stars and unlock items
+/// • Can save and load progress
 /// </summary>
 public class ProgressionManager : MonoBehaviour
 {
     public static ProgressionManager Instance { get; private set; }
 
-    [Header("Bridge Unlock")]
-    public int savannaThreshold = 12;
-    public int jungleThreshold = 20;
-    public GameObject savannaBridge;
-    public GameObject jungleBridge;
+    [Header("Star Limit Settings")]
+    [Tooltip("Max stars each animal can get")]
+    public int maxStarsPerAnimal = 3;
+
+    [Tooltip("Show message when max stars reached")]
+    public bool showMaxStarWarning = true;
 
     [Header("Item Unlock Thresholds")]
-    [Tooltip("解锁抓钩所需的星星数")]
-    public int grappleStarsNeeded = 8;
-    [Tooltip("解锁滑板所需的星星数")]
-    public int skateboardStarsNeeded = 15;
-    [Tooltip("解锁麻醉枪所需的星星数")]
-    public int dartGunStarsNeeded = 25;
-    [Tooltip("解锁魔法棒所需的星星数")]
-    public int magicWandStarsNeeded = 50;
+    [Tooltip("Stars needed to unlock grapple")]
+    public int grappleStarsNeeded = 6;
+
+    [Tooltip("Stars needed to unlock skateboard")]
+    public int skateboardStarsNeeded = 12;
+
+    [Tooltip("Stars needed to unlock dart gun")]
+    public int dartGunStarsNeeded = 18;
+
+    [Tooltip("Stars needed to unlock magic wand")]
+    public int magicWandStarsNeeded = 24;
 
     [Header("Item Unlock (ScriptableObjects)")]
-    public BaseItem grappleItem;      // 解锁需要 grappleStarsNeeded 星
-    public BaseItem skateboardItem;   // 解锁需要 skateboardStarsNeeded 星
-    public BaseItem dartGunItem;      // 解锁需要 dartGunStarsNeeded 星
-    public BaseItem magicWandItem;    // 解锁需要 magicWandStarsNeeded 星
+    public BaseItem grappleItem;
+    public BaseItem skateboardItem;
+    public BaseItem dartGunItem;
+    public BaseItem magicWandItem;
 
     [Header("Manual Unlock Flags (Inspector)")]
-    [Tooltip("勾选后启动时直接解锁抓钩")]
+    [Tooltip("Unlock grapple at start")]
     public bool ManualUnlockGrapple = false;
-    [Tooltip("勾选后启动时直接解锁滑板")]
+
+    [Tooltip("Unlock skateboard at start")]
     public bool ManualUnlockSkateboard = false;
-    [Tooltip("勾选后启动时直接解锁麻醉枪")]
+
+    [Tooltip("Unlock dart gun at start")]
     public bool ManualUnlockDartGun = false;
-    [Tooltip("勾选后启动时直接解锁魔法棒")]
+
+    [Tooltip("Unlock magic wand at start")]
     public bool ManualUnlockMagicWand = false;
 
     [Header("Save Settings")]
-    [Tooltip("是否启用自动保存")]
+    [Tooltip("Auto save is on")]
     public bool enableAutoSave = true;
-    [Tooltip("自动保存间隔（秒）")]
+
+    [Tooltip("Time between auto saves (seconds)")]
     public float autoSaveInterval = 60f;
-    [Tooltip("存档文件名")]
+
+    [Tooltip("Save file name")]
     public string saveFileName = "player_progress.json";
 
-    // —— 内部进度数据 —— //
+    // -- Inside data --
     private Dictionary<string, int> bestStars = new Dictionary<string, int>();
     public IReadOnlyDictionary<string, int> BestStars => bestStars;
 
@@ -67,22 +77,25 @@ public class ProgressionManager : MonoBehaviour
     public bool HasDartGun { get; private set; }
     public bool HasMagicWand { get; private set; }
 
-    // 存档路径
+    // Where the save file is
     private string SaveFilePath => Path.Combine(Application.persistentDataPath, saveFileName);
 
-    // 自动保存计时器
+    // Timer for auto save
     private float autoSaveTimer = 0f;
 
-    // 是否已初始化
+    // Did we finish setup
     private bool isInitialized = false;
 
-    /// <summary>动物星级更新事件 (animalKey, newStars)</summary>
+    /// <summary>Animal star update event (animalKey, newStars)</summary>
     public event Action<string, int> OnAnimalStarUpdated;
 
-    /// <summary>游戏进度保存完成事件</summary>
+    /// <summary>Animal reached max stars (animalKey, maxStars)</summary>
+    public event Action<string, int> OnAnimalMaxStarsReached;
+
+    /// <summary>When progress is saved</summary>
     public event Action OnProgressSaved;
 
-    /// <summary>游戏进度加载完成事件</summary>
+    /// <summary>When progress is loaded</summary>
     public event Action OnProgressLoaded;
 
     [Serializable]
@@ -95,8 +108,7 @@ public class ProgressionManager : MonoBehaviour
         public bool hasSkateboard;
         public bool hasDartGun;
         public bool hasMagicWand;
-        public bool savannaUnlocked;
-        public bool jungleUnlocked;
+        public int maxStarsPerAnimal = 3;
     }
 
     void Awake()
@@ -115,10 +127,10 @@ public class ProgressionManager : MonoBehaviour
 
     void Start()
     {
-        // 加载游戏进度
+        // Load saved game
         LoadProgress();
 
-        // 手动解锁（仅在编辑器中起效）
+        // Manually unlock (in editor only)
         if (Application.isEditor)
         {
             if (ManualUnlockGrapple && !HasGrapple) UnlockGrapple();
@@ -127,23 +139,16 @@ public class ProgressionManager : MonoBehaviour
             if (ManualUnlockMagicWand && !HasMagicWand) UnlockMagicWand();
         }
 
-        // 检查区域解锁状态
-        if (savannaBridge != null)
-            savannaBridge.SetActive(TotalStars >= savannaThreshold);
-        if (jungleBridge != null)
-            jungleBridge.SetActive(TotalStars >= jungleThreshold);
-
-        // 更新ScoreManager
+        // Update score
         if (ScoreManager.Instance != null)
             ScoreManager.Instance.SetStars(TotalStars);
 
-        // 标记初始化完成
         isInitialized = true;
     }
 
     void Update()
     {
-        // 处理自动保存
+        // Handle auto save
         if (enableAutoSave)
         {
             autoSaveTimer += Time.deltaTime;
@@ -156,66 +161,131 @@ public class ProgressionManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 拍照后汇报某物种的新星级，由 AnimalEvent.TriggerEvent 调用。
+    /// Add new stars after taking photo. Called by AnimalEvent.
+    /// Max stars per animal is limited.
     /// </summary>
     public void RegisterStars(string animalKey, int stars, bool isEasterEgg)
     {
         if (string.IsNullOrEmpty(animalKey) || stars <= 0) return;
 
+        if (bestStars.TryGetValue(animalKey, out int currentStars))
+        {
+            if (currentStars >= maxStarsPerAnimal)
+            {
+                if (showMaxStarWarning)
+                {
+                    ShowPopup($"{animalKey} already has {maxStarsPerAnimal}★");
+                }
+                OnAnimalMaxStarsReached?.Invoke(animalKey, maxStarsPerAnimal);
+                return;
+            }
+        }
+
         int cap = isEasterEgg ? 5 : 4;
         int clamped = Mathf.Clamp(stars, 1, cap);
-        bool isNew = false;
 
         if (bestStars.TryGetValue(animalKey, out int prev))
         {
-            if (clamped <= prev) return;
-            bestStars[animalKey] = clamped;
-            TotalStars += clamped - prev;
+            int maxCanAdd = maxStarsPerAnimal - prev;
+            int actualStarsToAdd = Mathf.Min(clamped, prev + maxCanAdd) - prev;
+
+            if (actualStarsToAdd <= 0)
+            {
+                if (showMaxStarWarning)
+                {
+                    ShowPopup($"{animalKey} has max stars ({maxStarsPerAnimal}★)");
+                }
+                OnAnimalMaxStarsReached?.Invoke(animalKey, maxStarsPerAnimal);
+                return;
+            }
+
+            int newStars = prev + actualStarsToAdd;
+            newStars = Mathf.Min(newStars, maxStarsPerAnimal);
+
+            bestStars[animalKey] = newStars;
+            TotalStars += newStars - prev;
+
+            if (newStars >= maxStarsPerAnimal)
+            {
+                OnAnimalMaxStarsReached?.Invoke(animalKey, maxStarsPerAnimal);
+                if (showMaxStarWarning)
+                {
+                    ShowPopup($"{animalKey} has {maxStarsPerAnimal}★ now!");
+                }
+            }
         }
         else
         {
-            bestStars[animalKey] = clamped;
-            TotalStars += clamped;
+            int newStars = Mathf.Min(clamped, maxStarsPerAnimal);
+            bestStars[animalKey] = newStars;
+            TotalStars += newStars;
             UniqueAnimals++;
-            isNew = true;
+
+            if (newStars >= maxStarsPerAnimal)
+            {
+                OnAnimalMaxStarsReached?.Invoke(animalKey, maxStarsPerAnimal);
+                if (showMaxStarWarning)
+                {
+                    ShowPopup($"{animalKey} has {maxStarsPerAnimal}★ now!");
+                }
+            }
         }
 
-        // 通知UI更新星星数量
-        OnAnimalStarUpdated?.Invoke(animalKey, clamped);
+        OnAnimalStarUpdated?.Invoke(animalKey, bestStars[animalKey]);
+
         var scoreManager = ScoreManager.Instance;
         if (scoreManager != null)
             scoreManager.SetStars(TotalStars);
 
-        // 检查桥梁和道具解锁
-        CheckBridgeUnlock();
         CheckItemUnlocks();
 
-        // 获得新星星后保存进度
         if (isInitialized && enableAutoSave)
         {
             SaveProgress();
         }
     }
 
-    void CheckBridgeUnlock()
+    public bool HasMaxStars(string animalKey)
     {
-        if (savannaBridge && !savannaBridge.activeSelf &&
-            TotalStars >= savannaThreshold)
+        if (bestStars.TryGetValue(animalKey, out int stars))
         {
-            savannaBridge.SetActive(true);
-            ShowPopup($"累计 {savannaThreshold} ★，热带草原开放！");
+            return stars >= maxStarsPerAnimal;
         }
-        if (jungleBridge && !jungleBridge.activeSelf &&
-            TotalStars >= jungleThreshold)
+        return false;
+    }
+
+    public int GetAnimalStars(string animalKey)
+    {
+        return bestStars.TryGetValue(animalKey, out int stars) ? stars : 0;
+    }
+
+    public int GetRemainingStars(string animalKey)
+    {
+        int current = GetAnimalStars(animalKey);
+        return Mathf.Max(0, maxStarsPerAnimal - current);
+    }
+
+    public List<string> GetMaxedAnimals()
+    {
+        var maxedAnimals = new List<string>();
+        foreach (var kvp in bestStars)
         {
-            jungleBridge.SetActive(true);
-            ShowPopup($"累计 {jungleThreshold} ★，丛林开放！");
+            if (kvp.Value >= maxStarsPerAnimal)
+            {
+                maxedAnimals.Add(kvp.Key);
+            }
         }
+        return maxedAnimals;
+    }
+
+    public string GetProgressSummary()
+    {
+        int maxedCount = GetMaxedAnimals().Count;
+        return $"Animals photographed: {UniqueAnimals}, Perfect shots: {maxedCount}/{UniqueAnimals}, Total stars: {TotalStars}";
     }
 
     void CheckItemUnlocks()
     {
-        // 基于星星总数检查道具解锁
         if (!HasGrapple && TotalStars >= grappleStarsNeeded) UnlockGrapple();
         if (!HasSkateboard && TotalStars >= skateboardStarsNeeded) UnlockSkateboard();
         if (!HasDartGun && TotalStars >= dartGunStarsNeeded) UnlockDartGun();
@@ -226,7 +296,7 @@ public class ProgressionManager : MonoBehaviour
     {
         HasGrapple = true;
         InventoryCycler.RegisterItem(grappleItem);
-        ShowPopup($"已收集 {grappleStarsNeeded} ★，解锁抓钩！按 I 装备");
+        ShowPopup($"Got {grappleStarsNeeded}★, Grapple unlocked! Press E to equip");
         if (isInitialized && enableAutoSave) SaveProgress();
     }
 
@@ -234,7 +304,7 @@ public class ProgressionManager : MonoBehaviour
     {
         HasSkateboard = true;
         InventoryCycler.RegisterItem(skateboardItem);
-        ShowPopup($"已收集 {skateboardStarsNeeded} ★，解锁滑板！按 I 装备");
+        ShowPopup($"Got {skateboardStarsNeeded}★, Skateboard unlocked! Press E to equip");
         if (isInitialized && enableAutoSave) SaveProgress();
     }
 
@@ -242,7 +312,7 @@ public class ProgressionManager : MonoBehaviour
     {
         HasDartGun = true;
         InventoryCycler.RegisterItem(dartGunItem);
-        ShowPopup($"已收集 {dartGunStarsNeeded} ★，解锁麻醉枪！按 I 装备");
+        ShowPopup($"Got {dartGunStarsNeeded}★, Dart Gun unlocked! Press E to equip");
         if (isInitialized && enableAutoSave) SaveProgress();
     }
 
@@ -250,13 +320,12 @@ public class ProgressionManager : MonoBehaviour
     {
         HasMagicWand = true;
         InventoryCycler.RegisterItem(magicWandItem);
-        ShowPopup($"已收集 {magicWandStarsNeeded} ★，魔法棒已解锁！按 I 装备");
+        ShowPopup($"Got {magicWandStarsNeeded}★, Magic Wand unlocked! Press E to equip");
         if (isInitialized && enableAutoSave) SaveProgress();
     }
 
     void ShowPopup(string msg)
     {
-        // 使用UIManager显示弹窗
         if (UIManager.Instance != null)
         {
             UIManager.Instance.ShowPopup(msg);
@@ -267,14 +336,10 @@ public class ProgressionManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 保存游戏进度
-    /// </summary>
     public void SaveProgress()
     {
         try
         {
-            // 创建存档数据
             SaveData saveData = new SaveData
             {
                 bestStars = new Dictionary<string, int>(bestStars),
@@ -284,46 +349,35 @@ public class ProgressionManager : MonoBehaviour
                 hasSkateboard = HasSkateboard,
                 hasDartGun = HasDartGun,
                 hasMagicWand = HasMagicWand,
-                savannaUnlocked = savannaBridge != null && savannaBridge.activeSelf,
-                jungleUnlocked = jungleBridge != null && jungleBridge.activeSelf
+                maxStarsPerAnimal = maxStarsPerAnimal
             };
 
-            // 序列化为JSON
             string jsonData = JsonUtility.ToJson(saveData, true);
-
-            // 写入文件
             File.WriteAllText(SaveFilePath, jsonData);
 
-            Debug.Log($"游戏进度已保存到: {SaveFilePath}");
+            Debug.Log($"Progress saved to: {SaveFilePath}");
             OnProgressSaved?.Invoke();
         }
         catch (Exception e)
         {
-            Debug.LogError($"保存游戏进度失败: {e.Message}");
+            Debug.LogError($"Save failed: {e.Message}");
         }
     }
 
-    /// <summary>
-    /// 加载游戏进度
-    /// </summary>
     public void LoadProgress()
     {
         if (!File.Exists(SaveFilePath))
         {
-            Debug.Log("没有找到存档文件，使用默认设置");
+            Debug.Log("Save file not found. Using default.");
             InitializeDefaultProgress();
             return;
         }
 
         try
         {
-            // 读取文件
             string jsonData = File.ReadAllText(SaveFilePath);
-
-            // 反序列化
             SaveData saveData = JsonUtility.FromJson<SaveData>(jsonData);
 
-            // 应用存档数据
             bestStars = new Dictionary<string, int>(saveData.bestStars);
             TotalStars = saveData.totalStars;
             UniqueAnimals = saveData.uniqueAnimals;
@@ -332,7 +386,11 @@ public class ProgressionManager : MonoBehaviour
             HasDartGun = saveData.hasDartGun;
             HasMagicWand = saveData.hasMagicWand;
 
-            // 重新注册已解锁的物品
+            if (saveData.maxStarsPerAnimal > 0)
+            {
+                maxStarsPerAnimal = saveData.maxStarsPerAnimal;
+            }
+
             if (HasGrapple && grappleItem != null)
                 InventoryCycler.RegisterItem(grappleItem);
             if (HasSkateboard && skateboardItem != null)
@@ -342,19 +400,16 @@ public class ProgressionManager : MonoBehaviour
             if (HasMagicWand && magicWandItem != null)
                 InventoryCycler.RegisterItem(magicWandItem);
 
-            Debug.Log($"成功加载游戏进度: {TotalStars}颗星星, {UniqueAnimals}种动物");
+            Debug.Log($"Progress loaded: {TotalStars} stars, {UniqueAnimals} animals, max per animal: {maxStarsPerAnimal}");
             OnProgressLoaded?.Invoke();
         }
         catch (Exception e)
         {
-            Debug.LogError($"加载游戏进度失败: {e.Message}");
+            Debug.LogError($"Load failed: {e.Message}");
             InitializeDefaultProgress();
         }
     }
 
-    /// <summary>
-    /// 初始化默认进度
-    /// </summary>
     private void InitializeDefaultProgress()
     {
         bestStars = new Dictionary<string, int>();
@@ -366,22 +421,17 @@ public class ProgressionManager : MonoBehaviour
         HasMagicWand = false;
     }
 
-    /// <summary>
-    /// 重置所有进度（通常用于"新游戏"）
-    /// </summary>
     public void ResetProgress()
     {
-        // 确认对话框
         if (UIManager.Instance != null)
         {
             UIManager.Instance.ShowConfirmation(
-                "重置进度",
-                "确定要重置所有游戏进度吗？这将删除所有收集的星星和解锁的物品。此操作不可撤销！",
+                "Reset Progress",
+                "Are you sure? This will delete all stars and items. Can't undo!",
                 () => {
-                    // 确认重置
                     PerformProgressReset();
                 },
-                null // 取消不执行任何操作
+                null
             );
         }
         else
@@ -390,42 +440,22 @@ public class ProgressionManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 执行进度重置
-    /// </summary>
     private void PerformProgressReset()
     {
-        // 重置内部数据
         InitializeDefaultProgress();
 
-        // 更新UI
         if (ScoreManager.Instance != null)
             ScoreManager.Instance.SetStars(0);
 
-        // 禁用桥梁
-        if (savannaBridge != null)
-            savannaBridge.SetActive(false);
-        if (jungleBridge != null)
-            jungleBridge.SetActive(false);
-
-        // 保存重置后的状态
         SaveProgress();
-
-        // 显示提示
-        ShowPopup("游戏进度已重置");
+        ShowPopup("Game progress reset");
     }
 
-    /// <summary>
-    /// 在游戏退出前保存进度
-    /// </summary>
     private void OnApplicationQuit()
     {
         SaveProgress();
     }
 
-    /// <summary>
-    /// 在游戏暂停时保存进度
-    /// </summary>
     private void OnApplicationPause(bool pauseStatus)
     {
         if (pauseStatus)

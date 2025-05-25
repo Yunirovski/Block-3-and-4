@@ -10196,22 +10196,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83375e1bb4c10c2408f3228bb2ba7115, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  savannaThreshold: 12
-  jungleThreshold: 20
-  savannaBridge: {fileID: 0}
-  jungleBridge: {fileID: 0}
-  grappleStarsNeeded: 8
-  skateboardStarsNeeded: 15
-  dartGunStarsNeeded: 25
-  magicWandStarsNeeded: 50
+  maxStarsPerAnimal: 3
+  showMaxStarWarning: 1
+  grappleStarsNeeded: 6
+  skateboardStarsNeeded: 12
+  dartGunStarsNeeded: 18
+  magicWandStarsNeeded: 24
   grappleItem: {fileID: 11400000, guid: 61e58ca49b3f83f4585d606903ab638a, type: 2}
   skateboardItem: {fileID: 11400000, guid: 2bd9a362c2bfcf64db5e1ce31728ae66, type: 2}
   dartGunItem: {fileID: 11400000, guid: f093cc49d96a83f43a78859e3ea86556, type: 2}
   magicWandItem: {fileID: 11400000, guid: 28f72fbb89339d7479505ac06bb16362, type: 2}
-  ManualUnlockGrapple: 1
-  ManualUnlockSkateboard: 1
-  ManualUnlockDartGun: 1
-  ManualUnlockMagicWand: 1
+  ManualUnlockGrapple: 0
+  ManualUnlockSkateboard: 0
+  ManualUnlockDartGun: 0
+  ManualUnlockMagicWand: 0
   enableAutoSave: 1
   autoSaveInterval: 60
   saveFileName: player_progress.json
