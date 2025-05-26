@@ -17,7 +17,7 @@ MonoBehaviour:
   holdPosition: {x: 0.5, y: 0.5, z: 1}
   holdRotation: {x: -90, y: 0, z: -90}
   modelScale: {x: 0.1, y: 0.1, z: 0.1}
-  maxDistance: 80
+  maxDistance: 40
   pullSpeed: 25
   hookPrefab: {fileID: 4132503947252268379, guid: 88a0653f8208e154aada1f6a267e8901, type: 3}
   hookTravelSpeed: 50

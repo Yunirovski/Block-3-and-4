@@ -12,7 +12,7 @@ public class GrappleItem : BaseItem
     [Tooltip("抓钩模型 Prefab，由美术提供")]
     public GameObject hookPrefab;
     [Tooltip("钩爪飞行速度 (m/s)")]
-    public float hookTravelSpeed = 70f;  // 增加了飞行速度
+    public float hookTravelSpeed = 30f;  // 调整了飞行速度，配合物理系统
     [Tooltip("绳索材质，用于 LineRenderer")]
     public Material ropeMaterial;
     [Tooltip("钩爪和绳索的颜色")]
@@ -62,7 +62,7 @@ public class GrappleItem : BaseItem
         _grappler.ropeColor = ropeColor;
         _grappler.Initialize();
 
-        UIManager.Instance.UpdateCameraDebugText("抓钩就绪，点击发射");
+        UIManager.Instance.UpdateCameraDebugText("抓钩就绪，左键发射");
     }
 
     public override void OnUse()
@@ -84,24 +84,32 @@ public class GrappleItem : BaseItem
             new Vector3(Screen.width / 2f, Screen.height / 2f)
         );
 
-        // 尝试命中
+        Vector3 targetPoint;
+
+        // 尝试命中物体
         if (Physics.Raycast(ray, out RaycastHit hit, maxDistance))
         {
-            // 检查是否命中静态物体（可抓取表面）
+            // 命中了物体，使用命中点作为目标
+            targetPoint = hit.point;
+
             if (hit.collider.gameObject.isStatic)
             {
-                _grappler.StartGrapple(hit.point, pullSpeed);
-                UIManager.Instance.UpdateCameraDebugText("抓钩附着成功");
+                UIManager.Instance.UpdateCameraDebugText("瞄准静态物体，发射抓钩");
             }
             else
             {
-                UIManager.Instance.UpdateCameraDebugText("命中目标非静态，不可附着");
+                UIManager.Instance.UpdateCameraDebugText("瞄准动态物体，抓钩将尝试穿过");
             }
         }
         else
         {
-            UIManager.Instance.UpdateCameraDebugText("射程内未命中任何表面");
+            // 没有命中物体，向最大射程方向发射
+            targetPoint = ray.origin + ray.direction * maxDistance;
+            UIManager.Instance.UpdateCameraDebugText("向空中发射抓钩");
         }
+
+        // 发射抓钩（新的物理系统会处理重力和碰撞）
+        _grappler.StartGrapple(targetPoint, pullSpeed);
     }
 
     public override void OnDeselect()
