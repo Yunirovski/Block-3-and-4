@@ -6885,7 +6885,7 @@ MonoBehaviour:
   playerSafeDistance: 15
   eatDuration: 5
   graceDuration: 10
-  modelRotationOffset: {x: 0, y: 0, z: 0}
+  modelRotationOffset: {x: 0, y: 180, z: 0}
 --- !u!54 &1069879772
 Rigidbody:
   m_ObjectHideFlags: 0
