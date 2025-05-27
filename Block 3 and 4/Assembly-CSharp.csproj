@@ -76,7 +76,6 @@
     <Compile Include="Assets\Script\ProgressionManager.cs" />
     <Compile Include="Assets\Script\book\photoalbumcontroller2.cs" />
     <Compile Include="Assets\Script\player\mousetoggle.cs" />
-    <Compile Include="Assets\Script\MenuButtons.cs" />
     <Compile Include="Assets\Script\Photo\PhotoLibrary.cs" />
     <Compile Include="Assets\Script\Animal\Generator.cs" />
     <Compile Include="Assets\Script\Inventory System\InventoryUI.cs" />
