@@ -9,17 +9,20 @@ public class GrappleController : MonoBehaviour
     [HideInInspector] public float hookSpeed = 70f;
     [HideInInspector] public Material ropeMaterial;
     [HideInInspector] public Color ropeColor = new Color(0.545f, 0.271f, 0.075f);
+    [HideInInspector] public Transform muzzlePoint; // 新增：枪口位置
 
-    // 新增：物理参数
+    // 物理参数
     [Header("Physics Settings")]
     [Tooltip("重力加速度")]
     public float gravity = 9.81f;
     [Tooltip("钩爪碰撞检测半径")]
-    public float hookCollisionRadius = 0.5f;
+    public float hookCollisionRadius = 0.3f;
     [Tooltip("钩爪最大飞行时间（秒）")]
     public float maxFlightTime = 5f;
     [Tooltip("钩爪发射角度调整（度数，正值向上）")]
     public float launchAngleOffset = 0f;
+    [Tooltip("发射前偏移距离，避免卡在枪口")]
+    public float launchOffset = 0.5f;
 
     // 组件引用
     private CharacterController controller;
@@ -123,11 +126,12 @@ public class GrappleController : MonoBehaviour
         flightTimer = 0f;
         hookConnected = false;
 
+        // 确定发射起点
+        hookStartPosition = GetLaunchPosition();
+
         // 创建钩子实例
         if (hookPrefab != null)
         {
-            // 从相机位置发射钩子
-            hookStartPosition = Camera.main.transform.position;
             hookInstance = Instantiate(hookPrefab, hookStartPosition, Quaternion.identity);
 
             // 设置钩子颜色
@@ -154,11 +158,43 @@ public class GrappleController : MonoBehaviour
                 lineRenderer.enabled = true;
             }
 
-            Debug.Log($"创建了钩子，开始飞行。初始速度: {hookVelocity}");
+            Debug.Log($"创建了钩子，从{(muzzlePoint != null ? "枪口" : "相机")}位置发射。初始速度: {hookVelocity}");
         }
         else
         {
             Debug.LogError("钩子预制体为空，无法创建钩子");
+        }
+    }
+
+    // 获取发射位置
+    private Vector3 GetLaunchPosition()
+    {
+        if (muzzlePoint != null)
+        {
+            // 从枪口位置发射，稍微向前偏移避免卡在枪口
+            Vector3 launchPos = muzzlePoint.position;
+            Vector3 forwardOffset = muzzlePoint.forward * launchOffset;
+            return launchPos + forwardOffset;
+        }
+        else
+        {
+            // fallback到相机位置
+            Vector3 camPos = Camera.main.transform.position;
+            Vector3 forwardOffset = Camera.main.transform.forward * launchOffset;
+            return camPos + forwardOffset;
+        }
+    }
+
+    // 获取发射方向
+    private Vector3 GetLaunchDirection()
+    {
+        if (muzzlePoint != null)
+        {
+            return muzzlePoint.forward;
+        }
+        else
+        {
+            return Camera.main.transform.forward;
         }
     }
 
@@ -171,29 +207,14 @@ public class GrappleController : MonoBehaviour
         // 应用角度偏移
         if (launchAngleOffset != 0f)
         {
-            Vector3 right = Camera.main.transform.right;
+            Vector3 right = muzzlePoint != null ? muzzlePoint.right : Camera.main.transform.right;
             direction = Quaternion.AngleAxis(launchAngleOffset, right) * direction;
         }
 
-        // 计算到达目标所需的初始速度
-        // 使用物理公式计算抛射运动
-        Vector3 horizontalDirection = new Vector3(direction.x, 0, direction.z).normalized;
-        float horizontalDistance = Vector3.Distance(
-            new Vector3(hookStartPosition.x, 0, hookStartPosition.z),
-            new Vector3(grapplePoint.x, 0, grapplePoint.z)
-        );
-        float verticalDistance = grapplePoint.y - hookStartPosition.y;
+        // 简化速度计算 - 直接朝目标方向发射
+        hookVelocity = direction * hookSpeed;
 
-        // 计算飞行时间（基于水平距离和速度）
-        float timeToTarget = horizontalDistance / hookSpeed;
-
-        // 计算所需的垂直速度（考虑重力）
-        float verticalVelocity = (verticalDistance / timeToTarget) + (0.5f * gravity * timeToTarget);
-
-        // 设置钩爪初始速度
-        hookVelocity = horizontalDirection * hookSpeed + Vector3.up * verticalVelocity;
-
-        Debug.Log($"计算发射参数 - 水平距离: {horizontalDistance:F2}, 垂直距离: {verticalDistance:F2}, 飞行时间: {timeToTarget:F2}");
+        Debug.Log($"计算发射参数 - 距离: {distance:F2}, 方向: {direction}");
     }
 
     // 更新钩爪物理
@@ -206,28 +227,27 @@ public class GrappleController : MonoBehaviour
         // 应用重力
         hookVelocity.y -= gravity * Time.deltaTime;
 
-        // 计算新位置
-        Vector3 newPosition = hookInstance.transform.position + hookVelocity * Time.deltaTime;
+        // 计算这一帧的移动
+        Vector3 deltaMove = hookVelocity * Time.deltaTime;
+        Vector3 newPosition = hookInstance.transform.position + deltaMove;
 
-        // 检查碰撞（球形碰撞检测）
+        // 使用Raycast检测碰撞，避免穿墙
         RaycastHit hit;
-        Vector3 moveDirection = newPosition - hookInstance.transform.position;
-        float moveDistance = moveDirection.magnitude;
-
-        if (Physics.SphereCast(
+        if (Physics.Raycast(
             hookInstance.transform.position,
-            hookCollisionRadius,
-            moveDirection.normalized,
+            deltaMove.normalized,
             out hit,
-            moveDistance + hookCollisionRadius
+            deltaMove.magnitude + hookCollisionRadius,
+            ~0, // 检测所有层
+            QueryTriggerInteraction.Ignore // 忽略触发器
         ))
         {
-            // 碰撞到物体
+            // 检测到碰撞
             HandleHookCollision(hit);
         }
         else
         {
-            // 更新钩爪位置
+            // 没有碰撞，更新位置
             hookInstance.transform.position = newPosition;
 
             // 旋转钩爪面向运动方向
@@ -252,18 +272,19 @@ public class GrappleController : MonoBehaviour
         // 检查碰撞的物体是否可以附着
         if (hit.collider.gameObject.isStatic || hit.collider.CompareTag("Grappable"))
         {
-            // 连接成功
-            hookInstance.transform.position = hit.point;
-            grapplePoint = hit.point;
+            // 连接成功 - 将钩子放在碰撞点稍微外面一点
+            Vector3 connectionPoint = hit.point + hit.normal * 0.1f;
+            hookInstance.transform.position = connectionPoint;
+            grapplePoint = connectionPoint;
             isHookFlying = false;
             isGrappling = true;
             hookConnected = true;
 
-            Debug.Log($"钩爪成功附着到: {hit.collider.name} at {hit.point}");
+            Debug.Log($"钩爪成功附着到: {hit.collider.name} at {connectionPoint}");
         }
         else
         {
-            // 碰撞到不可附着的物体，钩爪弹开或停止
+            // 碰撞到不可附着的物体
             Debug.Log($"钩爪碰撞到不可附着物体: {hit.collider.name}");
             StopGrapple();
         }
@@ -297,14 +318,23 @@ public class GrappleController : MonoBehaviour
     // 更新绳索位置
     private void UpdateRopePositions()
     {
-        if (lineRenderer == null || Camera.main == null) return;
+        if (lineRenderer == null) return;
 
-        // 设置绳索起点（玩家手部位置）
-        Vector3 handPosition = Camera.main.transform.position +
-                              Camera.main.transform.right * 0.2f -
-                              Camera.main.transform.up * 0.1f;
+        // 设置绳索起点
+        Vector3 ropeStart;
+        if (muzzlePoint != null)
+        {
+            ropeStart = muzzlePoint.position;
+        }
+        else
+        {
+            // fallback到相机附近的手部位置
+            ropeStart = Camera.main.transform.position +
+                       Camera.main.transform.right * 0.2f -
+                       Camera.main.transform.up * 0.1f;
+        }
 
-        lineRenderer.SetPosition(0, handPosition);
+        lineRenderer.SetPosition(0, ropeStart);
 
         // 设置绳索终点（钩子位置）
         if (hookInstance != null)
@@ -348,9 +378,17 @@ public class GrappleController : MonoBehaviour
     // 在Scene视图中绘制调试信息
     private void OnDrawGizmos()
     {
+        // 绘制枪口位置
+        if (muzzlePoint != null)
+        {
+            Gizmos.color = Color.blue;
+            Gizmos.DrawWireSphere(muzzlePoint.position, 0.2f);
+            Gizmos.DrawRay(muzzlePoint.position, muzzlePoint.forward * 2f);
+        }
+
         if (isHookFlying && hookInstance != null)
         {
-            // 绘制钩爪碰撞球体
+            // 绘制钩爪碰撞检测
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(hookInstance.transform.position, hookCollisionRadius);
 
