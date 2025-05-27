@@ -2,18 +2,21 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine.UIElements;
-using Unity.VisualScripting;
 
-public class menuButton : MonoBehaviour
+public class MenuButtons
 {
-    
-    public void SwitchScene(string SceneName){
+    void SwitchScene(string SceneName){
 
         SceneManager.LoadScene(SceneName);
     }
 
-    void Quit(){
+    void SwitchMenu(string NextMenu){
+
+
+    }
+
+    void Quit()
+    {
         Application.Quit();
     }
 }
