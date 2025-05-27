@@ -3,9 +3,10 @@ using System.IO;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
-/// 增强版照片书控制器：支持从文件系统加载动物照片并显示
+/// 增强版照片书控制器：支持从文件系统加载动物照片并显示每个动物的星级
 /// </summary>
 public class EnhancedPhotoBookController : MonoBehaviour
 {
@@ -16,6 +17,7 @@ public class EnhancedPhotoBookController : MonoBehaviour
         public int pageIndex;               // 页面索引（从0开始）
         public List<Image> photoSlots;      // 照片槽位（最多5个）
         public GameObject photoLayer;       // 照片层GameObject
+        public TMP_Text starText;           // 显示星级的文本组件 (如: "2/3")
     }
 
     [Header("Book Canvas")]
@@ -50,6 +52,13 @@ public class EnhancedPhotoBookController : MonoBehaviour
     [Header("Photo Slot Prefab")]
     [Tooltip("照片槽位预制体")]
     public GameObject photoSlotPrefab;
+
+    [Header("Star Display Settings")]
+    [Tooltip("星级文字显示位置偏移")]
+    public Vector2 starTextOffset = new Vector2(0, -200);
+    
+    [Tooltip("总得分显示文本组件 (如: 8/24)")]
+    public TMP_Text totalScoreText;
 
     // 当前页面索引
     private int currentPageIndex = 0;
@@ -140,7 +149,7 @@ public class EnhancedPhotoBookController : MonoBehaviour
     }
 
     /// <summary>
-    /// 初始化动物页面的照片层
+    /// 初始化动物页面的照片层和星级显示
     /// </summary>
     void InitializeAnimalPages()
     {
@@ -169,7 +178,38 @@ public class EnhancedPhotoBookController : MonoBehaviour
             {
                 CreatePhotoSlots(animalPage);
             }
+
+            // 创建星级文字显示
+            CreateStarText(animalPage);
         }
+    }
+
+    /// <summary>
+    /// 为动物页面创建星级文字显示
+    /// </summary>
+    void CreateStarText(AnimalPage animalPage)
+    {
+        if (animalPage.starText != null) return;
+
+        GameObject pageObj = allPages[animalPage.pageIndex];
+        
+        // 创建星级文字
+        GameObject textObj = new GameObject($"{animalPage.animalName}_StarText");
+        textObj.transform.SetParent(pageObj.transform, false);
+
+        TMP_Text starText = textObj.AddComponent<TMP_Text>();
+        starText.text = "0/3";
+        starText.fontSize = 36;
+        starText.color = Color.white;
+        starText.alignment = TextAlignmentOptions.Center;
+
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = new Vector2(0.5f, 0.5f);
+        textRect.anchorMax = new Vector2(0.5f, 0.5f);
+        textRect.sizeDelta = new Vector2(200, 50);
+        textRect.anchoredPosition = starTextOffset;
+
+        animalPage.starText = starText;
     }
 
     /// <summary>
@@ -230,7 +270,7 @@ public class EnhancedPhotoBookController : MonoBehaviour
                     new Vector2(150, 100),
                     new Vector2(-150, -50),
                     new Vector2(150, -50),
-                    new Vector2(0, -200)
+                    new Vector2(0, -150)
                 };
 
             case "Donkey":
@@ -250,9 +290,65 @@ public class EnhancedPhotoBookController : MonoBehaviour
                     new Vector2(150, 100),
                     new Vector2(-150, -50),
                     new Vector2(150, -50),
-                    new Vector2(0, -200)
+                    new Vector2(0, -150)
                 };
         }
+    }
+
+    /// <summary>
+    /// 更新动物的星级显示
+    /// </summary>
+    void UpdateAnimalStarDisplay(AnimalPage animalPage)
+    {
+        if (ProgressionManager.Instance == null || animalPage.starText == null)
+            return;
+
+        // 获取动物的当前星级和最大星级
+        int currentStars = ProgressionManager.Instance.GetAnimalStars(animalPage.animalName);
+        int maxStars = ProgressionManager.Instance.maxStarsPerAnimal;
+
+        // 更新文本显示为 "当前/最大" 格式
+        animalPage.starText.text = $"{currentStars}/{maxStars}";
+
+        // 根据完成度调整颜色
+        if (currentStars == 0)
+        {
+            animalPage.starText.color = Color.gray;          // 未发现 - 灰色
+        }
+        else if (currentStars >= maxStars)
+        {
+            animalPage.starText.color = Color.yellow;        // 完美 - 黄色
+        }
+        else
+        {
+            animalPage.starText.color = Color.white;         // 进行中 - 白色
+        }
+    }
+
+    /// <summary>
+    /// 更新总得分显示
+    /// </summary>
+    void UpdateTotalScoreDisplay()
+    {
+        if (totalScoreText != null)
+        {
+            totalScoreText.text = GetTotalScore();
+        }
+    }
+
+    /// <summary>
+    /// 计算总得分 (当前总星级/最大可能总星级)
+    /// </summary>
+    /// <returns>格式为 "当前总星级/最大可能总星级" 的字符串，如 "8/24"</returns>
+    public string GetTotalScore()
+    {
+        if (ProgressionManager.Instance == null)
+            return "0/0";
+
+        int currentTotal = ProgressionManager.Instance.TotalStars;
+        int maxPossible = animalPages.Count * ProgressionManager.Instance.maxStarsPerAnimal;
+
+        return $"{currentTotal}/{maxPossible}";
     }
 
     /// <summary>
@@ -357,6 +453,9 @@ public class EnhancedPhotoBookController : MonoBehaviour
 
         currentPageIndex = 0;
         ShowPage();
+        
+        // 更新总得分显示
+        UpdateTotalScoreDisplay();
     }
 
     /// <summary>
@@ -396,38 +495,48 @@ public class EnhancedPhotoBookController : MonoBehaviour
                 allPages[i].SetActive(i == currentPageIndex);
         }
 
-        // 如果是动物页面，更新照片
+        // 如果是动物页面，更新照片和星级
         UpdatePhotosForCurrentPage();
 
         // 更新按钮状态
         UpdateButtons();
+        
+        // 更新总得分显示
+        UpdateTotalScoreDisplay();
     }
 
     /// <summary>
-    /// 更新当前页面的照片
+    /// 更新当前页面的照片和星级显示
     /// </summary>
     void UpdatePhotosForCurrentPage()
     {
         // 查找当前页面是否是动物页面
         AnimalPage currentAnimalPage = animalPages.Find(p => p.pageIndex == currentPageIndex);
 
-        if (currentAnimalPage != null && loadedPhotos.ContainsKey(currentAnimalPage.animalName))
+        if (currentAnimalPage != null)
         {
-            List<Sprite> photos = loadedPhotos[currentAnimalPage.animalName];
+            // 更新星级显示
+            UpdateAnimalStarDisplay(currentAnimalPage);
 
-            // 更新照片槽位
-            for (int i = 0; i < currentAnimalPage.photoSlots.Count; i++)
+            // 更新照片显示
+            if (loadedPhotos.ContainsKey(currentAnimalPage.animalName))
             {
-                if (i < photos.Count)
+                List<Sprite> photos = loadedPhotos[currentAnimalPage.animalName];
+
+                // 更新照片槽位
+                for (int i = 0; i < currentAnimalPage.photoSlots.Count; i++)
                 {
-                    currentAnimalPage.photoSlots[i].sprite = photos[i];
-                    currentAnimalPage.photoSlots[i].gameObject.SetActive(true);
-                }
-                else
-                {
-                    // 如果没有照片，隐藏槽位或显示占位符
-                    currentAnimalPage.photoSlots[i].sprite = placeholderSprite;
-                    currentAnimalPage.photoSlots[i].gameObject.SetActive(placeholderSprite != null);
+                    if (i < photos.Count)
+                    {
+                        currentAnimalPage.photoSlots[i].sprite = photos[i];
+                        currentAnimalPage.photoSlots[i].gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        // 如果没有照片，隐藏槽位或显示占位符
+                        currentAnimalPage.photoSlots[i].sprite = placeholderSprite;
+                        currentAnimalPage.photoSlots[i].gameObject.SetActive(placeholderSprite != null);
+                    }
                 }
             }
         }
@@ -483,13 +592,23 @@ public class EnhancedPhotoBookController : MonoBehaviour
             UpdatePhotosForCurrentPage();
         }
     }
+
+    /// <summary>
+    /// 刷新当前页面的照片和星级
+    /// </summary>
     public void RefreshCurrentPagePhotos()
     {
         AnimalPage currentAnimalPage = animalPages.Find(p => p.pageIndex == currentPageIndex);
         if (currentAnimalPage != null)
         {
-            Debug.Log($"刷新 {currentAnimalPage.animalName} 的照片...");
+            Debug.Log($"刷新 {currentAnimalPage.animalName} 的照片和星级...");
             StartCoroutine(LoadPhotosForAnimal(currentAnimalPage.animalName));
+            
+            // 立即更新星级显示
+            UpdateAnimalStarDisplay(currentAnimalPage);
+            
+            // 更新总得分显示
+            UpdateTotalScoreDisplay();
         }
     }
 }
