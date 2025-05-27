@@ -3,9 +3,10 @@ using System.IO;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
-/// 增强版照片书控制器：支持从文件系统加载动物照片并显示
+/// 增强版照片书控制器：支持从文件系统加载动物照片并显示每个动物的星级
 /// </summary>
 public class EnhancedPhotoBookController : MonoBehaviour
 {
@@ -16,7 +17,13 @@ public class EnhancedPhotoBookController : MonoBehaviour
         public int pageIndex;               // 页面索引（从0开始）
         public List<Image> photoSlots;      // 照片槽位（最多5个）
         public GameObject photoLayer;       // 照片层GameObject
+        public TMP_Text starText;           // 显示星级的文本组件 (如: "2/3")
+        public List<string> photoFilePaths; // 对应照片的文件路径
     }
+
+    // 双击检测相关
+    private Dictionary<Image, float> lastClickTimes = new Dictionary<Image, float>();
+    private float doubleClickTime = 0.8f; // 双击间隔时间（增加到0.8秒）
 
     [Header("Book Canvas")]
     public Canvas bookCanvas;
@@ -50,6 +57,13 @@ public class EnhancedPhotoBookController : MonoBehaviour
     [Header("Photo Slot Prefab")]
     [Tooltip("照片槽位预制体")]
     public GameObject photoSlotPrefab;
+
+    [Header("Star Display Settings")]
+    [Tooltip("星级文字显示位置偏移")]
+    public Vector2 starTextOffset = new Vector2(0, -200);
+
+    [Tooltip("总得分显示文本组件 (如: 8/24)")]
+    public TMP_Text totalScoreText;
 
     // 当前页面索引
     private int currentPageIndex = 0;
@@ -140,12 +154,18 @@ public class EnhancedPhotoBookController : MonoBehaviour
     }
 
     /// <summary>
-    /// 初始化动物页面的照片层
+    /// 初始化动物页面的照片层和星级显示
     /// </summary>
     void InitializeAnimalPages()
     {
         foreach (var animalPage in animalPages)
         {
+            // 初始化照片路径列表
+            if (animalPage.photoFilePaths == null)
+            {
+                animalPage.photoFilePaths = new List<string>();
+            }
+
             // 如果还没有照片层，创建一个
             if (animalPage.photoLayer == null && animalPage.pageIndex < allPages.Count)
             {
@@ -169,7 +189,38 @@ public class EnhancedPhotoBookController : MonoBehaviour
             {
                 CreatePhotoSlots(animalPage);
             }
+
+            // 创建星级文字显示
+            CreateStarText(animalPage);
         }
+    }
+
+    /// <summary>
+    /// 为动物页面创建星级文字显示
+    /// </summary>
+    void CreateStarText(AnimalPage animalPage)
+    {
+        if (animalPage.starText != null) return;
+
+        GameObject pageObj = allPages[animalPage.pageIndex];
+
+        // 创建星级文字
+        GameObject textObj = new GameObject($"{animalPage.animalName}_StarText");
+        textObj.transform.SetParent(pageObj.transform, false);
+
+        TMP_Text starText = textObj.AddComponent<TMP_Text>();
+        starText.text = "0/3";
+        starText.fontSize = 36;
+        starText.color = Color.white;
+        starText.alignment = TextAlignmentOptions.Center;
+
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = new Vector2(0.5f, 0.5f);
+        textRect.anchorMax = new Vector2(0.5f, 0.5f);
+        textRect.sizeDelta = new Vector2(200, 50);
+        textRect.anchoredPosition = starTextOffset;
+
+        animalPage.starText = starText;
     }
 
     /// <summary>
@@ -211,7 +262,117 @@ public class EnhancedPhotoBookController : MonoBehaviour
             if (imageComponent != null)
             {
                 animalPage.photoSlots.Add(imageComponent);
+
+                // 添加双击检测组件
+                AddDoubleClickHandler(imageComponent, animalPage, i);
             }
+        }
+    }
+
+    /// <summary>
+    /// 为照片槽位添加双击处理器
+    /// </summary>
+    void AddDoubleClickHandler(Image photoSlot, AnimalPage animalPage, int slotIndex)
+    {
+        // 添加Button组件用于检测点击
+        Button button = photoSlot.gameObject.GetComponent<Button>();
+        if (button == null)
+        {
+            button = photoSlot.gameObject.AddComponent<Button>();
+        }
+
+        // 设置按钮点击事件
+        button.onClick.AddListener(() => OnPhotoSlotClicked(photoSlot, animalPage, slotIndex));
+
+        // 初始化双击计时
+        lastClickTimes[photoSlot] = 0f;
+    }
+
+    /// <summary>
+    /// 处理照片槽位点击事件
+    /// </summary>
+    void OnPhotoSlotClicked(Image photoSlot, AnimalPage animalPage, int slotIndex)
+    {
+        // 使用realtimeSinceStartup，因为照片书打开时Time.timeScale=0
+        float currentTime = Time.realtimeSinceStartup;
+
+        Debug.Log($"点击了 {animalPage.animalName} 的第 {slotIndex + 1} 张照片");
+
+        if (lastClickTimes.ContainsKey(photoSlot))
+        {
+            float timeSinceLastClick = currentTime - lastClickTimes[photoSlot];
+            Debug.Log($"距离上次点击时间: {timeSinceLastClick:F2}秒");
+
+            if (timeSinceLastClick <= doubleClickTime)
+            {
+                // 双击检测到，删除照片
+                Debug.Log($"检测到双击！删除 {animalPage.animalName} 的第 {slotIndex + 1} 张照片");
+                DeletePhoto(animalPage, slotIndex);
+                lastClickTimes[photoSlot] = 0f; // 重置计时
+            }
+            else
+            {
+                // 单击，更新时间
+                lastClickTimes[photoSlot] = currentTime;
+                Debug.Log("单击，等待可能的第二次点击");
+            }
+        }
+        else
+        {
+            // 第一次点击
+            lastClickTimes[photoSlot] = currentTime;
+            Debug.Log("首次点击此照片");
+        }
+    }
+
+    /// <summary>
+    /// 删除指定位置的照片
+    /// </summary>
+    void DeletePhoto(AnimalPage animalPage, int slotIndex)
+    {
+        Debug.Log($"尝试删除 {animalPage.animalName} 的第 {slotIndex + 1} 张照片");
+
+        // 检查索引是否有效
+        if (slotIndex < 0 || slotIndex >= animalPage.photoFilePaths.Count)
+        {
+            Debug.LogWarning($"删除失败：索引 {slotIndex} 无效，当前有 {animalPage.photoFilePaths.Count} 张照片");
+            return;
+        }
+
+        // 检查是否真的有照片（不是占位符）
+        if (slotIndex >= loadedPhotos[animalPage.animalName].Count)
+        {
+            Debug.LogWarning($"删除失败：位置 {slotIndex} 没有实际照片");
+            return;
+        }
+
+        // 获取要删除的文件路径
+        string filePath = animalPage.photoFilePaths[slotIndex];
+
+        try
+        {
+            // 删除文件系统中的照片文件
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+                Debug.Log($"✓ 成功删除照片文件: {filePath}");
+            }
+            else
+            {
+                Debug.LogWarning($"文件不存在: {filePath}");
+            }
+
+            // 从列表中移除
+            animalPage.photoFilePaths.RemoveAt(slotIndex);
+
+            // 重新加载该动物的照片
+            StartCoroutine(LoadPhotosForAnimal(animalPage.animalName));
+
+            Debug.Log($"✓ 成功删除 {animalPage.animalName} 的第 {slotIndex + 1} 张照片，重新加载照片列表");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"删除照片时出错: {e.Message}");
         }
     }
 
@@ -230,7 +391,7 @@ public class EnhancedPhotoBookController : MonoBehaviour
                     new Vector2(150, 100),
                     new Vector2(-150, -50),
                     new Vector2(150, -50),
-                    new Vector2(0, -200)
+                    new Vector2(0, -150)
                 };
 
             case "Donkey":
@@ -250,9 +411,65 @@ public class EnhancedPhotoBookController : MonoBehaviour
                     new Vector2(150, 100),
                     new Vector2(-150, -50),
                     new Vector2(150, -50),
-                    new Vector2(0, -200)
+                    new Vector2(0, -150)
                 };
         }
+    }
+
+    /// <summary>
+    /// 更新动物的星级显示
+    /// </summary>
+    void UpdateAnimalStarDisplay(AnimalPage animalPage)
+    {
+        if (ProgressionManager.Instance == null || animalPage.starText == null)
+            return;
+
+        // 获取动物的当前星级和最大星级
+        int currentStars = ProgressionManager.Instance.GetAnimalStars(animalPage.animalName);
+        int maxStars = ProgressionManager.Instance.maxStarsPerAnimal;
+
+        // 更新文本显示为 "当前/最大" 格式
+        animalPage.starText.text = $"{currentStars}/{maxStars}";
+
+        // 根据完成度调整颜色
+        if (currentStars == 0)
+        {
+            animalPage.starText.color = Color.gray;          // 未发现 - 灰色
+        }
+        else if (currentStars >= maxStars)
+        {
+            animalPage.starText.color = Color.yellow;        // 完美 - 黄色
+        }
+        else
+        {
+            animalPage.starText.color = Color.white;         // 进行中 - 白色
+        }
+    }
+
+    /// <summary>
+    /// 更新总得分显示
+    /// </summary>
+    void UpdateTotalScoreDisplay()
+    {
+        if (totalScoreText != null)
+        {
+            totalScoreText.text = GetTotalScore();
+        }
+    }
+
+    /// <summary>
+    /// 计算总得分 (当前总星级/最大可能总星级)
+    /// </summary>
+    /// <returns>格式为 "当前总星级/最大可能总星级" 的字符串，如 "8/24"</returns>
+    public string GetTotalScore()
+    {
+        if (ProgressionManager.Instance == null)
+            return "0/0";
+
+        int currentTotal = ProgressionManager.Instance.TotalStars;
+        int maxPossible = animalPages.Count * ProgressionManager.Instance.maxStarsPerAnimal;
+
+        return $"{currentTotal}/{maxPossible}";
     }
 
     /// <summary>
@@ -272,24 +489,54 @@ public class EnhancedPhotoBookController : MonoBehaviour
     IEnumerator LoadPhotosForAnimal(string animalName)
     {
         List<Sprite> photos = new List<Sprite>();
+        List<string> filePaths = new List<string>();
         string folderPath = Path.Combine(Application.persistentDataPath, animalName);
 
         if (Directory.Exists(folderPath))
         {
             string[] files = Directory.GetFiles(folderPath, "*.png");
 
+            // 按文件修改时间排序，最新的在前面（这样新照片会覆盖旧照片的位置）
+            System.Array.Sort(files, (x, y) => File.GetLastWriteTime(y).CompareTo(File.GetLastWriteTime(x)));
+
             // 只加载前5张照片
             for (int i = 0; i < Mathf.Min(files.Length, 5); i++)
             {
+                bool photoLoaded = false;
                 yield return StartCoroutine(LoadPhotoFromFile(files[i], (sprite) => {
                     if (sprite != null)
+                    {
                         photos.Add(sprite);
+                        filePaths.Add(files[i]);
+                        photoLoaded = true;
+                    }
                 }));
+
+                if (!photoLoaded)
+                {
+                    Debug.LogWarning($"无法加载照片: {files[i]}");
+                }
             }
         }
 
+        // 更新缓存
         loadedPhotos[animalName] = photos;
+
+        // 更新对应动物页面的文件路径
+        AnimalPage animalPage = animalPages.Find(p => p.animalName == animalName);
+        if (animalPage != null)
+        {
+            animalPage.photoFilePaths = filePaths;
+        }
+
         Debug.Log($"加载了 {photos.Count} 张 {animalName} 的照片");
+
+        // 如果当前正在显示这个动物的页面，立即更新显示
+        AnimalPage currentPage = animalPages.Find(p => p.pageIndex == currentPageIndex);
+        if (currentPage != null && currentPage.animalName == animalName)
+        {
+            UpdatePhotosForCurrentPage();
+        }
     }
 
     /// <summary>
@@ -357,6 +604,9 @@ public class EnhancedPhotoBookController : MonoBehaviour
 
         currentPageIndex = 0;
         ShowPage();
+
+        // 更新总得分显示
+        UpdateTotalScoreDisplay();
     }
 
     /// <summary>
@@ -396,38 +646,97 @@ public class EnhancedPhotoBookController : MonoBehaviour
                 allPages[i].SetActive(i == currentPageIndex);
         }
 
-        // 如果是动物页面，更新照片
+        // 如果是动物页面，更新照片和星级
         UpdatePhotosForCurrentPage();
 
         // 更新按钮状态
         UpdateButtons();
+
+        // 更新总得分显示
+        UpdateTotalScoreDisplay();
     }
 
     /// <summary>
-    /// 更新当前页面的照片
+    /// 更新当前页面的照片和星级显示
     /// </summary>
     void UpdatePhotosForCurrentPage()
     {
         // 查找当前页面是否是动物页面
         AnimalPage currentAnimalPage = animalPages.Find(p => p.pageIndex == currentPageIndex);
 
-        if (currentAnimalPage != null && loadedPhotos.ContainsKey(currentAnimalPage.animalName))
+        if (currentAnimalPage != null)
         {
-            List<Sprite> photos = loadedPhotos[currentAnimalPage.animalName];
+            // 更新星级显示
+            UpdateAnimalStarDisplay(currentAnimalPage);
 
-            // 更新照片槽位
-            for (int i = 0; i < currentAnimalPage.photoSlots.Count; i++)
+            // 更新照片显示
+            if (loadedPhotos.ContainsKey(currentAnimalPage.animalName))
             {
-                if (i < photos.Count)
+                List<Sprite> photos = loadedPhotos[currentAnimalPage.animalName];
+
+                // 更新照片槽位
+                for (int i = 0; i < currentAnimalPage.photoSlots.Count; i++)
                 {
-                    currentAnimalPage.photoSlots[i].sprite = photos[i];
-                    currentAnimalPage.photoSlots[i].gameObject.SetActive(true);
+                    if (i < photos.Count && photos[i] != null)
+                    {
+                        // 显示照片
+                        currentAnimalPage.photoSlots[i].sprite = photos[i];
+                        currentAnimalPage.photoSlots[i].gameObject.SetActive(true);
+
+                        // 确保Button组件可以接收点击
+                        Button button = currentAnimalPage.photoSlots[i].GetComponent<Button>();
+                        if (button != null)
+                        {
+                            button.interactable = true;
+                        }
+                        else
+                        {
+                            // 如果没有Button组件，重新添加双击处理器
+                            AddDoubleClickHandler(currentAnimalPage.photoSlots[i], currentAnimalPage, i);
+                        }
+                    }
+                    else
+                    {
+                        // 显示占位符或隐藏槽位
+                        if (placeholderSprite != null)
+                        {
+                            currentAnimalPage.photoSlots[i].sprite = placeholderSprite;
+                            currentAnimalPage.photoSlots[i].gameObject.SetActive(true);
+
+                            // 占位符不需要点击功能
+                            Button button = currentAnimalPage.photoSlots[i].GetComponent<Button>();
+                            if (button != null)
+                            {
+                                button.interactable = false;
+                            }
+                        }
+                        else
+                        {
+                            currentAnimalPage.photoSlots[i].gameObject.SetActive(false);
+                        }
+                    }
                 }
-                else
+            }
+            else
+            {
+                // 没有照片数据，显示占位符
+                for (int i = 0; i < currentAnimalPage.photoSlots.Count; i++)
                 {
-                    // 如果没有照片，隐藏槽位或显示占位符
-                    currentAnimalPage.photoSlots[i].sprite = placeholderSprite;
-                    currentAnimalPage.photoSlots[i].gameObject.SetActive(placeholderSprite != null);
+                    if (placeholderSprite != null)
+                    {
+                        currentAnimalPage.photoSlots[i].sprite = placeholderSprite;
+                        currentAnimalPage.photoSlots[i].gameObject.SetActive(true);
+
+                        Button button = currentAnimalPage.photoSlots[i].GetComponent<Button>();
+                        if (button != null)
+                        {
+                            button.interactable = false;
+                        }
+                    }
+                    else
+                    {
+                        currentAnimalPage.photoSlots[i].gameObject.SetActive(false);
+                    }
                 }
             }
         }
@@ -483,13 +792,23 @@ public class EnhancedPhotoBookController : MonoBehaviour
             UpdatePhotosForCurrentPage();
         }
     }
+
+    /// <summary>
+    /// 刷新当前页面的照片和星级
+    /// </summary>
     public void RefreshCurrentPagePhotos()
     {
         AnimalPage currentAnimalPage = animalPages.Find(p => p.pageIndex == currentPageIndex);
         if (currentAnimalPage != null)
         {
-            Debug.Log($"刷新 {currentAnimalPage.animalName} 的照片...");
+            Debug.Log($"刷新 {currentAnimalPage.animalName} 的照片和星级...");
             StartCoroutine(LoadPhotosForAnimal(currentAnimalPage.animalName));
+
+            // 立即更新星级显示
+            UpdateAnimalStarDisplay(currentAnimalPage);
+
+            // 更新总得分显示
+            UpdateTotalScoreDisplay();
         }
     }
 }
