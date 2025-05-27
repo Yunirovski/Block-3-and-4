@@ -13,13 +13,9 @@ MonoBehaviour:
   m_Name: Camera Item
   m_EditorClassIdentifier: 
   itemName: 
-  modelPrefab: {fileID: 7078114579393280156, guid: bd5def26b793e4c4283b59d48064f922, type: 3}
+  modelPrefab: {fileID: 4524075905556479275, guid: 38513517ebf51234cafc2135301d514a, type: 3}
   holdPosition: {x: 0.5, y: 0.6, z: 1}
   holdRotation: {x: 0, y: 0, z: 0}
   modelScale: {x: 1, y: 1, z: 1}
   shootCooldown: 1
-  mainCanvas: {fileID: 0}
-  cameraCanvas: {fileID: 0}
-  debugText: {fileID: 0}
-  resultText: {fileID: 0}
   shutterSound: {fileID: 8300000, guid: f6eae8222b8b73747b002c546e9921b0, type: 3}

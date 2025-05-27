@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: 
   modelPrefab: {fileID: 7976277445592135971, guid: 8184b99eea57c2345a8d74013fea114e, type: 3}
   holdPosition: {x: 0, y: 0, z: 0}
-  holdRotation: {x: -90, y: 0, z: 0}
+  holdRotation: {x: 0, y: 0, z: 0}
   modelScale: {x: 0, y: 0, z: 0}
   speedMultiplier: 5
   accelTime: 2
