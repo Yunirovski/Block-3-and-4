@@ -5820,7 +5820,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 758.51, y: -101.51, z: 127.1}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 645104806}
@@ -6021,10 +6021,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bea1ae4bac575b4479ee6f93f79c2473, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  walkSpeed: 5
-  runSpeed: 10
+  walkSpeed: 10
+  runSpeed: 20
   crouchSpeed: 2
-  jumpHeight: 1.5
+  jumpHeight: 3
   gravity: -18
   mouseSensitivity: 2
   verticalLookLimit: 80
