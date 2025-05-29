@@ -1689,12 +1689,12 @@ MonoBehaviour:
   itemAnimator: {fileID: 0}
   switchTrigger: SwitchItem
   availableItems:
+  - {fileID: 11400000, guid: bb7bdce8e5e05af4da8e06b1600b7b5a, type: 2}
   - {fileID: 11400000, guid: 07ee67998a0a56d4da47943f3ede7072, type: 2}
   - {fileID: 11400000, guid: 61e58ca49b3f83f4585d606903ab638a, type: 2}
   - {fileID: 11400000, guid: f093cc49d96a83f43a78859e3ea86556, type: 2}
   - {fileID: 11400000, guid: 2bd9a362c2bfcf64db5e1ce31728ae66, type: 2}
   - {fileID: 11400000, guid: 28f72fbb89339d7479505ac06bb16362, type: 2}
-  - {fileID: 11400000, guid: bb7bdce8e5e05af4da8e06b1600b7b5a, type: 2}
 --- !u!1001 &318848129
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7118,12 +7118,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1064336229}
   slotImages:
+  - {fileID: 101176294}
   - {fileID: 922993875}
   - {fileID: 1076001776}
   - {fileID: 2013405179}
   - {fileID: 1454098963}
   - {fileID: 383525196}
-  - {fileID: 101176294}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   highlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   lockedColor: {r: 0.3, g: 0.3, b: 0.3, a: 0.6}
