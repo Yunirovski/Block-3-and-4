@@ -17,7 +17,7 @@ MonoBehaviour:
   holdPosition: {x: 0, y: -0.1, z: 0.35}
   holdRotation: {x: -30, y: 0, z: 0}
   modelScale: {x: 1, y: 1, z: 1}
-  foodPrefab: {fileID: 8076146695099144129, guid: 2b0d2651c7f4dc64cafe6555706ce50a, type: 3}
+  foodPrefab: {fileID: 8076146695099144129, guid: 10d1a08bbca66d44e81ec0f2cb0b61f2, type: 3}
   spawnDistance: 2
   foodTypes: 00000000
   foodPrefabs:
