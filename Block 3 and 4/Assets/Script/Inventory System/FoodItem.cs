@@ -1,124 +1,243 @@
-// Assets/Scripts/Items/FoodItem.cs
+ï»¿// Assets/Scripts/Items/FoodItem.cs
 using UnityEngine;
 using System.Collections.Generic;
 
-/// <summary>
-/// µ¥Ò»Ê³Îï ScriptableObject£ºÊ¹ÓÃÊ±ÔÚÍæ¼ÒÇ°·½Éú³ÉÔ¤ÖÆÌå²¢¿Û¿â´æ¡£<br/>
-/// Í¬Ê±±£Áô¾É×Ö¶Î <c>foodTypes</c>/<c>foodPrefabs</c>/<c>currentIndex</c>
-/// ÒÔ¼æÈİ InventorySystem ¾É´úÂë£¨ÓÀÔ¶Ö»ÓĞ 1 ¸öÔªËØ£©¡£
-/// </summary>
 [CreateAssetMenu(menuName = "Items/FoodItem")]
 public class FoodItem : BaseItem
 {
-    /* ===================================================================== */
-    /*                        ¡ª¡ª ÏÖĞĞÅäÖÃ£¨¾«¼ò°æ£© ¡ª¡ª                        */
-    /* ===================================================================== */
+    [Header("Food Settings")]
+    [Tooltip("Food prefab for throwing")]
+    public GameObject foodPrefab;
 
-    [Header("Prefab & Spawn")]
-    [Tooltip("ÒªÉú³ÉµÄÊ³ÎïÔ¤ÖÆÌå")]
-    public GameObject foodPrefab;          // ÏÖÔÚÖ»ĞèÒª 1 ¸öÔ¤ÖÆÌå
-
-    [Tooltip("ÔÚÏà»úÇ°·½Éú³ÉµÄ¾àÀë£¨Ã×£©")]
+    [Tooltip("Throw distance")]
     public float spawnDistance = 2f;
 
-    /* ===================================================================== */
-    /*                       ¡ª¡ª ¼æÈİ¾É´úÂëµÄ¡°ÇÅ½Ó¡± ¡ª¡ª                         */
-    /* ===================================================================== */
+    [Tooltip("Throw force")]
+    public float throwForce = 10f;
 
-    // ¡ª¡ª ¾É×Ö¶Î£º¿ÉÔÚ Inspector ÖĞÕÛµşÒş²Ø£¬±ÜÃâÎó²Ù×÷ ¡ª¡ª
-    [HideInInspector] public List<FoodType> foodTypes = new() { FoodType.Food };
-    [HideInInspector] public List<GameObject> foodPrefabs = new();           // Awake Ê±×Ô¶¯Ìî³ä
-    [HideInInspector] public int currentIndex = 0;                            // ÓÀÔ¶ = 0
+    [Header("Food Types")]
+    [Tooltip("Food types we can use")]
+    public List<FoodType> foodTypes = new List<FoodType>();
 
-    // ÓÉÓÚ ScriptableObject µÄ Awake ²¢²»×ÜÊÇ±»µ÷ÓÃ£¬ÔÙ¼Ó OnEnable ×ö±£ÏÕ
-    private void Awake() => EnsureCompatLists();
-    private void OnEnable() => EnsureCompatLists();
+    [Tooltip("Food prefabs for each type")]
+    public List<GameObject> foodPrefabs = new List<GameObject>();
 
-    // È·±£¼æÈİÁĞ±íÀïÖÁÉÙÓĞÒ»¸öÔªËØ
-    private void EnsureCompatLists()
-    {
-        if (foodTypes.Count == 0) foodTypes.Add(FoodType.Food);
+    [Tooltip("Which food type we picked")]
+    public int currentIndex = 0;
 
-        if (foodPrefabs.Count == 0 && foodPrefab != null)
-            foodPrefabs.Add(foodPrefab);
-    }
-
-    /* ===================================================================== */
-    /*                          ¡ª¡ª BaseItem ½Ó¿Ú ¡ª¡ª                           */
-    /* ===================================================================== */
+    // è¿è¡Œæ—¶çŠ¶æ€
+    private Camera playerCamera;
+    private Transform playerTransform;
 
     public override void OnSelect(GameObject model)
     {
-        // ½öÔÚ HUD ÉÏÏÔÊ¾Î¨Ò»ÀàĞÍ
-        UIManager.Instance.UpdateFoodTypeText(FoodType.Food);
+        // è·å–ç©å®¶ç›¸æœºå’Œä½ç½®
+        playerCamera = Camera.main;
+        if (playerCamera != null)
+        {
+            playerTransform = playerCamera.transform;
+        }
+
+        // æ›´æ–°UIæ˜¾ç¤ºå½“å‰é£Ÿç‰©ç±»å‹
+        if (UIManager.Instance != null && foodTypes.Count > 0 && currentIndex < foodTypes.Count)
+        {
+            UIManager.Instance.UpdateFoodTypeText(foodTypes[currentIndex]);
+        }
+
+        Debug.Log($"FoodItemé€‰ä¸­ï¼Œå½“å‰é£Ÿç‰©ç±»å‹: {(foodTypes.Count > 0 ? foodTypes[currentIndex].ToString() : "æ— ")}");
+    }
+
+    public override void OnReady()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateCameraDebugText("å·¦é”®æŠ•æ·é£Ÿç‰©ï¼ŒQé”®åˆ‡æ¢é£Ÿç‰©ç±»å‹");
+        }
     }
 
     public override void OnUse()
     {
-        Debug.Log("FoodItem.OnUse: ¿ªÊ¼·ÅÖÃÊ³Îï");
+        ThrowFood();
+    }
 
-        // ¼ì²é ConsumableManager
-        if (ConsumableManager.Instance == null)
+    public override void HandleUpdate()
+    {
+        // Qé”®åˆ‡æ¢é£Ÿç‰©ç±»å‹
+        if (Input.GetKeyDown(KeyCode.Q))
         {
-            Debug.LogError("FoodItem.OnUse: ConsumableManager.Instance Îª¿Õ");
-            UIManager.Instance?.UpdateCameraDebugText("´íÎó: ÏûºÄÆ·¹ÜÀíÆ÷Î´ÕÒµ½");
-            return;
-        }
-
-        // ¿Û¿â´æ
-        if (!ConsumableManager.Instance.UseFood())
-        {
-            Debug.Log("FoodItem.OnUse: Ã»ÓĞÊ³Îï¿â´æ");
-            UIManager.Instance?.UpdateCameraDebugText("Ã»ÓĞÊ³ÎïÊ£Óà£¡");
-            return;
-        }
-
-        // ¼ì²éÏà»ú
-        Camera cam = Camera.main;
-        if (cam == null)
-        {
-            Debug.LogError("FoodItem.OnUse: Main Camera not found.");
-            UIManager.Instance?.UpdateCameraDebugText("´íÎó: ÕÒ²»µ½Ö÷Ïà»ú");
-            return;
-        }
-
-        // ¼ì²éÊ³ÎïÔ¤ÖÆÌå
-        if (foodPrefab == null)
-        {
-            Debug.LogError("FoodItem.OnUse: foodPrefab Îª¿Õ£¡ÇëÔÚInspectorÖĞÉèÖÃÊ³ÎïÔ¤ÖÆÌå");
-            UIManager.Instance?.UpdateCameraDebugText("´íÎó: Ê³ÎïÔ¤ÖÆÌåÎ´ÉèÖÃ");
-            return;
-        }
-
-        // ¼ÆËãÉú³ÉÎ»ÖÃ
-        Vector3 spawnPos = cam.transform.position + cam.transform.forward * spawnDistance;
-
-        // È·±£Ê³Îï²»»áÉú³ÉÔÚµØÃæÒÔÏÂ
-        spawnPos.y = Mathf.Max(spawnPos.y, 0.5f);
-
-        try
-        {
-            // Éú³ÉÊ³Îï
-            GameObject foodInstance = Instantiate(foodPrefab, spawnPos, Quaternion.identity);
-
-            if (foodInstance != null)
-            {
-                Debug.Log($"FoodItem.OnUse: ³É¹¦Éú³ÉÊ³ÎïÔÚÎ»ÖÃ {spawnPos}");
-                UIManager.Instance?.UpdateCameraDebugText($"ÔÚÇ°·½ {spawnDistance}m ´¦·ÅÖÃÊ³Îï");
-            }
-            else
-            {
-                Debug.LogError("FoodItem.OnUse: Ê³ÎïÊµÀı»¯Ê§°Ü");
-                UIManager.Instance?.UpdateCameraDebugText("´íÎó: Ê³ÎïÉú³ÉÊ§°Ü");
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"FoodItem.OnUse: Éú³ÉÊ³ÎïÊ±·¢ÉúÒì³£: {e.Message}");
-            UIManager.Instance?.UpdateCameraDebugText($"´íÎó: {e.Message}");
+            SwitchFoodType();
         }
     }
 
-    // ÒÔÇ°ÓÃÀ´ [ / ] ÇĞ»»£¬ÏÖÔÚ²»ÔÙĞèÒª
-    public override void HandleUpdate() { }
+    /// <summary>
+    /// Change food type
+    /// </summary>
+    private void SwitchFoodType()
+    {
+        if (foodTypes.Count <= 1) return;
+
+        currentIndex = (currentIndex + 1) % foodTypes.Count;
+
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateFoodTypeText(foodTypes[currentIndex]);
+            UIManager.Instance.UpdateCameraDebugText($"Changed to: {foodTypes[currentIndex]}");
+        }
+
+        Debug.Log($"Food type changed to: {foodTypes[currentIndex]}");
+    }
+
+    /// <summary>
+    /// Throw food
+    /// </summary>
+    private void ThrowFood()
+    {
+        if (playerCamera == null || playerTransform == null)
+        {
+            Debug.LogError("FoodItem: Can't find player camera or position");
+            return;
+        }
+
+        // Check if we have enough food
+        if (ConsumableManager.Instance == null || !ConsumableManager.Instance.UseFood())
+        {
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText("No food left!");
+            }
+            Debug.Log("FoodItem: Not enough food");
+            return;
+        }
+
+        // ç¡®å®šè¦ä½¿ç”¨çš„é¢„åˆ¶ä½“
+        GameObject prefabToUse = GetCurrentFoodPrefab();
+        if (prefabToUse == null)
+        {
+            Debug.LogError("FoodItem: Can't find good food prefab");
+            return;
+        }
+
+        // Make throw position (in front of player)
+        Vector3 spawnPosition = playerTransform.position + playerTransform.forward * spawnDistance;
+
+        // Make the food
+        GameObject thrownFood = Instantiate(prefabToUse, spawnPosition, Quaternion.identity);
+
+        // Make sure food has what it needs
+        SetupThrownFood(thrownFood);
+
+        // Make it fly
+        ApplyThrowForce(thrownFood);
+
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateCameraDebugText($"Threw {foodTypes[currentIndex]}");
+        }
+
+        Debug.Log($"FoodItem: Threw food {foodTypes[currentIndex]} to {spawnPosition}");
+    }
+
+    /// <summary>
+    /// Get the food prefab we want to use now
+    /// </summary>
+    private GameObject GetCurrentFoodPrefab()
+    {
+        // ä¼˜å…ˆä½¿ç”¨foodPrefabsåˆ—è¡¨
+        if (foodPrefabs.Count > 0 && currentIndex < foodPrefabs.Count && foodPrefabs[currentIndex] != null)
+        {
+            return foodPrefabs[currentIndex];
+        }
+
+        // å›é€€åˆ°é€šç”¨foodPrefab
+        if (foodPrefab != null)
+        {
+            return foodPrefab;
+        }
+
+        Debug.LogError("FoodItem: No good food prefab found");
+        return null;
+    }
+
+    /// <summary>
+    /// Set up the food we threw
+    /// </summary>
+    private void SetupThrownFood(GameObject thrownFood)
+    {
+        // Make sure it has Rigidbody (for moving around)
+        Rigidbody rb = thrownFood.GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = thrownFood.AddComponent<Rigidbody>();
+            Debug.Log("FoodItem: Added Rigidbody to food");
+        }
+
+        // Set Rigidbody settings
+        rb.mass = 0.5f;
+        rb.linearDamping = 0.5f;
+        rb.angularDamping = 0.5f;
+        rb.useGravity = true;
+        rb.isKinematic = false;
+
+        // Make sure it has Collider (for hitting things)
+        Collider col = thrownFood.GetComponent<Collider>();
+        if (col == null)
+        {
+            // If no collider, add a ball collider
+            SphereCollider sphereCol = thrownFood.AddComponent<SphereCollider>();
+            sphereCol.radius = 0.5f;
+            sphereCol.isTrigger = false;
+            Debug.Log("FoodItem: Added SphereCollider to food");
+        }
+        else
+        {
+            // Make sure the collider works and is not a trigger
+            col.enabled = true;
+            col.isTrigger = false;
+            Debug.Log($"FoodItem: Collider found and ready: {col.GetType().Name}");
+        }
+
+        // Make sure it has FoodWorld script (for animals to find it)
+        FoodWorld foodWorld = thrownFood.GetComponent<FoodWorld>();
+        if (foodWorld == null)
+        {
+            foodWorld = thrownFood.AddComponent<FoodWorld>();
+            Debug.Log("FoodItem: Added FoodWorld to food");
+        }
+
+        // Set the food type
+        if (foodTypes.Count > 0 && currentIndex < foodTypes.Count)
+        {
+            foodWorld.foodType = foodTypes[currentIndex];
+        }
+
+        // Set how long the food will stay
+        foodWorld.lifetime = 300f; // 5 minutes then goes away
+    }
+
+    /// <summary>
+    /// Make the food fly when we throw it
+    /// </summary>
+    private void ApplyThrowForce(GameObject thrownFood)
+    {
+        Rigidbody rb = thrownFood.GetComponent<Rigidbody>();
+        if (rb == null) return;
+
+        // Make throw direction (where player looks, a bit up)
+        Vector3 throwDirection = playerTransform.forward;
+        throwDirection.y += 0.3f; // add some up
+        throwDirection = throwDirection.normalized;
+
+        // Push it!
+        rb.AddForce(throwDirection * throwForce, ForceMode.VelocityChange);
+
+        // Make it spin a little
+        Vector3 randomTorque = new Vector3(
+            Random.Range(-5f, 5f),
+            Random.Range(-5f, 5f),
+            Random.Range(-5f, 5f)
+        );
+        rb.AddTorque(randomTorque, ForceMode.VelocityChange);
+
+        Debug.Log($"FoodItem: Made food fly with force {throwDirection * throwForce}");
+    }
 }
