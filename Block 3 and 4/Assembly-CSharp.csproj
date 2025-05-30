@@ -114,6 +114,7 @@
     <Compile Include="Assets\Script\Animal\patrolpath.cs" />
     <Compile Include="Assets\Script\Log\FullPageAlertPopup.cs" />
     <Compile Include="Assets\Script\Photo\PhotoCollectionManager.cs" />
+    <Compile Include="Assets\Script\menuButton.cs" />
     <Compile Include="Assets\Script\Inventory System\CameraItem.cs" />
     <Compile Include="Assets\Script\Inventory System\Progresscanvascontroller.cs" />
     <Compile Include="Assets\Script\InventoryCycler.cs" />
