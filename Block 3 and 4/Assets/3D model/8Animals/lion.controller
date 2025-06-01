@@ -56,7 +56,7 @@ AnimatorController:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: camel
+  m_Name: lion
   serializedVersion: 5
   m_AnimatorParameters:
   - m_Name: isRun
@@ -99,7 +99,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: -675539586928324132, guid: 973a72bd0d205164cb46339eb717fd01, type: 3}
+  m_Motion: {fileID: 4781951162920444690, guid: df624939e0e92f543838995f27f3f380, type: 3}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
