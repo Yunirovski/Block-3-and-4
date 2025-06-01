@@ -1738,7 +1738,16 @@ PrefabInstance:
     m_RemovedGameObjects:
     - {fileID: 65702495048144492, guid: 25292fdbbd6c9d140b970fefeac40558, type: 3}
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 25292fdbbd6c9d140b970fefeac40558, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1496878704}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 25292fdbbd6c9d140b970fefeac40558, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1496878703}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 25292fdbbd6c9d140b970fefeac40558, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1496878706}
   m_SourcePrefab: {fileID: 100100000, guid: 25292fdbbd6c9d140b970fefeac40558, type: 3}
 --- !u!1001 &256236390
 PrefabInstance:
@@ -5668,6 +5677,9 @@ MonoBehaviour:
     - {fileID: 406779418}
     - {fileID: 367692922}
     photoLayer: {fileID: 1462228182}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Donkey
     pageIndex: 4
     photoSlots:
@@ -5677,6 +5689,9 @@ MonoBehaviour:
     - {fileID: 971355484}
     - {fileID: 1027530421}
     photoLayer: {fileID: 831817299}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Giraffe
     pageIndex: 5
     photoSlots:
@@ -5686,6 +5701,9 @@ MonoBehaviour:
     - {fileID: 1150537273}
     - {fileID: 2143646394}
     photoLayer: {fileID: 1061846173}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Goat
     pageIndex: 6
     photoSlots:
@@ -5695,6 +5713,9 @@ MonoBehaviour:
     - {fileID: 580887677}
     - {fileID: 335173050}
     photoLayer: {fileID: 1394143892}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Hippo
     pageIndex: 7
     photoSlots:
@@ -5704,6 +5725,9 @@ MonoBehaviour:
     - {fileID: 1661035365}
     - {fileID: 86935864}
     photoLayer: {fileID: 123482422}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Lion
     pageIndex: 8
     photoSlots:
@@ -5713,6 +5737,9 @@ MonoBehaviour:
     - {fileID: 449730389}
     - {fileID: 532768582}
     photoLayer: {fileID: 1832676762}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Pigeon
     pageIndex: 9
     photoSlots:
@@ -5722,6 +5749,9 @@ MonoBehaviour:
     - {fileID: 233433146}
     - {fileID: 743868481}
     photoLayer: {fileID: 694725312}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Rhino
     pageIndex: 10
     photoSlots:
@@ -5731,9 +5761,15 @@ MonoBehaviour:
     - {fileID: 1246200323}
     - {fileID: 1040566738}
     photoLayer: {fileID: 814519178}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   placeholderSprite: {fileID: 0}
   errorSprite: {fileID: 0}
   photoSlotPrefab: {fileID: 6508108447828053168, guid: b2a447a925d38c94fbd7d7c970aaf863, type: 3}
+  starTextOffset: {x: 0, y: -200}
+  totalScoreText: {fileID: 0}
+  enableDebugLogs: 1
   componentsToDisable: []
   refreshOnOpen: 1
   enableAutoRefresh: 1
@@ -11792,6 +11828,77 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4311903302273995307, guid: 2d1f466b80311964b9fdb98dedf71632, type: 3}
   m_PrefabInstance: {fileID: 1492481800}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1496878702 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 25292fdbbd6c9d140b970fefeac40558, type: 3}
+  m_PrefabInstance: {fileID: 249079902}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &1496878703
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1496878702}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 03aef12d8a651604e83c8606c25a1747, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1496878704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1496878702}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 184d772aea9ae1642a05669b15180ffb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  animator: {fileID: 1496878703}
+  isRunParameterName: isRun
+  moveSpeedParameterName: moveSpeed
+  movementThreshold: 0.1
+  smoothTime: 0.1
+  showDebugInfo: 0
+--- !u!114 &1496878706
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1496878702}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2eecd7a97c615544857ae1124321135, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  moveSpeed: 3
+  wanderRadius: 40
+  minWanderTime: 2
+  maxWanderTime: 5
+  escapeSpeed: 6
+  detectionRadius: 20
+  safeDistance: 8
+  forcedEscapeDuration: 10
+  temperament: 0
+  foodDetectionRadius: 20
+  playerSafeDistance: 15
+  eatDuration: 5
+  graceDuration: 10
+  modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &1509727953
 GameObject:
   m_ObjectHideFlags: 0
