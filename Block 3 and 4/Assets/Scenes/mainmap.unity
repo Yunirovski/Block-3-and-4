@@ -7230,6 +7230,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pauseMenuUI: {fileID: 1304538846}
+  mouseToggleKey: 43
 --- !u!114 &931300890
 MonoBehaviour:
   m_ObjectHideFlags: 0

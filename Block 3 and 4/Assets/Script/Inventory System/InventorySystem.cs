@@ -60,11 +60,27 @@ public class InventorySystem : MonoBehaviour
     }
 
     // -- Press E to open/release the toolring -- 
+    // -- Press E to open/release the toolring -- 
     void HandleRing()
     {
         if (Input.GetKeyDown(KeyCode.E))
         {
             ringOpen = true;
+
+            // Auto unlock cursor for tool ring
+            var mouseManager = FindObjectOfType<PauseAndMouseManager>();
+            if (mouseManager != null)
+            {
+                mouseManager.AutoUnlockCursor();
+                Debug.Log("Tool ring opened - cursor unlocked");
+            }
+            else
+            {
+                // Fallback if no mouse manager found
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                Debug.Log("Tool ring opened - cursor unlocked (fallback)");
+            }
 
             // Use UIManager to display the item radial
             UIManager.Instance.ShowInventoryRadial(BuildUnlockArray(), currentIndex);
@@ -72,6 +88,21 @@ public class InventorySystem : MonoBehaviour
         else if (Input.GetKeyUp(KeyCode.E))
         {
             ringOpen = false;
+
+            // Auto lock cursor when tool ring closes
+            var mouseManager = FindObjectOfType<PauseAndMouseManager>();
+            if (mouseManager != null)
+            {
+                mouseManager.AutoLockCursor();
+                Debug.Log("Tool ring closed - cursor locked");
+            }
+            else
+            {
+                // Fallback if no mouse manager found
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+                Debug.Log("Tool ring closed - cursor locked (fallback)");
+            }
 
             // Use UIManager to hide the item radial
             UIManager.Instance.HideInventoryRadial();
