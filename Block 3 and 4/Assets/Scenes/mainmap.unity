@@ -239,6 +239,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -583,6 +585,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -979,6 +983,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -2762,14 +2768,16 @@ MonoBehaviour:
   detectionRadius: 20
   safeDistance: 8
   forcedEscapeDuration: 10
-  stoppingDistance: 0.1
+  stoppingDistance: 0.5
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 3
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
-  eatDuration: 5
-  graceDuration: 10
+  eatDuration: 1
+  graceDuration: 5
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &348523662
 Animator:
@@ -2835,8 +2843,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.4083252, y: 7.7869225, z: 11.0933075}
-  m_Center: {x: -0.04510498, y: 3.3934612, z: -0.47049713}
+  m_Size: {x: 3.4083252, y: 7.7869225, z: 9.216782}
+  m_Center: {x: -0.04510498, y: 3.3934612, z: -1.4087601}
 --- !u!54 &348523666
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -5864,8 +5872,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.9711914, y: 4.8243465, z: 9.82254}
-  m_Center: {x: -0.046020508, y: 1.9121733, z: -0.35525513}
+  m_Size: {x: 1.9711914, y: 4.8243465, z: 8.833237}
+  m_Center: {x: -0.046020508, y: 1.9121733, z: -0.8499069}
 --- !u!54 &665841886
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -5916,6 +5924,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -6189,6 +6199,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -8922,6 +8934,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -9837,6 +9851,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -10372,6 +10388,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -12786,6 +12804,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -15845,6 +15865,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -16317,6 +16339,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -17499,8 +17523,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 2.3456268, y: 2.0401292, z: 4.816969}
-  m_Center: {x: 0.04943793, y: -0.17354974, z: 0.53185296}
+  m_Size: {x: 2.3456268, y: 2.0401292, z: 4.5663443}
+  m_Center: {x: 0.04943793, y: -0.17354974, z: 0.40654165}
 --- !u!54 &1850476458
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -17551,6 +17575,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -17678,6 +17704,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -17881,6 +17909,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
@@ -18686,6 +18716,8 @@ MonoBehaviour:
   stoppingDistance: 0.1
   sampleDistance: 5
   useAgentRotation: 0
+  foodInteractionDistance: 2.5
+  forceAgentRadius: 0
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15

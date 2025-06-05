@@ -18,11 +18,15 @@ public class AnimalBehavior : MonoBehaviour
 
     [Header("NavMesh Settings")]
     [Tooltip("NavMesh Agent停止距离")]
-    public float stoppingDistance = 0.1f;
+    public float stoppingDistance = 0.5f; // 减小默认停止距离
     [Tooltip("NavMesh采样距离")]
     public float sampleDistance = 5f;
     [Tooltip("是否自动旋转（建议关闭，使用自定义旋转）")]
     public bool useAgentRotation = false;
+    [Tooltip("食物交互的检测距离")]
+    public float foodInteractionDistance = 2.5f;
+    [Tooltip("强制设置NavMeshAgent半径（0=自动）")]
+    public float forceAgentRadius = 0f;
 
     [Header("Food Interaction Settings")]
     [Tooltip("动物性格决定靠近/回避玩家的方式")]
@@ -99,6 +103,23 @@ public class AnimalBehavior : MonoBehaviour
         // 设置合理的转向速度
         agent.angularSpeed = 180f;
         agent.acceleration = 8f;
+
+        // 重要：设置合理的Agent尺寸以避免碰撞问题
+        if (forceAgentRadius > 0f)
+        {
+            agent.radius = forceAgentRadius;
+        }
+        else if (agent.radius == 0.5f) // 如果是默认值，调整它
+        {
+            Collider col = GetComponent<Collider>();
+            if (col != null)
+            {
+                // 根据实际碰撞体设置Agent半径
+                agent.radius = Mathf.Max(col.bounds.size.x, col.bounds.size.z) * 0.4f; // 稍小于实际尺寸
+                agent.height = col.bounds.size.y;
+                Debug.Log($"{gameObject.name}: 设置NavMeshAgent - radius: {agent.radius:F2}, height: {agent.height:F2}");
+            }
+        }
     }
 
     void ValidateStartPosition()
@@ -251,9 +272,10 @@ public class AnimalBehavior : MonoBehaviour
     /// </summary>
     private bool HasReachedDestination()
     {
-        if (agent == null || !agent.hasPath) return true;
+        if (agent == null || !agent.hasPath || agent.pathPending) return false;
 
-        return !agent.pathPending && agent.remainingDistance < stoppingDistance;
+        // 更宽松的到达判断
+        return agent.remainingDistance <= agent.stoppingDistance + 0.1f;
     }
 
     /// <summary>
@@ -367,23 +389,50 @@ public class AnimalBehavior : MonoBehaviour
             return;
         }
 
+        // 设置更小的停止距离以便接近食物
+        float originalStopDistance = agent.stoppingDistance;
+        agent.stoppingDistance = 0.1f; // 更小的停止距离
+
         MoveToPosition(targetFood.position, moveSpeed);
         HandleRotation(targetFood.position);
 
-        // 检查是否到达食物
+        // 检查是否到达食物 - 考虑碰撞体积
         float distanceToFood = Vector3.Distance(transform.position, targetFood.position);
-        if (distanceToFood < 1.5f || HasReachedDestination())
+
+        // 考虑动物和食物的碰撞体积
+        float animalRadius = agent.radius;
+        Collider foodCollider = targetFood.GetComponent<Collider>();
+        float foodRadius = foodCollider != null ? foodCollider.bounds.size.magnitude * 0.5f : 0.5f;
+        float totalRadius = animalRadius + foodRadius + 0.5f; // 添加额外缓冲
+
+        bool nearFood = distanceToFood <= totalRadius;
+        bool reachedDestination = HasReachedDestination();
+        bool stoppedMoving = agent.velocity.magnitude < 0.1f && !agent.pathPending;
+        bool stuckNearFood = distanceToFood < totalRadius * 1.5f && agent.velocity.magnitude < 0.1f;
+
+        if (nearFood || reachedDestination || stoppedMoving || stuckNearFood)
         {
             foodState = FoodState.Eating;
             foodTimer = eatDuration;
             agent.isStopped = true; // 停止移动开始吃
+            agent.stoppingDistance = originalStopDistance; // 恢复原始停止距离
 
             if (targetFood != null)
             {
                 Destroy(targetFood.gameObject);
                 targetFood = null;
-                Debug.Log($"{gameObject.name} 开始吃食物");
+                Debug.Log($"{gameObject.name} 开始吃食物 - 距离: {distanceToFood:F2}m, 需要距离: {totalRadius:F2}m, " +
+                         $"动物半径: {animalRadius:F2}m, 食物半径: {foodRadius:F2}m, " +
+                         $"到达目标: {reachedDestination}, 停止移动: {stoppedMoving}, 卡住: {stuckNearFood}");
             }
+        }
+
+        // 如果长时间无法到达食物，放弃
+        if (!nearFood && !reachedDestination && Vector3.Distance(transform.position, targetFood.position) > foodDetectionRadius)
+        {
+            Debug.LogWarning($"{gameObject.name} 食物太远，放弃追踪");
+            foodState = FoodState.Idle;
+            agent.stoppingDistance = originalStopDistance;
         }
     }
 
