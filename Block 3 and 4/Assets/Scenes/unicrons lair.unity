@@ -3201,11 +3201,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b06d3c4817789b14bbfd5ecfb914ac17, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  minSizePct: 0.15
-  idealSizePct: 0.45
-  centerTolerance: 0.2
-  cornerPctNeeded: 0.75
+  star1MinArea: 30
+  star2MinArea: 100
+  star3MinArea: 500
+  star4MinArea: 1500
+  maxDetectionDistance: 100
+  showDetailedDebug: 1
   multiTargetPenalty: 1
+  showDebugInfo: 1
+  showAnimalBounds: 1
+  showAreaInfo: 1
+  showDistanceInfo: 1
+  star1Color: {r: 1, g: 0, b: 0, a: 1}
+  star2Color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  star3Color: {r: 0, g: 1, b: 0, a: 1}
+  star4Color: {r: 0, g: 1, b: 1, a: 1}
+  tooFarColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  scoreTextColor: {r: 1, g: 1, b: 1, a: 1}
+  debugFontSize: 16
 --- !u!4 &684532119
 Transform:
   m_ObjectHideFlags: 0
@@ -6450,6 +6463,9 @@ MonoBehaviour:
     - {fileID: 1308412426}
     - {fileID: 1514187353}
     photoLayer: {fileID: 2106423243}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Donkey
     pageIndex: 4
     photoSlots:
@@ -6459,6 +6475,9 @@ MonoBehaviour:
     - {fileID: 814756403}
     - {fileID: 1883123375}
     photoLayer: {fileID: 1706234487}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Giraffe
     pageIndex: 5
     photoSlots:
@@ -6468,6 +6487,9 @@ MonoBehaviour:
     - {fileID: 1639165139}
     - {fileID: 384191907}
     photoLayer: {fileID: 712028577}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Goat
     pageIndex: 6
     photoSlots:
@@ -6477,6 +6499,9 @@ MonoBehaviour:
     - {fileID: 2017698243}
     - {fileID: 1719713490}
     photoLayer: {fileID: 2049119825}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Hippo
     pageIndex: 7
     photoSlots:
@@ -6486,6 +6511,9 @@ MonoBehaviour:
     - {fileID: 1661060513}
     - {fileID: 432608748}
     photoLayer: {fileID: 1603856325}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Lion
     pageIndex: 8
     photoSlots:
@@ -6495,6 +6523,9 @@ MonoBehaviour:
     - {fileID: 965872699}
     - {fileID: 1690239714}
     photoLayer: {fileID: 39434930}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Pigeon
     pageIndex: 9
     photoSlots:
@@ -6504,6 +6535,9 @@ MonoBehaviour:
     - {fileID: 1380144145}
     - {fileID: 1804561380}
     photoLayer: {fileID: 715080591}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   - animalName: Rhino
     pageIndex: 10
     photoSlots:
@@ -6513,9 +6547,15 @@ MonoBehaviour:
     - {fileID: 855486175}
     - {fileID: 1037842117}
     photoLayer: {fileID: 1929051267}
+    starText: {fileID: 0}
+    photoFilePaths: []
+    autoDetectPage: 1
   placeholderSprite: {fileID: 0}
   errorSprite: {fileID: 0}
   photoSlotPrefab: {fileID: 6508108447828053168, guid: b2a447a925d38c94fbd7d7c970aaf863, type: 3}
+  starTextOffset: {x: 0, y: -200}
+  totalScoreText: {fileID: 0}
+  enableDebugLogs: 1
   componentsToDisable: []
   refreshOnOpen: 1
   enableAutoRefresh: 1
@@ -7825,6 +7865,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pauseMenuUI: {fileID: 1450021509}
+  mouseToggleKey: 43
 --- !u!143 &1473197926
 CharacterController:
   m_ObjectHideFlags: 0
@@ -8027,6 +8068,10 @@ MonoBehaviour:
   hookSpeed: 70
   ropeMaterial: {fileID: 0}
   ropeColor: {r: 0.545, g: 0.271, b: 0.075, a: 1}
+  gravity: 9.81
+  hookCollisionRadius: 0.5
+  maxFlightTime: 5
+  launchAngleOffset: 0
 --- !u!224 &1491728472 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8569059462470773527, guid: b2a447a925d38c94fbd7d7c970aaf863, type: 3}
