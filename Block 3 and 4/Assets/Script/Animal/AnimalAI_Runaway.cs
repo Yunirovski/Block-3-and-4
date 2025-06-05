@@ -1,5 +1,6 @@
 ﻿// Assets/Scripts/Animal/AnimalBehavior.cs
 using UnityEngine;
+using UnityEngine.AI;
 
 public class AnimalBehavior : MonoBehaviour
 {
@@ -14,6 +15,14 @@ public class AnimalBehavior : MonoBehaviour
     public float detectionRadius = 20f;
     public float safeDistance = 8f;
     public float forcedEscapeDuration = 10f;
+
+    [Header("NavMesh Settings")]
+    [Tooltip("NavMesh Agent停止距离")]
+    public float stoppingDistance = 0.1f;
+    [Tooltip("NavMesh采样距离")]
+    public float sampleDistance = 5f;
+    [Tooltip("是否自动旋转（建议关闭，使用自定义旋转）")]
+    public bool useAgentRotation = false;
 
     [Header("Food Interaction Settings")]
     [Tooltip("动物性格决定靠近/回避玩家的方式")]
@@ -54,29 +63,90 @@ public class AnimalBehavior : MonoBehaviour
     private bool isReturning;
 
     private Transform player;
+    private NavMeshAgent agent;
+    private bool hasValidPath = false;
 
     void Start()
     {
-        // 禁用 NavMeshAgent，全部改为手动移动
-        var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
-        if (agent != null) agent.enabled = false;
+        // 获取或添加NavMeshAgent
+        agent = GetComponent<NavMeshAgent>();
+        if (agent == null)
+        {
+            agent = gameObject.AddComponent<NavMeshAgent>();
+            Debug.Log($"{gameObject.name}: 自动添加NavMeshAgent组件");
+        }
+
+        // 配置NavMeshAgent
+        ConfigureNavMeshAgent();
 
         wanderCenter = transform.position;
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
+
+        // 确保起始位置在NavMesh上
+        ValidateStartPosition();
+
         SetNewWanderTarget();
+    }
+
+    void ConfigureNavMeshAgent()
+    {
+        agent.speed = moveSpeed;
+        agent.stoppingDistance = stoppingDistance;
+        agent.updateRotation = useAgentRotation;
+        agent.updateUpAxis = true; // 保持在NavMesh表面
+        agent.autoBraking = true;
+
+        // 设置合理的转向速度
+        agent.angularSpeed = 180f;
+        agent.acceleration = 8f;
+    }
+
+    void ValidateStartPosition()
+    {
+        NavMeshHit hit;
+        if (!NavMesh.SamplePosition(transform.position, out hit, sampleDistance, NavMesh.AllAreas))
+        {
+            Debug.LogWarning($"{gameObject.name}: 不在NavMesh上，尝试寻找最近的NavMesh位置");
+
+            // 尝试在更大范围内找到NavMesh
+            if (NavMesh.SamplePosition(transform.position, out hit, sampleDistance * 3, NavMesh.AllAreas))
+            {
+                transform.position = hit.position;
+                Debug.Log($"{gameObject.name}: 移动到最近的NavMesh位置 {hit.position}");
+            }
+            else
+            {
+                Debug.LogError($"{gameObject.name}: 无法找到有效的NavMesh位置！请检查NavMesh烘焙");
+            }
+        }
     }
 
     void Update()
     {
+        // 检查Agent是否有效
+        if (agent == null || !agent.isOnNavMesh)
+        {
+            Debug.LogWarning($"{gameObject.name}: NavMeshAgent无效或不在NavMesh上");
+            return;
+        }
+
         // 1) 昏迷中：只计时
         if (isStunned)
         {
             stunTimer -= Time.deltaTime;
-            if (stunTimer <= 0f) isStunned = false;
+            if (stunTimer <= 0f)
+            {
+                isStunned = false;
+                agent.isStopped = false; // 恢复移动
+            }
+            else
+            {
+                agent.isStopped = true; // 停止移动
+            }
             return;
         }
 
-        // 2) 吸引中：水平走向 attractTarget
+        // 2) 吸引中：移动向attractTarget
         if (isAttracted)
         {
             attractTimer -= Time.deltaTime;
@@ -88,23 +158,8 @@ public class AnimalBehavior : MonoBehaviour
             }
             else
             {
-                // 水平移动到玩家（摄像机）所在 XZ 平面位置
-                Vector3 targetPos = attractTarget.position;
-                targetPos.y = transform.position.y;
-                transform.position = Vector3.MoveTowards(
-                    transform.position,
-                    targetPos,
-                    moveSpeed * Time.deltaTime);
-
-                // 面向玩家方向
-                Vector3 lookDir = (targetPos - transform.position).normalized;
-                if (lookDir.sqrMagnitude > 0.001f)
-                {
-                    Quaternion rot = Quaternion.LookRotation(lookDir, Vector3.up)
-                                     * Quaternion.Euler(modelRotationOffset);
-                    transform.rotation = Quaternion.Slerp(
-                        transform.rotation, rot, 5f * Time.deltaTime);
-                }
+                MoveToPosition(attractTarget.position, moveSpeed);
+                HandleRotation(attractTarget.position);
             }
             return;
         }
@@ -113,7 +168,7 @@ public class AnimalBehavior : MonoBehaviour
         HandleFoodInteraction();
         if (foodState != FoodState.Idle)
         {
-            return; // 如果在处理食物，不执行其他行为
+            return;
         }
 
         // 4) 逃跑优先：更新逃跑计时
@@ -129,7 +184,8 @@ public class AnimalBehavior : MonoBehaviour
         if (distToCenter > wanderRadius)
         {
             isReturning = true;
-            targetPosition = wanderCenter + (wanderCenter - transform.position).normalized * (wanderRadius * 0.8f);
+            Vector3 returnPos = wanderCenter + (wanderCenter - transform.position).normalized * (wanderRadius * 0.8f);
+            MoveToPosition(returnPos, moveSpeed);
         }
         else if (distToCenter <= wanderRadius * 0.9f)
         {
@@ -137,13 +193,93 @@ public class AnimalBehavior : MonoBehaviour
         }
 
         if (isReturning)
+        {
             ReturnToWanderArea();
+        }
         else
         {
             Wander();
             CheckForPlayer();
         }
     }
+
+    #region NavMesh移动系统
+
+    /// <summary>
+    /// 使用NavMesh移动到指定位置
+    /// </summary>
+    private bool MoveToPosition(Vector3 targetPos, float speed)
+    {
+        if (agent == null || !agent.isOnNavMesh) return false;
+
+        // 寻找最近的有效NavMesh位置
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(targetPos, out hit, sampleDistance, NavMesh.AllAreas))
+        {
+            agent.speed = speed;
+            agent.SetDestination(hit.position);
+            hasValidPath = agent.hasPath;
+            return true;
+        }
+        else
+        {
+            Debug.LogWarning($"{gameObject.name}: 无法在目标位置 {targetPos} 找到有效的NavMesh");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 处理动物旋转（如果不使用Agent自动旋转）
+    /// </summary>
+    private void HandleRotation(Vector3 targetPos)
+    {
+        if (useAgentRotation) return;
+
+        Vector3 direction = (targetPos - transform.position);
+        direction.y = 0; // 只在水平面旋转
+
+        if (direction.sqrMagnitude > 0.001f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up)
+                                       * Quaternion.Euler(modelRotationOffset);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 5f * Time.deltaTime);
+        }
+    }
+
+    /// <summary>
+    /// 检查是否到达目标位置
+    /// </summary>
+    private bool HasReachedDestination()
+    {
+        if (agent == null || !agent.hasPath) return true;
+
+        return !agent.pathPending && agent.remainingDistance < stoppingDistance;
+    }
+
+    /// <summary>
+    /// 获取随机的NavMesh位置
+    /// </summary>
+    private bool GetRandomNavMeshPosition(Vector3 center, float radius, out Vector3 result)
+    {
+        result = Vector3.zero;
+
+        for (int i = 0; i < 10; i++) // 最多尝试10次
+        {
+            Vector2 randomCircle = Random.insideUnitCircle * radius;
+            Vector3 randomPoint = center + new Vector3(randomCircle.x, 0, randomCircle.y);
+
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(randomPoint, out hit, sampleDistance, NavMesh.AllAreas))
+            {
+                result = hit.position;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    #endregion
 
     #region 食物交互逻辑
 
@@ -170,7 +306,6 @@ public class AnimalBehavior : MonoBehaviour
                 if (foodTimer <= 0f)
                 {
                     foodState = FoodState.Idle;
-                    // 重新设置漫游中心和目标
                     wanderCenter = transform.position;
                     SetNewWanderTarget();
                 }
@@ -180,15 +315,13 @@ public class AnimalBehavior : MonoBehaviour
 
     private void DetectAndReactToFood()
     {
-        // 检测范围内的食物
         Collider[] colliders = Physics.OverlapSphere(transform.position, foodDetectionRadius);
 
         foreach (var col in colliders)
         {
             var food = col.GetComponent<FoodWorld>();
-            if (food == null) continue; // 只对 FoodWorld 做反应
+            if (food == null) continue;
 
-            // 根据性格决定是否靠近食物
             float distToPlayer = Vector3.Distance(transform.position,
                                                 player != null ? player.position : Camera.main.transform.position);
 
@@ -209,7 +342,7 @@ public class AnimalBehavior : MonoBehaviour
             if (shouldApproach)
             {
                 StartApproachFood(food.transform);
-                return; // 找到一个即可
+                return;
             }
         }
     }
@@ -219,7 +352,6 @@ public class AnimalBehavior : MonoBehaviour
         targetFood = food;
         foodState = FoodState.Approaching;
 
-        // 取消其他状态
         isEscaping = false;
         escapeCooldown = 0f;
         isReturning = false;
@@ -235,31 +367,17 @@ public class AnimalBehavior : MonoBehaviour
             return;
         }
 
-        // 移动向食物
-        Vector3 targetPos = targetFood.position;
-        targetPos.y = transform.position.y; // 保持同一水平面
-
-        transform.position = Vector3.MoveTowards(transform.position,
-                                                targetPos,
-                                                moveSpeed * Time.deltaTime);
-
-        // 面向食物
-        Vector3 lookDir = (targetPos - transform.position).normalized;
-        if (lookDir.sqrMagnitude > 0.001f)
-        {
-            Quaternion rot = Quaternion.LookRotation(lookDir, Vector3.up)
-                             * Quaternion.Euler(modelRotationOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, rot, 5f * Time.deltaTime);
-        }
+        MoveToPosition(targetFood.position, moveSpeed);
+        HandleRotation(targetFood.position);
 
         // 检查是否到达食物
-        if (Vector3.Distance(transform.position, targetPos) < 1.5f)
+        float distanceToFood = Vector3.Distance(transform.position, targetFood.position);
+        if (distanceToFood < 1.5f || HasReachedDestination())
         {
-            // 开始吃食物
             foodState = FoodState.Eating;
             foodTimer = eatDuration;
+            agent.isStopped = true; // 停止移动开始吃
 
-            // 销毁食物
             if (targetFood != null)
             {
                 Destroy(targetFood.gameObject);
@@ -281,16 +399,18 @@ public class AnimalBehavior : MonoBehaviour
         isReturning = false;
         isAttracted = false;
 
-        // 重置食物状态
         foodState = FoodState.Idle;
         targetFood = null;
         foodTimer = 0f;
+
+        if (agent != null) agent.isStopped = true;
     }
 
     /// <summary>外部调用：令动物被法杖吸引</summary>
     public void Attract(Transform target, float duration)
     {
         if (target == null || duration <= 0f) return;
+
         isAttracted = true;
         attractTarget = target;
         attractTimer = duration;
@@ -299,25 +419,20 @@ public class AnimalBehavior : MonoBehaviour
         escapeCooldown = 0f;
         isReturning = false;
 
-        // 重置食物状态
         foodState = FoodState.Idle;
         targetFood = null;
         foodTimer = 0f;
+
+        if (agent != null) agent.isStopped = false;
     }
 
     private void ReturnToWanderArea()
     {
-        transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+        if (!isReturning) return;
 
-        Vector3 dir = (targetPosition - transform.position).normalized;
-        if (dir.sqrMagnitude > 0.001f)
-        {
-            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up)
-                             * Quaternion.Euler(modelRotationOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, rot, 5f * Time.deltaTime);
-        }
+        HandleRotation(targetPosition);
 
-        if (Vector3.Distance(transform.position, targetPosition) < 0.1f)
+        if (HasReachedDestination())
         {
             isReturning = false;
             SetNewWanderTarget();
@@ -326,38 +441,42 @@ public class AnimalBehavior : MonoBehaviour
 
     private void Wander()
     {
-        transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
-
-        Vector3 dir = (targetPosition - transform.position).normalized;
-        if (dir.sqrMagnitude > 0.001f)
-        {
-            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up)
-                             * Quaternion.Euler(modelRotationOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, rot, 5f * Time.deltaTime);
-        }
+        HandleRotation(targetPosition);
 
         wanderTimer -= Time.deltaTime;
-        if (wanderTimer <= 0f || Vector3.Distance(transform.position, targetPosition) < 0.1f)
+        if (wanderTimer <= 0f || HasReachedDestination())
+        {
             SetNewWanderTarget();
+        }
     }
 
     private void SetNewWanderTarget()
     {
-        Vector2 rnd = Random.insideUnitCircle * wanderRadius;
-        targetPosition = wanderCenter + new Vector3(rnd.x, 0, rnd.y);
-        wanderTimer = Random.Range(minWanderTime, maxWanderTime);
+        Vector3 newTarget;
+        if (GetRandomNavMeshPosition(wanderCenter, wanderRadius, out newTarget))
+        {
+            targetPosition = newTarget;
+            MoveToPosition(targetPosition, moveSpeed);
+            wanderTimer = Random.Range(minWanderTime, maxWanderTime);
+        }
+        else
+        {
+            // 如果找不到有效位置，延长当前的等待时间
+            wanderTimer = Random.Range(minWanderTime, maxWanderTime);
+            Debug.LogWarning($"{gameObject.name}: 无法找到有效的漫游目标");
+        }
     }
 
     private void CheckForPlayer()
     {
         if (player == null) return;
+
         float dist = Vector3.Distance(transform.position, player.position);
         if (dist < detectionRadius)
         {
             isEscaping = true;
             escapeCooldown = forcedEscapeDuration;
 
-            // 取消食物交互
             foodState = FoodState.Idle;
             targetFood = null;
             foodTimer = 0f;
@@ -372,17 +491,17 @@ public class AnimalBehavior : MonoBehaviour
             return;
         }
 
-        Vector3 dir = (transform.position - player.position).normalized;
-        Vector3 fleeTarget = transform.position + dir * safeDistance;
+        Vector3 escapeDirection = (transform.position - player.position).normalized;
+        Vector3 escapeTarget = transform.position + escapeDirection * safeDistance;
 
-        transform.position = Vector3.MoveTowards(transform.position, fleeTarget, escapeSpeed * Time.deltaTime);
-
-        if (dir.sqrMagnitude > 0.001f)
+        // 尝试找到逃跑目标的有效NavMesh位置
+        Vector3 validEscapeTarget;
+        if (GetRandomNavMeshPosition(escapeTarget, sampleDistance, out validEscapeTarget))
         {
-            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up)
-                             * Quaternion.Euler(modelRotationOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, rot, 10f * Time.deltaTime);
+            MoveToPosition(validEscapeTarget, escapeSpeed);
         }
+
+        HandleRotation(escapeTarget);
 
         float dist = Vector3.Distance(transform.position, player.position);
         if (dist >= safeDistance && escapeCooldown <= 0f)
@@ -402,6 +521,17 @@ public class AnimalBehavior : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, detectionRadius);
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, foodDetectionRadius);
+
+        // 显示NavMesh路径
+        if (Application.isPlaying && agent != null && agent.hasPath)
+        {
+            Gizmos.color = Color.blue;
+            Vector3[] pathCorners = agent.path.corners;
+            for (int i = 0; i < pathCorners.Length - 1; i++)
+            {
+                Gizmos.DrawLine(pathCorners[i], pathCorners[i + 1]);
+            }
+        }
     }
 
     private void OnDrawGizmos()
