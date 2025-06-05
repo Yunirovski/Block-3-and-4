@@ -4,139 +4,176 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Items/SkateboardItem")]
 public class SkateboardItem : BaseItem
 {
-    [Header("滑板设置")]
-    [Tooltip("滑行时玩家移动速度倍率")]
-    public float speedMultiplier = 2f;
-    [Tooltip("加速 / 减速 用时 (s)")]
-    public float accelTime = 2f;
-    [Tooltip("当输入停止时继续滑行的距离 (m)")]
-    public float coastDistance = 3f;
+    [Header("Skateboard Settings")]
+    public float forwardSpeed = 8f;
+    public float turnSpeed = 60f; // A/D turn speed
+    public float deceleration = 0.95f; // Slow down when no input
+    public float minSpeed = 0.5f; // Stop when too slow
 
-    [Header("模型偏移 (挂载在 FootAnchor 下)")]
+    [Header("Model Position")]
     public Vector3 holdPosition = Vector3.zero;
     public Vector3 holdRotation = Vector3.zero;
     public Vector3 modelScale = Vector3.one;
 
-    // —— 内部状态 —— 
-    float _currentMultiplier;
-    float _targetMultiplier;
-    float _coastRemaining;
-    Vector3 _lastMoveDir;
-    bool _isSkating;
-    player_move2 _mover;
-    CharacterController _cc;
-    GameObject _model;
+    [Header("Sound")]
+    public AudioClip skateboardSound;
+    [Range(0f, 1f)] public float soundVolume = 0.8f;
+
+    private bool _isSkating;
+    private player_move2 _mover;
+    private CharacterController _cc;
+    private GameObject _model;
+    private AudioSource _audioSource;
+
+    private float _currentSpeed;
+    private Vector3 _velocity;
 
     public override void OnSelect(GameObject model)
     {
         _model = model;
-        // 应用挂载偏移
         model.transform.localPosition = holdPosition;
         model.transform.localEulerAngles = holdRotation;
         model.transform.localScale = modelScale;
 
-        // 查找移动控制
         _mover = Object.FindObjectOfType<player_move2>();
         if (_mover == null)
         {
-            Debug.LogError("SkateboardItem: 找不到 player_move2");
-            UIManager.Instance.UpdateCameraDebugText("滑板错误: 找不到移动控制器");
+            Debug.LogError("Cannot find player_move2");
+            return;
         }
-        else
-            _cc = _mover.GetComponent<CharacterController>();
 
-        // 初始化状态
-        _currentMultiplier = 1f;
-        _targetMultiplier = 1f;
-        _coastRemaining = 0f;
+        _cc = _mover.GetComponent<CharacterController>();
+
+        // Setup audio
+        _audioSource = _mover.GetComponent<AudioSource>();
+        if (_audioSource == null)
+        {
+            _audioSource = _mover.gameObject.AddComponent<AudioSource>();
+        }
+
         _isSkating = false;
+        _currentSpeed = 0f;
+        _velocity = Vector3.zero;
 
-        UIManager.Instance.UpdateCameraDebugText("滑板准备就绪，按 Q 开始滑行");
+        UIManager.Instance.UpdateCameraDebugText("Skateboard ready - Hold left click to skate");
     }
 
     public override void OnDeselect()
     {
-        // 卸下滑板，立即恢复正常速度
-        if (_mover != null) _mover.ModifySpeed(1f);
-        _isSkating = false;
-        _coastRemaining = 0f;
+        StopSkating();
     }
 
     public override void HandleUpdate()
     {
         if (_mover == null || _cc == null) return;
 
-        // Q 键切换滑板状态
-        if (Input.GetKeyDown(KeyCode.Q))
+        bool holdingClick = Input.GetMouseButton(0);
+
+        if (holdingClick && !_isSkating)
         {
-            _isSkating = !_isSkating;
-            if (_isSkating)
-            {
-                // 开始滑行
-                _targetMultiplier = speedMultiplier;
-                _coastRemaining = coastDistance;
-                UIManager.Instance.UpdateCameraDebugText("滑板已启动");
-            }
-            else
-            {
-                // 立即停下
-                _currentMultiplier = 1f;
-                _targetMultiplier = 1f;
-                _coastRemaining = 0f;
-                _mover.ModifySpeed(1f);
-                UIManager.Instance.UpdateCameraDebugText("滑板已停止");
-                return;
-            }
+            StartSkating();
+        }
+        else if (!holdingClick && _isSkating)
+        {
+            StopSkating();
         }
 
+        if (_isSkating)
+        {
+            HandleSkateboardMovement();
+        }
+    }
+
+    private void StartSkating()
+    {
+        _isSkating = true;
+        _mover.enabled = false; // Turn off normal walking
+        _currentSpeed = forwardSpeed;
+
+        // Play skateboard sound
+        if (skateboardSound != null && _audioSource != null)
+        {
+            _audioSource.clip = skateboardSound;
+            _audioSource.loop = true;
+            _audioSource.volume = soundVolume;
+            _audioSource.Play();
+        }
+
+        UIManager.Instance.UpdateCameraDebugText("Skating - A/D to turn, can't go backwards");
+    }
+
+    private void StopSkating()
+    {
         if (!_isSkating) return;
 
-        // 读取输入方向
-        Vector2 raw = new Vector2(
-            Input.GetAxis("Horizontal"),
-            Input.GetAxis("Vertical")
-        );
-        Vector3 inputDir = Vector3.zero;
-        if (raw.sqrMagnitude > 0.01f)
+        _isSkating = false;
+        _mover.enabled = true; // Turn on normal walking
+        _currentSpeed = 0f;
+        _velocity = Vector3.zero;
+
+        // Stop skateboard sound
+        if (_audioSource != null && _audioSource.isPlaying)
         {
-            inputDir = (
-                _mover.transform.right * raw.x +
-                _mover.transform.forward * raw.y
-            ).normalized;
+            _audioSource.Stop();
         }
 
-        // 平滑加速 / 减速
-        _currentMultiplier = Mathf.MoveTowards(
-            _currentMultiplier,
-            _targetMultiplier,
-            Time.deltaTime * (speedMultiplier - 1f) / accelTime
-        );
-        _mover.ModifySpeed(_currentMultiplier);
+        UIManager.Instance.UpdateCameraDebugText("Stopped skating");
+    }
 
-        if (inputDir.sqrMagnitude > 0.01f)
+    private void HandleSkateboardMovement()
+    {
+        // Get input
+        float horizontalInput = Input.GetAxis("Horizontal"); // A/D keys
+        float verticalInput = Input.GetAxis("Vertical");     // W/S keys
+
+        // Only W key can maintain speed, S key does nothing (can't go backwards)
+        if (verticalInput > 0.1f)
         {
-            // 有输入：正常滑行
-            _lastMoveDir = inputDir;
-            _coastRemaining = coastDistance;
+            _currentSpeed = forwardSpeed; // Push with W key
         }
         else
         {
-            // 无输入：惯性滑行
-            if (_coastRemaining > 0f)
-            {
-                float step = speedMultiplier * Time.deltaTime;
-                _cc.Move(_lastMoveDir * step);
-                _coastRemaining = Mathf.Max(0f, _coastRemaining - step);
-            }
-            else
-            {
-                // 惯性结束 → 停下
-                _isSkating = false;
-                _currentMultiplier = 1f;
-                _targetMultiplier = 1f;
-                _mover.ModifySpeed(1f);
-                UIManager.Instance.UpdateCameraDebugText("滑板已停止（惯性结束）");
-            }
+            _currentSpeed *= deceleration; // Slow down naturally
         }
+
+        // Stop if too slow
+        if (_currentSpeed < minSpeed)
+        {
+            StopSkating();
+            return;
+        }
+
+        // A/D keys turn the player (not strafe)
+        if (Mathf.Abs(horizontalInput) > 0.1f)
+        {
+            float turnAmount = horizontalInput * turnSpeed * Time.deltaTime;
+            _mover.transform.Rotate(0, turnAmount, 0);
+        }
+
+        // Always move forward in the direction player is facing
+        Vector3 forwardDirection = _mover.transform.forward;
+        _velocity = new Vector3(forwardDirection.x * _currentSpeed, _velocity.y, forwardDirection.z * _currentSpeed);
+
+        // Handle gravity
+        if (_cc.isGrounded && _velocity.y < 0)
+        {
+            _velocity.y = -2f; // Stay on ground
+        }
+        else
+        {
+            _velocity.y += _mover.gravity * Time.deltaTime; // Apply gravity
+        }
+
+        // Move the player
+        _cc.Move(_velocity * Time.deltaTime);
+
+        // Update sound volume based on speed
+        if (_audioSource != null && _audioSource.isPlaying)
+        {
+            float speedRatio = _currentSpeed / forwardSpeed;
+            _audioSource.volume = soundVolume * speedRatio;
+        }
+
+        UIManager.Instance.UpdateCameraDebugText($"Skating - Speed: {_currentSpeed:F1} - A/D to turn");
     }
 }

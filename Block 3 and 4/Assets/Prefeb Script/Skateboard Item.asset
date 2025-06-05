@@ -12,14 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a9a308ed5680ebe41999625f44ac3af7, type: 3}
   m_Name: Skateboard Item
   m_EditorClassIdentifier: 
-  itemName: 
-  modelPrefab: {fileID: 7976277445592135971, guid: 8184b99eea57c2345a8d74013fea114e, type: 3}
+  itemName: New Item
+  modelPrefab: {fileID: 2496159964600877267, guid: 368b606a979e8924d971271bcec36d55, type: 3}
   holdPosition: {x: 0, y: 0, z: 0}
-  holdRotation: {x: -90, y: 0, z: 0}
-  modelScale: {x: 0, y: 0, z: 0}
-  speedMultiplier: 5
-  accelTime: 2
-  coastDistance: 3
-  holdPosition: {x: 0, y: -0.3, z: 0.6}
-  holdRotation: {x: -90, y: 0, z: 0}
+  holdRotation: {x: 0, y: 0, z: 0}
+  modelScale: {x: 1, y: 0.8, z: 1}
+  forwardSpeed: 30
+  turnSpeed: 40
+  deceleration: 0.95
+  minSpeed: 0.5
+  holdPosition: {x: 0, y: 0, z: 0}
+  holdRotation: {x: 0, y: 0, z: 0}
   modelScale: {x: 1, y: 1, z: 1}
+  skateboardSound: {fileID: 8300000, guid: b8cefdab55de1aa458dfff7c3165a1aa, type: 3}
+  soundVolume: 0.8
