@@ -26,6 +26,9 @@ public class InventorySystem : MonoBehaviour
     int pendingIndex;
     bool ringOpen;
 
+    // -- Click support --
+    private int lastRadialIndex = -1; // 记录上次物品环的选择状态
+
     void Start()
     {
         // Ensure UIManager reference is set
@@ -46,6 +49,11 @@ public class InventorySystem : MonoBehaviour
             HandleNumberKeys();
             HandleUse();
         }
+        else
+        {
+            // 物品环打开时，检查点击选择
+            HandleRadialSelection();
+        }
 
         // Camera-specific input: Q key/left click for photos
         if (currentItem is CameraItem cam)
@@ -60,12 +68,12 @@ public class InventorySystem : MonoBehaviour
     }
 
     // -- Press E to open/release the toolring -- 
-    // -- Press E to open/release the toolring -- 
     void HandleRing()
     {
         if (Input.GetKeyDown(KeyCode.E))
         {
             ringOpen = true;
+            lastRadialIndex = currentIndex; // 记录当前选择
 
             // Auto unlock cursor for tool ring
             var mouseManager = FindObjectOfType<PauseAndMouseManager>();
@@ -109,9 +117,13 @@ public class InventorySystem : MonoBehaviour
 
             // Get the selected item index
             int sel = UIManager.Instance.GetSelectedInventorySlot();
+
             if (sel == 1) RefreshSlot1List();
             if (sel >= 0 && sel != currentIndex)
+            {
                 BeginSwitch(sel);
+                Debug.Log($"Tool ring selection changed from {currentIndex} to {sel}");
+            }
         }
 
         if (ringOpen)
@@ -119,6 +131,34 @@ public class InventorySystem : MonoBehaviour
             float scroll = Input.GetAxis("Mouse ScrollWheel");
             if (scroll > 0.01f) UIManager.Instance.StepInventorySelection(+1);
             else if (scroll < -0.01f) UIManager.Instance.StepInventorySelection(-1);
+        }
+    }
+
+    // -- Handle radial UI click selection --
+    void HandleRadialSelection()
+    {
+        if (UIManager.Instance?.radialInventoryUI == null) return;
+
+        int currentRadialIndex = UIManager.Instance.GetSelectedInventorySlot();
+
+        // 检查选择是否发生变化（无论是通过点击还是滚轮）
+        if (currentRadialIndex != lastRadialIndex && currentRadialIndex >= 0)
+        {
+            lastRadialIndex = currentRadialIndex;
+
+            // 实时预览效果（可选）
+            // 可以在这里添加预览逻辑，比如显示物品名称等
+            if (currentRadialIndex < availableItems.Count && availableItems[currentRadialIndex] != null)
+            {
+                string itemName = availableItems[currentRadialIndex].itemName;
+                Debug.Log($"Radial selection changed to: {itemName} (index {currentRadialIndex})");
+
+                // 可以通过 UIManager 显示物品信息
+                if (UIManager.Instance != null)
+                {
+                    UIManager.Instance.UpdateCameraDebugText($"Selected: {itemName}");
+                }
+            }
         }
     }
 
@@ -245,5 +285,54 @@ public class InventorySystem : MonoBehaviour
         pm != null && pm.HasDartGun,           // 4 Dart Gun
         pm != null && pm.HasMagicWand          // 5 Magic Wand
     };
+    }
+
+    // -- Public methods for external access --
+
+    /// <summary>
+    /// 获取当前装备的物品索引
+    /// </summary>
+    public int GetCurrentItemIndex()
+    {
+        return currentIndex;
+    }
+
+    /// <summary>
+    /// 获取当前装备的物品
+    /// </summary>
+    public BaseItem GetCurrentItem()
+    {
+        return currentItem;
+    }
+
+    /// <summary>
+    /// 强制切换到指定物品（供外部调用）
+    /// </summary>
+    public void SwitchToItem(int itemIndex)
+    {
+        if (itemIndex >= 0 && itemIndex < availableItems.Count)
+        {
+            bool[] unlocked = BuildUnlockArray();
+            if (unlocked[itemIndex])
+            {
+                BeginSwitch(itemIndex);
+            }
+            else
+            {
+                Debug.LogWarning($"Cannot switch to item {itemIndex}: item is locked");
+            }
+        }
+        else
+        {
+            Debug.LogError($"Invalid item index: {itemIndex}");
+        }
+    }
+
+    /// <summary>
+    /// 检查物品环是否打开
+    /// </summary>
+    public bool IsRadialOpen()
+    {
+        return ringOpen;
     }
 }
