@@ -9693,6 +9693,8 @@ MonoBehaviour:
   lockedColor: {r: 0.3, g: 0.3, b: 0.3, a: 0.6}
   normalScale: 1.1
   highlightScale: 1.25
+  hoverColor: {r: 0, g: 1, b: 1, a: 1}
+  hoverScale: 1.1
 --- !u!225 &1064336229
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -12440,6 +12442,9 @@ MonoBehaviour:
   lockedColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   almostColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   unlockedColor: {r: 0, g: 1, b: 0, a: 1}
+  enableTabDisplay: 1
+  fadeTime: 0.2
+  backgroundAlpha: 0.8
 --- !u!1 &1369681146
 GameObject:
   m_ObjectHideFlags: 0
@@ -16849,7 +16854,7 @@ Transform:
   m_GameObject: {fileID: 1820164816}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.38, z: 0}
+  m_LocalPosition: {x: 0, y: -1.03, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
