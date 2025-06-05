@@ -5,15 +5,10 @@ using UnityEngine;
 public class SkateboardItem : BaseItem
 {
     [Header("Skateboard Settings")]
-    public float forwardSpeed = 8f;
-    public float turnSpeed = 60f; // A/D turn speed
-    public float deceleration = 0.95f; // Slow down when no input
-    public float minSpeed = 0.5f; // Stop when too slow
-
-    [Header("Model Position")]
-    public Vector3 holdPosition = Vector3.zero;
-    public Vector3 holdRotation = Vector3.zero;
-    public Vector3 modelScale = Vector3.one;
+    public float forwardSpeed = 30f;
+    public float turnSpeed = 40f;
+    public float deceleration = 0.95f;
+    public float minSpeed = 0.5f;
 
     [Header("Sound")]
     public AudioClip skateboardSound;
@@ -31,9 +26,9 @@ public class SkateboardItem : BaseItem
     public override void OnSelect(GameObject model)
     {
         _model = model;
-        model.transform.localPosition = holdPosition;
-        model.transform.localEulerAngles = holdRotation;
-        model.transform.localScale = modelScale;
+
+        // Apply transform from base class
+        ApplyHoldTransform(model.transform);
 
         _mover = Object.FindObjectOfType<player_move2>();
         if (_mover == null)
