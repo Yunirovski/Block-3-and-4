@@ -4,9 +4,9 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// Simple progress Canvas controller
-/// Show 4 items progress: 6/24, 12/24, 18/24, 24/24
-/// Press R to add stars, green when unlocked, yellow when almost unlocked
+/// 增强的进度Canvas控制器
+/// 按住Tab键显示，松开隐藏
+/// 显示星星进度和物品解锁状态
 /// </summary>
 public class ProgressCanvasController : MonoBehaviour
 {
@@ -21,10 +21,10 @@ public class ProgressCanvasController : MonoBehaviour
     public Sprite backgroundSprite;
 
     [Header("Progress Text")]
-    [Tooltip("Text to show total stars")]
+    [Tooltip("Text showing total stars")]
     public TMP_Text starsText;
 
-    [Tooltip("4 progress Text items")]
+    [Tooltip("4 progress text items")]
     public TMP_Text[] progressTexts = new TMP_Text[4];
 
     [Header("Colors")]
@@ -35,27 +35,33 @@ public class ProgressCanvasController : MonoBehaviour
     [Tooltip("Unlocked color")]
     public Color unlockedColor = Color.green;
 
+    [Header("Tab Display Settings")]
+    [Tooltip("Hold Tab key to show")]
+    public bool enableTabDisplay = true;
+    [Tooltip("Fade in/out time")]
+    public float fadeTime = 0.2f;
+    [Tooltip("Background transparency")]
+    [Range(0f, 1f)]
+    public float backgroundAlpha = 0.8f;
+
     // Current stars
     private int currentStars = 0;
 
-    // Stars needed and item names
+    // Stars needed for unlocks
     private readonly int[] requiredStars = { 6, 12, 18, 24 };
-    private readonly string[] itemNames = { "Grapple", "Skateboard", "Dart Gun", "Magic Wand" };
+
+    // Tab display related
+    private bool isShowingByTab = false;
+    private bool isShowingByP = false;
+    private CanvasGroup canvasGroup;
+    private Coroutine fadeCoroutine;
 
     void Start()
     {
         Debug.Log("ProgressCanvasController Start!");
 
-        // Hide canvas at start
-        if (progressCanvas != null)
-        {
-            progressCanvas.gameObject.SetActive(false);
-            Debug.Log("Canvas hidden at start");
-        }
-        else
-        {
-            Debug.LogError("Progress Canvas is null! Please set it in Inspector!");
-        }
+        // Initialize Canvas components
+        InitializeCanvas();
 
         // Setup background
         SetupBackground();
@@ -75,13 +81,44 @@ public class ProgressCanvasController : MonoBehaviour
         UpdateDisplay();
     }
 
+    void InitializeCanvas()
+    {
+        if (progressCanvas == null)
+        {
+            Debug.LogError("Progress Canvas is null! Please set it in Inspector!");
+            return;
+        }
+
+        // Get or add CanvasGroup component
+        canvasGroup = progressCanvas.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+        {
+            canvasGroup = progressCanvas.gameObject.AddComponent<CanvasGroup>();
+            Debug.Log("Added CanvasGroup component");
+        }
+
+        // Initial state: hidden
+        progressCanvas.gameObject.SetActive(false);
+        canvasGroup.alpha = 0f;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+
+        Debug.Log("Canvas initialization complete");
+    }
+
     void SetupBackground()
     {
         if (backgroundImage != null && backgroundSprite != null)
         {
             backgroundImage.sprite = backgroundSprite;
             backgroundImage.type = Image.Type.Simple;
-            Debug.Log("Background set up");
+
+            // Set background transparency
+            Color bgColor = backgroundImage.color;
+            bgColor.a = backgroundAlpha;
+            backgroundImage.color = bgColor;
+
+            Debug.Log("Background setup complete");
         }
     }
 
@@ -92,21 +129,34 @@ public class ProgressCanvasController : MonoBehaviour
 
     void HandleInput()
     {
-        // P key to show/hide Canvas
+        // Tab key show/hide
+        if (enableTabDisplay)
+        {
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                ShowCanvasByTab();
+            }
+            else if (Input.GetKeyUp(KeyCode.Tab))
+            {
+                HideCanvasByTab();
+            }
+        }
+
+        // P key toggle show/hide
         if (Input.GetKeyDown(KeyCode.P))
         {
             Debug.Log("P key pressed!");
-            ToggleCanvas();
+            ToggleCanvasByP();
         }
 
-        // R key to add stars
+        // R key add stars (for testing)
         if (Input.GetKeyDown(KeyCode.R))
         {
             Debug.Log("R key pressed!");
             AddStar();
         }
 
-        // T key to reset
+        // T key reset (for testing)
         if (Input.GetKeyDown(KeyCode.T))
         {
             Debug.Log("T key pressed!");
@@ -114,26 +164,142 @@ public class ProgressCanvasController : MonoBehaviour
         }
     }
 
-    public void ToggleCanvas()
+    void ShowCanvasByTab()
     {
-        Debug.Log("ToggleCanvas called!");
+        if (isShowingByTab) return;
+
+        Debug.Log("Tab key pressed - Show progress canvas");
+        isShowingByTab = true;
+
+        if (!IsCanvasVisible())
+        {
+            ShowCanvas();
+        }
+    }
+
+    void HideCanvasByTab()
+    {
+        if (!isShowingByTab) return;
+
+        Debug.Log("Tab key released - Hide progress canvas");
+        isShowingByTab = false;
+
+        // Only hide if not shown by P key
+        if (!isShowingByP)
+        {
+            HideCanvas();
+        }
+    }
+
+    public void ToggleCanvasByP()
+    {
+        Debug.Log("ToggleCanvasByP called!");
 
         if (progressCanvas != null)
         {
-            bool isActive = progressCanvas.gameObject.activeInHierarchy;
-            Debug.Log("Canvas current state: " + isActive + ", will set to: " + !isActive);
+            bool isActive = IsCanvasVisible();
+            Debug.Log($"Canvas current state: {isActive}, will set to: {!isActive}");
 
-            progressCanvas.gameObject.SetActive(!isActive);
-
-            if (!isActive)
+            if (isActive)
             {
-                UpdateDisplay();
+                isShowingByP = false;
+                // Only hide if not shown by Tab key
+                if (!isShowingByTab)
+                {
+                    HideCanvas();
+                }
+            }
+            else
+            {
+                isShowingByP = true;
+                ShowCanvas();
             }
         }
         else
         {
             Debug.LogError("Progress Canvas is null! Please set Progress Canvas in Inspector!");
         }
+    }
+
+    void ShowCanvas()
+    {
+        if (progressCanvas == null) return;
+
+        UpdateDisplay(); // Update data before showing
+
+        progressCanvas.gameObject.SetActive(true);
+
+        // Stop previous fade coroutine
+        if (fadeCoroutine != null)
+        {
+            StopCoroutine(fadeCoroutine);
+        }
+
+        // Start fade in
+        fadeCoroutine = StartCoroutine(FadeCanvasGroup(canvasGroup.alpha, 1f));
+
+        Debug.Log("Canvas fade in show");
+    }
+
+    void HideCanvas()
+    {
+        if (progressCanvas == null) return;
+
+        // Stop previous fade coroutine
+        if (fadeCoroutine != null)
+        {
+            StopCoroutine(fadeCoroutine);
+        }
+
+        // Start fade out
+        fadeCoroutine = StartCoroutine(FadeCanvasGroup(canvasGroup.alpha, 0f));
+
+        Debug.Log("Canvas fade out hide");
+    }
+
+    bool IsCanvasVisible()
+    {
+        return progressCanvas != null && progressCanvas.gameObject.activeInHierarchy && canvasGroup.alpha > 0.1f;
+    }
+
+    System.Collections.IEnumerator FadeCanvasGroup(float fromAlpha, float toAlpha)
+    {
+        if (canvasGroup == null) yield break;
+
+        float elapsed = 0f;
+        canvasGroup.alpha = fromAlpha;
+
+        // If fading in, activate GameObject first
+        if (toAlpha > 0f)
+        {
+            progressCanvas.gameObject.SetActive(true);
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+        }
+
+        while (elapsed < fadeTime)
+        {
+            elapsed += Time.unscaledDeltaTime; // Use unscaledDeltaTime to support pause
+            float t = elapsed / fadeTime;
+
+            // Use smooth curve
+            t = Mathf.SmoothStep(0f, 1f, t);
+
+            canvasGroup.alpha = Mathf.Lerp(fromAlpha, toAlpha, t);
+            yield return null;
+        }
+
+        canvasGroup.alpha = toAlpha;
+
+        // If fading out, deactivate GameObject at the end
+        if (toAlpha <= 0f)
+        {
+            progressCanvas.gameObject.SetActive(false);
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+        }
+
+        fadeCoroutine = null;
     }
 
     void AddStar()
@@ -143,7 +309,7 @@ public class ProgressCanvasController : MonoBehaviour
         // Sync to ProgressionManager
         if (ProgressionManager.Instance != null)
         {
-            // Make fake photo star
+            // Generate fake photo star
             string testAnimal = "TestAnimal_" + Time.time;
             ProgressionManager.Instance.RegisterStars(testAnimal, 1, false);
         }
@@ -186,7 +352,7 @@ public class ProgressCanvasController : MonoBehaviour
         // Update stars text
         if (starsText != null)
         {
-            starsText.text = "Total Stars: " + currentStars + "/24";
+            starsText.text = $"Total Stars: {currentStars}/24";
         }
 
         // Update 4 progress texts
@@ -252,5 +418,29 @@ public class ProgressCanvasController : MonoBehaviour
     {
         backgroundSprite = sprite;
         SetupBackground();
+    }
+
+    /// <summary>
+    /// External call: Force refresh display
+    /// </summary>
+    public void RefreshDisplay()
+    {
+        UpdateDisplay();
+    }
+
+    /// <summary>
+    /// Check if showing by Tab key
+    /// </summary>
+    public bool IsShowingByTab()
+    {
+        return isShowingByTab;
+    }
+
+    /// <summary>
+    /// Check if showing by P key
+    /// </summary>
+    public bool IsShowingByP()
+    {
+        return isShowingByP;
     }
 }
