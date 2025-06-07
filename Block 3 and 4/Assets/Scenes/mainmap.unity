@@ -1195,7 +1195,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 42.96
+      value: 46.35
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4911,8 +4911,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.316162, y: 1.760226, z: 2.85141}
-  m_Center: {x: 0.068115234, y: 0.3461889, z: -0.42024994}
+  m_Size: {x: 3.316162, y: 3.8067157, z: 2.85141}
+  m_Center: {x: 0.068115234, y: -0.67705595, z: -0.42024994}
 --- !u!95 &549699201
 Animator:
   serializedVersion: 7
@@ -4990,7 +4990,7 @@ MonoBehaviour:
   wanderRadius: 30
   changeDirectionTime: 5
   rotationSpeed: 2
-  foodDetectionRadius: 8
+  foodDetectionRadius: 17.69
   eatDuration: 3
   restDuration: 4
   temperament: 0
