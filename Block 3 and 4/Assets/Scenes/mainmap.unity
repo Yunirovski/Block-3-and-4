@@ -1191,15 +1191,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1415.1
+      value: 1269
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.97
+      value: 53
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 746.9
+      value: 149.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1245,13 +1245,13 @@ PrefabInstance:
       addedObject: {fileID: 549699201}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 549699200}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 549699199}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       insertIndex: -1
       addedObject: {fileID: 549699203}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 549699204}
   m_SourcePrefab: {fileID: 100100000, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
 --- !u!1001 &178156701
 PrefabInstance:
@@ -4758,37 +4758,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 3.316162, y: 1.1543231, z: 2.85141}
   m_Center: {x: 0.068115234, y: 0.64914036, z: -0.42024994}
---- !u!114 &549699200
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 549699197}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c2eecd7a97c615544857ae1124321135, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  moveSpeed: 8
-  wanderRadius: 40
-  minWanderTime: 5
-  maxWanderTime: 20
-  escapeSpeed: 15
-  detectionRadius: 20
-  safeDistance: 8
-  forcedEscapeDuration: 10
-  stoppingDistance: 0.1
-  sampleDistance: 5
-  useAgentRotation: 0
-  foodInteractionDistance: 2.5
-  forceAgentRadius: 0
-  temperament: 0
-  foodDetectionRadius: 20
-  playerSafeDistance: 15
-  eatDuration: 2
-  graceDuration: 8
-  modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &549699201
 Animator:
   serializedVersion: 7
@@ -4846,6 +4815,42 @@ MonoBehaviour:
   onDetected:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &549699204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 549699197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b6211fb36799a1449f204214e39d1cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  moveSpeed: 5
+  wanderRadius: 40
+  minWanderTime: 2
+  maxWanderTime: 5
+  minFlightHeight: 8
+  maxFlightHeight: 15
+  heightChangeSpeed: 2
+  groundCheckDistance: 50
+  avoidObstacles: 1
+  obstacleDetectionDistance: 3
+  escapeSpeed: 8
+  detectionRadius: 15
+  safeDistance: 20
+  forcedEscapeDuration: 8
+  temperament: 1
+  foodDetectionRadius: 25
+  playerSafeDistance: 20
+  eatDuration: 3
+  graceDuration: 5
+  takeoffDuration: 2
+  stoppingDistance: 0.3
+  sampleDistance: 8
+  forceAgentRadius: 0.3
+  modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &550735585
 GameObject:
   m_ObjectHideFlags: 0
