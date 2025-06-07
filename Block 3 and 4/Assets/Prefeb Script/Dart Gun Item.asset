@@ -13,13 +13,24 @@ MonoBehaviour:
   m_Name: Dart Gun Item
   m_EditorClassIdentifier: 
   itemName: 
-  modelPrefab: {fileID: 8150190952280149502, guid: eef44e566ddd1c345bc655882bb84388, type: 3}
+  modelPrefab: {fileID: 8150190952280149502, guid: 352963cac7c653f48925da03dcfb9a50, type: 3}
   holdPosition: {x: 0.06, y: -0.04, z: 0.28}
   holdRotation: {x: 0, y: 90, z: 0}
   modelScale: {x: 1, y: 1, z: 1}
-  maxDistance: 800
-  cooldown: 1
+  dartPrefab: {fileID: 8150190952280149502, guid: eef44e566ddd1c345bc655882bb84388, type: 3}
+  dartSpeed: 30
+  maxRange: 50
+  fireCooldown: 1.5
+  accuracy: 0.5
+  movementPenalty: 1
   stunDuration: 10
-  rayMaterial: {fileID: 0}
-  rayWidth: 10
-  rayDuration: 0.1
+  impactEffect: {fileID: 0}
+  muzzleFlashEffect: {fileID: 0}
+  fireSound: {fileID: 0}
+  hitSound: {fileID: 0}
+  emptySound: {fileID: 0}
+  reloadSound: {fileID: 0}
+  soundVolume: 0.8
+  useAmmoSystem: 1
+  magazineSize: 6
+  reloadTime: 2

@@ -97,6 +97,7 @@
     <Compile Include="Assets\Script\Log\PhotoLogUI.cs" />
     <Compile Include="Assets\Script\Dialog.cs" />
     <Compile Include="Assets\Script\Ui\ResourceHUD.cs" />
+    <Compile Include="Assets\Script\player\dartprojectile.cs" />
     <Compile Include="Assets\Script\Animal\EnemyController.cs" />
     <Compile Include="Assets\Script\Inventory System\SkateboardItem.cs" />
     <Compile Include="Assets\Script\Food\FoodWorld.cs" />
