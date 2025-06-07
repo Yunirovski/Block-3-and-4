@@ -1,7 +1,0 @@
-/// <summary>
-/// 目前仅保留一种食物，用枚举是为了以后方便拓展。
-/// </summary>
-public enum FoodType
-{
-    Food   // 唯一有效值
-}
