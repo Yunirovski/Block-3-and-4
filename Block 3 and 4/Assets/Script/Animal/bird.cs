@@ -18,11 +18,15 @@ public class PigeonBehavior : MonoBehaviour
     public float rotationSpeed = 2f;
 
     [Header("Food Behavior")]
-    public float foodDetectionRadius = 20f;
+    public float foodDetectionRadius = 8f; // 修改为8米
     public float eatDuration = 3f;
     public float restDuration = 4f;
-    public Temperament temperament = Temperament.Fearful;
+    public Temperament temperament = Temperament.Neutral; // 修改为Neutral
     public float playerSafeDistance = 15f;
+
+    [Header("Rest Position")]
+    [Tooltip("鸟吃完食物后休息时的高度（从地面算起）")]
+    public float restHeight = 0.1f; // 新增：可调节的休息高度，防止遁地
 
     [Header("Escape")]
     public float escapeSpeed = 10f;
@@ -168,17 +172,34 @@ public class PigeonBehavior : MonoBehaviour
 
     void HandleEating()
     {
+        // 保持在地面附近，防止遁地
+        Vector3 currentPos = transform.position;
+        currentPos.y = Mathf.Max(currentPos.y, groundLevel + 0.05f); // 确保不会低于地面
+        transform.position = currentPos;
+
         stateTimer -= Time.deltaTime;
         if (stateTimer <= 0f)
         {
             currentState = State.Resting;
             stateTimer = restDuration;
-            Debug.Log($"{name}: 吃完了，开始休息");
+
+            // 吃完后移动到休息高度
+            Vector3 restPos = transform.position;
+            restPos.y = groundLevel + restHeight;
+            transform.position = restPos;
+
+            Debug.Log($"{name}: 吃完了，在高度 {restHeight}m 处休息");
         }
     }
 
     void HandleResting()
     {
+        // 关键修复：持续保持在休息高度，防止遁地
+        Vector3 currentPos = transform.position;
+        float targetRestHeight = groundLevel + restHeight;
+        currentPos.y = targetRestHeight; // 强制保持在休息高度
+        transform.position = currentPos;
+
         stateTimer -= Time.deltaTime;
         if (stateTimer <= 0f)
         {
@@ -423,6 +444,11 @@ public class PigeonBehavior : MonoBehaviour
             float ground = Application.isPlaying ? groundLevel : transform.position.y - 10f;
             Vector3 flightPos = new Vector3(transform.position.x, ground + flightHeight, transform.position.z);
             Gizmos.DrawWireSphere(flightPos, 1f);
+
+            // 休息高度显示
+            Gizmos.color = new Color(1f, 0.5f, 0f); // 橙色 (替代Color.orange)
+            Vector3 restPos = new Vector3(transform.position.x, ground + restHeight, transform.position.z);
+            Gizmos.DrawWireSphere(restPos, 0.5f);
 
             // 目标位置
             Gizmos.color = Color.blue;

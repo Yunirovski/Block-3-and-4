@@ -1195,7 +1195,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 46.35
+      value: 52.7
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4990,11 +4990,12 @@ MonoBehaviour:
   wanderRadius: 30
   changeDirectionTime: 5
   rotationSpeed: 2
-  foodDetectionRadius: 17.69
-  eatDuration: 3
+  foodDetectionRadius: 20
+  eatDuration: 0.1
   restDuration: 4
   temperament: 0
   playerSafeDistance: 15
+  restHeight: 0.1
   escapeSpeed: 10
   detectionRadius: 12
   escapeHeight: 18
