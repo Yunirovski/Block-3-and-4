@@ -8424,6 +8424,7 @@ GameObject:
   - component: {fileID: 931300887}
   - component: {fileID: 931300886}
   - component: {fileID: 931300885}
+  - component: {fileID: 931300894}
   m_Layer: 0
   m_Name: Recorder
   m_TagString: Player
@@ -8750,6 +8751,18 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 0}
+--- !u!114 &931300894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 931300883}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce1c92ce749959847bfa2c575707ac13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &938076465
 GameObject:
   m_ObjectHideFlags: 0

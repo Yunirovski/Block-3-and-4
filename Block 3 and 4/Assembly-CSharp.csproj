@@ -71,6 +71,7 @@
     <Compile Include="Assets\QuickOutline\Scripts\Outline.cs" />
     <Compile Include="Assets\Script\Inventory System\MagicWandItem.cs" />
     <Compile Include="Assets\ithappy\Animals_FREE\Scripts\ThirdPersonCamera.cs" />
+    <Compile Include="Assets\Script\player\dartguncontroller.cs" />
     <Compile Include="Assets\AnimalStarUI.cs" />
     <Compile Include="Assets\Script\Animal\bird.cs" />
     <Compile Include="Assets\Script\Log\AnimalInfoDB.cs" />
