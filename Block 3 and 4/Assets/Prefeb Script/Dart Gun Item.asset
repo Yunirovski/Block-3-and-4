@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Dart Gun Item
   m_EditorClassIdentifier: 
   itemName: 
-  modelPrefab: {fileID: 0}
+  modelPrefab: {fileID: 8150190952280149502, guid: eef44e566ddd1c345bc655882bb84388, type: 3}
   holdPosition: {x: 0.06, y: -0.04, z: 0.28}
   holdRotation: {x: 0, y: 90, z: 0}
   modelScale: {x: 1, y: 1, z: 1}
