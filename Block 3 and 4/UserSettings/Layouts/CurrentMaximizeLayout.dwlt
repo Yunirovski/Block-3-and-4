@@ -246,7 +246,7 @@ MonoBehaviour:
       scrollPos: {x: 0, y: 0}
       m_SelectedIDs: 
       m_LastClickedID: 0
-      m_ExpandedIDs: 9255f2ff8c3af3ff9069f3ff38eaf3ff4858faffb8b9faff1afffaff8ce3fbff1625fcff3e59fcff90a8fdff04d2fdfffcfaffff20ce0000e2ce0000ae390100a63b0100c45c0100f05d01001e5e0100b8bf0100e4c0010012c1010008ee010034ef0100f8ef0100ce2e020054870200a8c402005ec70200b6c80200767105007aba0500fa180600d21d0600
+      m_ExpandedIDs: 9255f2ff8c3af3ff9069f3ff38eaf3ff4858faffb8b9faff1afffaff8ce3fbff1625fcff3e59fcff90a8fdff04d2fdfffcfaffff20ce0000e2ce0000ae390100a63b0100c45c0100f05d01001e5e0100b8bf0100e4c0010012c1010008ee010034ef0100f8ef0100ce2e020054870200a8c402005ec70200b6c80200767105007aba0500b41a0600d21d0600
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -903,9 +903,9 @@ MonoBehaviour:
     speed: 2
     m_Value: {x: 0.08576582, y: -0.6160179, z: 0.06772471, w: 0.7801152}
   m_Size:
-    m_Target: 346.8222
+    m_Target: 150.51447
     speed: 2
-    m_Value: 346.8222
+    m_Value: 150.51447
   m_Ortho:
     m_Target: 1
     speed: 2
@@ -1555,7 +1555,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets
+    - Assets/Fantasy Skybox FREE/Scenes/Textures (Terrain)
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -1565,17 +1565,17 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 56
   m_LastFolders:
-  - Assets
+  - Assets/Fantasy Skybox FREE/Scenes/Textures (Terrain)
   m_LastFoldersGridSize: 56
   m_LastProjectPath: C:\Users\Gebruiker\Documents\GitHub\Block-3-and-4\Block 3 and
     4
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
-    scrollPos: {x: 0, y: 79}
-    m_SelectedIDs: f8e20000
-    m_LastClickedID: 58104
-    m_ExpandedIDs: 00000000f2e20000f4e20000f6e20000f8e20000fae20000fce20000fee2000000e30000e0e3000000ca9a3bffffff7f
+    scrollPos: {x: 0, y: 0}
+    m_SelectedIDs: 5ec40600
+    m_LastClickedID: 443486
+    m_ExpandedIDs: 00000000f2e20000f4e20000f6e20000f8e20000fae20000fce20000fee2000000e30000cae3000060c4060000ca9a3bffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1812,4 +1812,4 @@ MonoBehaviour:
     m_OverlaysVisible: 1
   m_LockTracker:
     m_IsLocked: 0
-  m_LastSelectedObjectID: -388660
+  m_LastSelectedObjectID: 399922
