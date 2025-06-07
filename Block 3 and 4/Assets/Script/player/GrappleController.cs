@@ -2,520 +2,741 @@
 using System.Collections;
 using UnityEngine;
 
+/// <summary>
+/// 真实钩爪控制器 - 模拟现实中钩爪的物理效果
+/// 特性：
+/// - 真实抛物线轨迹
+/// - 钟摆式摆动
+/// - 绳索张力和长度限制
+/// - 智能边缘检测
+/// - 动量保持
+/// </summary>
 public class GrappleController : MonoBehaviour
 {
-    // 公开属性（从GrappleItem设置）
+    [Header("钩爪设置")]
     [HideInInspector] public GameObject hookPrefab;
     [HideInInspector] public float hookSpeed = 50f;
     [HideInInspector] public Material ropeMaterial;
     [HideInInspector] public Color ropeColor = new Color(0.545f, 0.271f, 0.075f);
 
-    [Header("Physics Settings")]
-    [Tooltip("重力加速度")]
+    [Header("钩爪物理")]
+    [Tooltip("钩爪质量（影响抛物线轨迹）")]
+    public float hookMass = 2f;
+    [Tooltip("重力强度")]
     public float gravity = 15f;
+    [Tooltip("空气阻力系数")]
+    public float airResistance = 0.1f;
     [Tooltip("钩爪碰撞检测半径")]
-    public float hookCollisionRadius = 0.5f;
-    [Tooltip("钩爪最大飞行时间（秒）")]
-    public float maxFlightTime = 6f;
-    [Tooltip("发射角度偏移（度数，正值向上）")]
-    public float launchAngleOffset = 15f;
+    public float hookCollisionRadius = 0.3f;
 
-    [Header("Smart Landing")]
-    [Tooltip("地面检测距离")]
-    public float groundDetectionDistance = 50f;
-    [Tooltip("最低飞行高度（防止钩爪飞得太低）")]
-    public float minFlightHeight = 2f;
-    [Tooltip("强制落地检测（钩爪飞行时持续检测下方地面）")]
-    public bool enableGroundMagnet = true;
+    [Header("绳索物理")]
+    [Tooltip("绳索最大长度")]
+    public float maxRopeLength = 40f;
+    [Tooltip("绳索弹性系数")]
+    public float ropeElasticity = 0.2f;
+    [Tooltip("绳索阻尼")]
+    public float ropeDamping = 0.95f;
+    [Tooltip("绳索分段数（影响绳索弯曲效果）")]
+    public int ropeSegments = 20;
 
-    [Header("Pull Settings")]
-    [Tooltip("玩家拉拽速度")]
-    public float playerPullSpeed = 15f;
-    [Tooltip("停止距离（距离目标多少米时停止）")]
-    public float stopDistance = 2.5f;
-    [Tooltip("最大拉拽距离")]
-    public float maxPullDistance = 100f;
+    [Header("摆动物理")]
+    [Tooltip("摆动强度")]
+    public float swingForce = 15f;
+    [Tooltip("玩家在绳索上的质量")]
+    public float playerMass = 70f;
+    [Tooltip("摆动阻尼")]
+    public float swingDamping = 0.98f;
+    [Tooltip("最大摆动速度")]
+    public float maxSwingSpeed = 20f;
+
+    [Header("附着检测")]
+    [Tooltip("可钩住的表面标签")]
+    public string[] grappableTagsرا = { "Grappable", "Wall", "Rock", "Building" };
+    [Tooltip("边缘检测距离")]
+    public float edgeDetectionDistance = 2f;
+    [Tooltip("钩爪穿透深度")]
+    public float hookPenetration = 0.5f;
+    [Tooltip("附着强度（防止钩爪脱落）")]
+    public float attachmentStrength = 100f;
+
+    [Header("玩家控制")]
+    [Tooltip("攀爬速度")]
+    public float climbSpeed = 8f;
+    [Tooltip("释放钩爪时的动量保持")]
+    public float momentumRetention = 0.8f;
+    [Tooltip("最小释放高度（防止玩家在地面释放）")]
+    public float minReleaseHeight = 2f;
+
+    [Header("视觉效果")]
+    [Tooltip("钩爪命中特效")]
+    public GameObject hookImpactEffect;
+    [Tooltip("绳索拉紧特效")]
+    public GameObject ropeTensionEffect;
+    [Tooltip("火花特效")]
+    public GameObject sparkEffect;
+
+    [Header("音效")]
+    [Tooltip("钩爪发射音效")]
+    public AudioClip hookFireSound;
+    [Tooltip("钩爪命中音效")]
+    public AudioClip hookHitSound;
+    [Tooltip("绳索拉紧音效")]
+    public AudioClip ropeTightSound;
+    [Tooltip("钩爪脱落音效")]
+    public AudioClip hookDetachSound;
 
     // 组件引用
     private CharacterController controller;
     private LineRenderer lineRenderer;
-    private GameObject hookInstance;
+    private AudioSource audioSource;
 
-    // 抓钩状态
+    // 钩爪状态
+    private GameObject hookInstance;
     private bool isGrappling = false;
     private bool isHookFlying = false;
-    private Vector3 grapplePoint;
-    private float grappleTimeLimit = 10f;
-    private float grappleTimer = 0f;
+    private bool isHookAttached = false;
 
-    // 钩爪物理状态
+    // 物理变量
     private Vector3 hookVelocity;
-    private Vector3 hookStartPosition;
-    private Vector3 originalTarget;
-    private float flightTimer = 0f;
-    private bool hookConnected = false;
+    private Vector3 hookPosition;
+    private Vector3 attachPoint;
+    private Vector3 playerVelocity;
+    private float currentRopeLength;
+    private float restRopeLength;
 
-    // 智能着陆
-    private LayerMask groundLayers = -1; // 所有层都算作可能的着陆点
+    // 摆动变量
+    private Vector3 pendulumCenter;
+    private float pendulumAngle;
+    private float pendulumAngularVelocity;
+    private Vector3 lastPlayerPosition;
 
-    // 初始化方法
+    // 绳索分段
+    private Vector3[] ropePoints;
+    private Vector3[] ropeVelocities;
+
+    // 附着表面信息
+    private IGrappable currentGrappable;
+    private Collider attachedSurface;
+
+    // 计时器
+    private float grappleTimer;
+    private float maxGrappleTime = 15f;
+
     public void Initialize()
     {
-        // 确保有CharacterController
+        // 获取组件
         controller = GetComponent<CharacterController>();
         if (controller == null)
         {
             controller = gameObject.AddComponent<CharacterController>();
-            Debug.Log("GrappleController: 添加了缺失的CharacterController组件");
         }
 
-        // 确保有LineRenderer
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        // 设置LineRenderer
+        SetupLineRenderer();
+
+        // 初始化绳索分段
+        InitializeRopeSegments();
+
+        Debug.Log("真实钩爪控制器初始化完成");
+    }
+
+    private void SetupLineRenderer()
+    {
         if (lineRenderer == null)
         {
             lineRenderer = gameObject.AddComponent<LineRenderer>();
-            lineRenderer.positionCount = 2;
-            lineRenderer.startWidth = 0.05f;
-            lineRenderer.endWidth = 0.05f;
-            lineRenderer.material = ropeMaterial;
-            lineRenderer.startColor = ropeColor;
-            lineRenderer.endColor = ropeColor;
-            lineRenderer.enabled = false;
-            Debug.Log("GrappleController: 设置了LineRenderer");
-        }
-        else if (ropeMaterial != null)
-        {
-            lineRenderer.material = ropeMaterial;
-            lineRenderer.startColor = ropeColor;
-            lineRenderer.endColor = ropeColor;
         }
 
-        Debug.Log("GrappleController: 初始化完成");
+        lineRenderer.positionCount = ropeSegments + 1;
+        lineRenderer.startWidth = 0.05f;
+        lineRenderer.endWidth = 0.03f;
+        lineRenderer.material = ropeMaterial;
+        lineRenderer.startColor = ropeColor;
+        lineRenderer.endColor = ropeColor;
+        lineRenderer.enabled = false;
+
+        // 设置绳索曲线
+        lineRenderer.useWorldSpace = true;
+        lineRenderer.textureMode = LineTextureMode.Tile;
+    }
+
+    private void InitializeRopeSegments()
+    {
+        ropePoints = new Vector3[ropeSegments + 1];
+        ropeVelocities = new Vector3[ropeSegments + 1];
     }
 
     void Update()
     {
-        // 如果正在抓钩中，更新计时器
         if (isGrappling || isHookFlying)
         {
             grappleTimer += Time.deltaTime;
 
-            // 如果超时，停止抓钩
-            if (grappleTimer > grappleTimeLimit)
+            if (grappleTimer > maxGrappleTime)
             {
-                Debug.Log("GrappleController: 抓钩超时，自动停止");
                 StopGrapple();
                 return;
             }
-
-            // 更新绳索位置
-            UpdateRopePositions();
         }
 
-        // 如果钩子正在飞行
-        if (isHookFlying && hookInstance != null)
+        if (isHookFlying)
         {
-            UpdateHookPhysics();
+            UpdateHookFlight();
         }
-        // 如果正在抓取
-        else if (isGrappling && hookConnected)
+        else if (isHookAttached)
         {
-            PullPlayerTowardsTarget();
+            UpdateSwinging();
+            HandlePlayerInput();
+        }
+
+        if (isGrappling)
+        {
+            UpdateRopePhysics();
+            UpdateRopeVisuals();
         }
     }
 
-    // 开始抓钩
-    public void StartGrapple(Vector3 hitPoint, float pullSpeed)
+    public void StartGrapple(Vector3 targetPoint, float pullSpeed)
     {
-        // 如果已经在抓钩，先停止
         if (isGrappling || isHookFlying)
         {
             StopGrapple();
         }
 
-        Debug.Log($"开始抓钩到位置: {hitPoint}, 拉力: {pullSpeed}");
+        // 计算发射点（从玩家胸部位置）
+        Vector3 firePoint = transform.position + Vector3.up * 1.5f;
 
-        // 设置参数
-        originalTarget = hitPoint;
-        grapplePoint = hitPoint;
-        playerPullSpeed = pullSpeed;
-        grappleTimer = 0f;
-        flightTimer = 0f;
-        hookConnected = false;
-
-        // 创建钩子实例
+        // 创建钩爪
         if (hookPrefab != null)
         {
-            // 从相机位置发射钩子
-            hookStartPosition = Camera.main.transform.position;
-            hookInstance = Instantiate(hookPrefab, hookStartPosition, Quaternion.identity);
-
-            // 设置钩子颜色
-            Renderer hookRenderer = hookInstance.GetComponent<Renderer>();
-            if (hookRenderer != null)
-            {
-                Material[] mats = hookRenderer.materials;
-                foreach (Material mat in mats)
-                {
-                    mat.color = ropeColor;
-                }
-                hookRenderer.materials = mats;
-            }
-
-            // 计算发射速度
-            CalculateLaunchVelocity();
-
-            // 开始钩子飞行
-            isHookFlying = true;
-
-            // 启用绳索
-            if (lineRenderer != null)
-            {
-                lineRenderer.enabled = true;
-            }
-
-            Debug.Log($"创建了钩子，开始智能飞行。初始速度: {hookVelocity}");
+            hookInstance = Instantiate(hookPrefab, firePoint, Quaternion.identity);
+            hookPosition = firePoint;
         }
-        else
-        {
-            Debug.LogError("钩子预制体为空，无法创建钩子");
-        }
+
+        // 计算发射速度（考虑重力补偿）
+        hookVelocity = CalculateLaunchVelocity(firePoint, targetPoint);
+
+        // 初始化状态
+        isHookFlying = true;
+        isGrappling = true;
+        grappleTimer = 0f;
+        lastPlayerPosition = transform.position;
+
+        // 启用绳索渲染
+        lineRenderer.enabled = true;
+
+        // 播放发射音效
+        PlaySound(hookFireSound);
+
+        Debug.Log($"发射钩爪: 目标 {targetPoint}, 速度 {hookVelocity.magnitude}");
     }
 
-    // 计算发射速度（朝目标方向，带角度偏移）
-    private void CalculateLaunchVelocity()
+    private Vector3 CalculateLaunchVelocity(Vector3 from, Vector3 to)
     {
-        Vector3 direction = (originalTarget - hookStartPosition).normalized;
+        Vector3 direction = to - from;
+        float distance = direction.magnitude;
 
-        // 应用角度偏移（向上一点，让轨迹更自然）
-        Vector3 right = Camera.main.transform.right;
-        direction = Quaternion.AngleAxis(launchAngleOffset, right) * direction;
+        // 水平方向
+        Vector3 horizontal = new Vector3(direction.x, 0, direction.z);
+        float horizontalDistance = horizontal.magnitude;
 
-        // 设置初始速度
-        hookVelocity = direction * hookSpeed;
+        // 垂直方向（考虑重力补偿）
+        float verticalDistance = direction.y;
 
-        Debug.Log($"发射方向: {direction}, 速度: {hookSpeed}, 角度偏移: {launchAngleOffset}度");
+        // 计算需要的初始速度
+        float angle = 25f * Mathf.Deg2Rad; // 最优抛射角度
+        float speed = hookSpeed;
+
+        // 基于物理公式计算
+        float vx = horizontalDistance / (distance / speed);
+        float vy = verticalDistance / (distance / speed) + 0.5f * gravity * (distance / speed);
+
+        Vector3 velocity = horizontal.normalized * vx + Vector3.up * vy;
+
+        // 确保速度不超过最大值
+        if (velocity.magnitude > hookSpeed)
+        {
+            velocity = velocity.normalized * hookSpeed;
+        }
+
+        return velocity;
     }
 
-    // 更新钩爪物理（真实重力模拟 + 智能着陆）
-    private void UpdateHookPhysics()
+    private void UpdateHookFlight()
     {
         if (hookInstance == null) return;
 
-        flightTimer += Time.deltaTime;
+        Vector3 oldPosition = hookPosition;
 
-        // 检查是否超时
-        if (flightTimer > maxFlightTime)
+        // 应用重力和空气阻力
+        hookVelocity.y -= gravity * Time.deltaTime;
+        hookVelocity *= (1f - airResistance * Time.deltaTime);
+
+        // 更新位置
+        hookPosition += hookVelocity * Time.deltaTime;
+
+        // 检测碰撞
+        if (CheckHookCollision(oldPosition, hookPosition))
         {
-            Debug.Log("钩爪飞行超时，强制着陆");
-            ForceHookLanding();
+            return; // 钩爪已附着
+        }
+
+        // 检查是否超出最大距离
+        float distanceFromPlayer = Vector3.Distance(transform.position, hookPosition);
+        if (distanceFromPlayer > maxRopeLength)
+        {
+            StopGrapple();
             return;
         }
 
-        Vector3 oldPosition = hookInstance.transform.position;
-
-        // 应用重力
-        hookVelocity.y -= gravity * Time.deltaTime;
-
-        // 计算新位置
-        Vector3 newPosition = oldPosition + hookVelocity * Time.deltaTime;
-
-        // 智能地面检测
-        if (enableGroundMagnet)
+        // 更新钩爪位置和朝向
+        hookInstance.transform.position = hookPosition;
+        if (hookVelocity.magnitude > 0.1f)
         {
-            CheckSmartLanding(oldPosition, newPosition);
-        }
-
-        // 普通碰撞检测
-        if (hookInstance != null) // 确保在智能着陆检查后钩爪还存在
-        {
-            CheckHookCollision(oldPosition, newPosition);
-        }
-
-        // 如果钩爪还在飞行，更新位置
-        if (hookInstance != null && isHookFlying)
-        {
-            hookInstance.transform.position = newPosition;
-
-            // 更新旋转朝向运动方向
-            if (hookVelocity.sqrMagnitude > 0.01f)
-            {
-                hookInstance.transform.rotation = Quaternion.LookRotation(hookVelocity.normalized);
-            }
-
-            // 检查是否飞得太远
-            float distanceFromStart = Vector3.Distance(hookStartPosition, newPosition);
-            if (distanceFromStart > maxPullDistance)
-            {
-                Debug.Log("钩爪飞行距离过远，强制着陆");
-                ForceHookLanding();
-                return;
-            }
+            hookInstance.transform.rotation = Quaternion.LookRotation(hookVelocity.normalized);
         }
     }
 
-    // 智能着陆检测
-    private void CheckSmartLanding(Vector3 fromPos, Vector3 toPos)
+    private bool CheckHookCollision(Vector3 from, Vector3 to)
     {
-        // 如果钩爪在下降，检测下方是否有可着陆的表面
-        if (hookVelocity.y < -2f) // 下降速度足够快时
-        {
-            RaycastHit hit;
-            // 从当前位置向下检测
-            if (Physics.Raycast(fromPos, Vector3.down, out hit, groundDetectionDistance, groundLayers))
-            {
-                // 计算钩爪按当前轨迹什么时候会到达这个高度
-                float timeToReachHeight = Mathf.Abs((fromPos.y - hit.point.y) / hookVelocity.y);
-                Vector3 horizontalMovement = new Vector3(hookVelocity.x, 0, hookVelocity.z) * timeToReachHeight;
-                Vector3 predictedLandingPoint = fromPos + horizontalMovement;
-                predictedLandingPoint.y = hit.point.y;
+        Vector3 direction = to - from;
+        float distance = direction.magnitude;
 
-                // 检查预测着陆点附近是否有可附着的表面
-                if (Physics.CheckSphere(predictedLandingPoint, hookCollisionRadius * 2f, groundLayers))
-                {
-                    // 如果检测到合适的着陆点，并且钩爪已经够接近了
-                    float distanceToLanding = Vector3.Distance(fromPos, predictedLandingPoint);
-                    if (distanceToLanding < hookSpeed * Time.deltaTime * 3f) // 3帧内会到达
-                    {
-                        // 直接让钩爪着陆到这个点
-                        if (Physics.Raycast(predictedLandingPoint + Vector3.up * 2f, Vector3.down, out RaycastHit landingHit, 5f, groundLayers))
-                        {
-                            AttachHook(landingHit.point, landingHit.collider.gameObject);
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 强制钩爪着陆（时间到了或距离太远时）
-    private void ForceHookLanding()
-    {
-        if (hookInstance == null) return;
-
-        Vector3 hookPos = hookInstance.transform.position;
         RaycastHit hit;
-
-        // 向下检测地面
-        if (Physics.Raycast(hookPos, Vector3.down, out hit, groundDetectionDistance, groundLayers))
+        if (Physics.SphereCast(from, hookCollisionRadius, direction.normalized, out hit, distance))
         {
-            AttachHook(hit.point, hit.collider.gameObject);
-            Debug.Log($"强制着陆到: {hit.collider.name}");
-        }
-        else
-        {
-            // 如果向下检测不到，向四周检测最近的表面
-            Vector3[] directions = {
-                Vector3.forward, Vector3.back, Vector3.left, Vector3.right,
-                Vector3.down, new Vector3(1,1,1).normalized, new Vector3(-1,1,1).normalized,
-                new Vector3(1,1,-1).normalized, new Vector3(-1,1,-1).normalized
-            };
-
-            float closestDistance = float.MaxValue;
-            RaycastHit closestHit = new RaycastHit();
-            bool foundSurface = false;
-
-            foreach (Vector3 dir in directions)
+            // 优先检查IGrappable接口
+            IGrappable grappable = hit.collider.GetComponent<IGrappable>();
+            if (grappable != null && grappable.CanBeGrappled())
             {
-                if (Physics.Raycast(hookPos, dir, out hit, groundDetectionDistance, groundLayers))
-                {
-                    if (hit.distance < closestDistance)
-                    {
-                        closestDistance = hit.distance;
-                        closestHit = hit;
-                        foundSurface = true;
-                    }
-                }
+                // 使用IGrappable的智能附着点选择
+                Vector3 bestAttachPoint = grappable.GetBestGrapplePoint(hookPosition);
+                AttachHook(bestAttachPoint, hit.collider, grappable);
+                return true;
             }
-
-            if (foundSurface)
+            // 回退到传统检测方法
+            else if (IsGrappableSurface(hit.collider))
             {
-                AttachHook(closestHit.point, closestHit.collider.gameObject);
-                Debug.Log($"强制着陆到最近表面: {closestHit.collider.name}");
+                // 寻找最佳附着点（边缘检测）
+                Vector3 bestAttachPoint = FindBestAttachPoint(hit);
+                AttachHook(bestAttachPoint, hit.collider, null);
+                return true;
             }
             else
             {
-                // 实在找不到就停止
-                Debug.Log("找不到任何可着陆的表面，停止抓钩");
-                StopGrapple();
+                // 钩爪弹开
+                Vector3 reflection = Vector3.Reflect(hookVelocity.normalized, hit.normal);
+                hookVelocity = reflection * hookVelocity.magnitude * 0.6f;
+                hookPosition = hit.point + hit.normal * hookCollisionRadius;
+
+                // 播放弹开特效
+                CreateImpactEffect(hit.point, false);
+
+                Debug.Log($"钩爪无法附着到 {hit.collider.name} - 表面不可钩住");
             }
         }
+
+        return false;
     }
 
-    // 检查钩爪碰撞
-    private void CheckHookCollision(Vector3 fromPos, Vector3 toPos)
+    private bool IsGrappableSurface(Collider collider)
     {
-        Vector3 direction = toPos - fromPos;
-        float distance = direction.magnitude;
-
-        if (distance > 0.01f)
+        // 首先检查特定标签
+        foreach (string tag in grappableTagsرا)
         {
-            RaycastHit hit;
-            if (Physics.Raycast(fromPos, direction.normalized, out hit, distance + hookCollisionRadius, groundLayers))
-            {
-                AttachHook(hit.point, hit.collider.gameObject);
-            }
+            if (collider.CompareTag(tag))
+                return true;
         }
+
+        // 检查是否是静态物体（但排除地面）
+        if (collider.gameObject.isStatic)
+        {
+            // 排除水平的地面
+            Vector3 normal = GetSurfaceNormal(collider, hookPosition);
+            float angle = Vector3.Angle(normal, Vector3.up);
+            return angle > 30f; // 只有倾斜超过30度的表面才能被钩住
+        }
+
+        return false;
     }
 
-    // 钩爪附着
-    private void AttachHook(Vector3 attachPoint, GameObject attachedObject)
+    private Vector3 GetSurfaceNormal(Collider collider, Vector3 position)
     {
+        Vector3 closestPoint = collider.ClosestPoint(position);
+        Vector3 direction = (position - closestPoint).normalized;
+
+        // 如果无法计算方向，使用向上的法线
+        if (direction.magnitude < 0.1f)
+        {
+            return Vector3.up;
+        }
+
+        return direction;
+    }
+
+    private Vector3 FindBestAttachPoint(RaycastHit hit)
+    {
+        Vector3 hitPoint = hit.point;
+        Vector3 hitNormal = hit.normal;
+
+        // 尝试找到边缘或突出部分
+        Vector3[] searchDirections = {
+            Vector3.up, Vector3.down, Vector3.left, Vector3.right,
+            Vector3.forward, Vector3.back,
+            // 添加对角线方向搜索
+            (Vector3.up + Vector3.forward).normalized,
+            (Vector3.up + Vector3.back).normalized,
+            (Vector3.up + Vector3.left).normalized,
+            (Vector3.up + Vector3.right).normalized
+        };
+
+        Vector3 bestPoint = hitPoint;
+        float bestScore = 0f;
+
+        foreach (Vector3 searchDir in searchDirections)
+        {
+            Vector3 searchPoint = hitPoint + searchDir * edgeDetectionDistance;
+
+            RaycastHit edgeHit;
+            if (!Physics.Raycast(searchPoint, -searchDir, out edgeHit, edgeDetectionDistance * 2f))
+            {
+                // 找到边缘，计算评分
+                float heightScore = Vector3.Dot(searchDir, Vector3.up) * 2f; // 高度加分
+                float visibilityScore = Vector3.Dot(searchDir, (transform.position - searchPoint).normalized); // 朝向玩家加分
+                float score = heightScore + visibilityScore;
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestPoint = searchPoint;
+                }
+            }
+        }
+
+        // 确保附着点在表面上
+        Collider collider = hit.collider;
+        bestPoint = collider.ClosestPoint(bestPoint);
+
+        return bestPoint;
+    }
+
+    private void AttachHook(Vector3 attachPoint, Collider surface, IGrappable grappable = null)
+    {
+        this.attachPoint = attachPoint;
+        hookPosition = attachPoint;
+        currentGrappable = grappable;
+        attachedSurface = surface;
+
         if (hookInstance != null)
         {
             hookInstance.transform.position = attachPoint;
         }
 
-        grapplePoint = attachPoint;
+        // 计算绳索长度
+        restRopeLength = Vector3.Distance(transform.position, attachPoint);
+        currentRopeLength = restRopeLength;
+
+        // 确保绳索长度在合理范围内
+        restRopeLength = Mathf.Clamp(restRopeLength, 2f, maxRopeLength);
+
+        // 初始化摆动
+        pendulumCenter = attachPoint;
+        Vector3 toPlayer = transform.position - attachPoint;
+        pendulumAngle = Mathf.Atan2(toPlayer.x, -toPlayer.y);
+        pendulumAngularVelocity = 0f;
+
+        // 状态切换
         isHookFlying = false;
-        isGrappling = true;
-        hookConnected = true;
+        isHookAttached = true;
 
-        Debug.Log($"钩爪附着到: {attachedObject.name} at {attachPoint}");
+        // 通知可钩住表面
+        if (grappable != null)
+        {
+            grappable.OnGrappleAttach(attachPoint);
+
+            // 根据表面强度调整附着牢固度
+            float strength = grappable.GetSurfaceStrength();
+            attachmentStrength = Mathf.Max(attachmentStrength, strength * 50f);
+
+            Debug.Log($"钩爪附着到可钩住表面: {surface.name}, 强度: {strength}");
+        }
+        else
+        {
+            Debug.Log($"钩爪附着到普通表面: {surface.name}");
+        }
+
+        // 播放附着音效和特效
+        PlaySound(hookHitSound);
+        CreateImpactEffect(attachPoint, true);
     }
 
-    // 拉动玩家到钩子位置
-    private void PullPlayerTowardsTarget()
+    private void UpdateSwinging()
     {
-        if (controller == null) return;
+        Vector3 playerPos = transform.position;
+        Vector3 toAttachPoint = attachPoint - playerPos;
+        currentRopeLength = toAttachPoint.magnitude;
 
-        Vector3 playerPosition = transform.position;
-        Vector3 direction = (grapplePoint - playerPosition);
-        float distanceToTarget = direction.magnitude;
-
-        // 检查是否应该停止
-        if (distanceToTarget <= stopDistance)
+        // 如果绳索拉紧，应用摆动物理
+        if (currentRopeLength >= restRopeLength * 0.95f)
         {
-            Debug.Log("玩家到达目标点附近，停止抓钩");
-            StopGrapple();
-            return;
+            ApplyPendulumPhysics();
+        }
+        else
+        {
+            // 自由落体（绳索松弛）
+            ApplyFreeFall();
         }
 
-        // 检查距离是否过远
-        if (distanceToTarget > maxPullDistance)
+        // 应用位置
+        controller.Move(playerVelocity * Time.deltaTime);
+
+        // 更新玩家速度记录
+        Vector3 currentPosition = transform.position;
+        Vector3 frameVelocity = (currentPosition - lastPlayerPosition) / Time.deltaTime;
+        lastPlayerPosition = currentPosition;
+
+        // 平滑速度变化
+        playerVelocity = Vector3.Lerp(playerVelocity, frameVelocity, 0.3f);
+    }
+
+    private void ApplyPendulumPhysics()
+    {
+        Vector3 playerPos = transform.position;
+        Vector3 toAttachPoint = attachPoint - playerPos;
+
+        // 强制保持绳索长度
+        Vector3 constrainedPos = attachPoint - toAttachPoint.normalized * restRopeLength;
+        Vector3 correction = constrainedPos - playerPos;
+
+        // 计算切线方向（摆动方向）
+        Vector3 radialDirection = toAttachPoint.normalized;
+        Vector3 tangentDirection = Vector3.Cross(radialDirection, Vector3.Cross(radialDirection, playerVelocity));
+
+        // 应用重力的切线分量
+        float gravityTangent = Vector3.Dot(Vector3.down * gravity, tangentDirection);
+        Vector3 gravityForce = tangentDirection * gravityTangent;
+
+        // 应用摆动阻尼
+        playerVelocity *= swingDamping;
+
+        // 更新速度
+        playerVelocity += gravityForce * Time.deltaTime;
+        playerVelocity = Vector3.ClampMagnitude(playerVelocity, maxSwingSpeed);
+
+        // 应用约束修正
+        playerVelocity += correction / Time.deltaTime * 0.5f;
+
+        // 移除径向速度分量（防止拉伸绳索）
+        float radialVelocity = Vector3.Dot(playerVelocity, radialDirection);
+        if (radialVelocity > 0) // 只移除远离钩点的速度
         {
-            Debug.Log("距离目标过远，停止抓钩");
-            StopGrapple();
-            return;
-        }
-
-        // 归一化方向
-        direction = direction.normalized;
-
-        // 计算拉拽速度，距离越远速度越快
-        float speedMultiplier = Mathf.Clamp(distanceToTarget / 10f, 0.5f, 2f);
-        Vector3 pullVelocity = direction * playerPullSpeed * speedMultiplier;
-
-        // 增强垂直分量以便更好地上升
-        if (pullVelocity.y > 0)
-        {
-            pullVelocity.y *= 1.3f;
-        }
-
-        // 应用移动
-        controller.Move(pullVelocity * Time.deltaTime);
-
-        // 调试信息
-        if (Time.frameCount % 30 == 0)
-        {
-            Debug.Log($"拉拽中 - 距离: {distanceToTarget:F1}m, 速度倍率: {speedMultiplier:F2}");
+            playerVelocity -= radialDirection * radialVelocity;
         }
     }
 
-    // 停止抓钩
+    private void ApplyFreeFall()
+    {
+        // 简单的重力和空气阻力
+        playerVelocity.y -= gravity * Time.deltaTime;
+        playerVelocity *= (1f - airResistance * 0.1f * Time.deltaTime);
+    }
+
+    private void HandlePlayerInput()
+    {
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
+
+        // 摆动控制
+        if (Mathf.Abs(horizontal) > 0.1f)
+        {
+            Vector3 swingDirection = Vector3.Cross(Vector3.up, attachPoint - transform.position).normalized;
+            playerVelocity += swingDirection * horizontal * swingForce * Time.deltaTime;
+        }
+
+        // 攀爬控制
+        if (Mathf.Abs(vertical) > 0.1f)
+        {
+            float climbInput = vertical * climbSpeed * Time.deltaTime;
+
+            // 向上攀爬
+            if (climbInput > 0 && currentRopeLength > 2f)
+            {
+                Vector3 climbDirection = (attachPoint - transform.position).normalized;
+                playerVelocity += climbDirection * climbInput;
+                restRopeLength = Mathf.Max(2f, restRopeLength - climbInput);
+            }
+            // 向下放绳
+            else if (climbInput < 0 && restRopeLength < maxRopeLength)
+            {
+                restRopeLength = Mathf.Min(maxRopeLength, restRopeLength - climbInput);
+            }
+        }
+
+        // 释放钩爪
+        if (Input.GetKeyDown(KeyCode.Q) || Input.GetMouseButtonDown(1))
+        {
+            ReleaseGrapple();
+        }
+    }
+
+    private void UpdateRopePhysics()
+    {
+        if (!isGrappling) return;
+
+        Vector3 playerPos = transform.position + Vector3.up * 1.5f; // 胸部位置
+        Vector3 hookPos = isHookAttached ? attachPoint : hookPosition;
+
+        // 计算绳索分段位置
+        for (int i = 0; i <= ropeSegments; i++)
+        {
+            float t = (float)i / ropeSegments;
+            Vector3 targetPos = Vector3.Lerp(playerPos, hookPos, t);
+
+            if (i == 0)
+            {
+                ropePoints[i] = playerPos;
+            }
+            else if (i == ropeSegments)
+            {
+                ropePoints[i] = hookPos;
+            }
+            else
+            {
+                // 模拟重力对绳索的影响
+                float sag = Mathf.Sin(t * Mathf.PI) * currentRopeLength * 0.1f;
+                targetPos.y -= sag;
+
+                // 平滑到目标位置
+                ropePoints[i] = Vector3.Lerp(ropePoints[i], targetPos, Time.deltaTime * 5f);
+            }
+        }
+    }
+
+    private void UpdateRopeVisuals()
+    {
+        if (lineRenderer != null && ropePoints != null)
+        {
+            lineRenderer.positionCount = ropePoints.Length;
+            lineRenderer.SetPositions(ropePoints);
+        }
+    }
+
+    private void ReleaseGrapple()
+    {
+        if (!isHookAttached) return;
+
+        // 保持动量
+        Vector3 currentVelocity = (transform.position - lastPlayerPosition) / Time.deltaTime;
+
+        // 添加释放冲力
+        if (currentVelocity.magnitude > 3f)
+        {
+            Vector3 releaseBoost = currentVelocity.normalized * currentVelocity.magnitude * momentumRetention;
+            // 这里可以应用到玩家的移动组件或者保存这个速度供后续使用
+        }
+
+        StopGrapple();
+
+        PlaySound(hookDetachSound);
+        Debug.Log($"释放钩爪，保持动量: {currentVelocity.magnitude}");
+    }
+
     public void StopGrapple()
     {
+        // 通知可钩住表面钩爪已脱离
+        if (currentGrappable != null)
+        {
+            currentGrappable.OnGrappleDetach();
+            currentGrappable = null;
+        }
+
         isGrappling = false;
         isHookFlying = false;
-        hookConnected = false;
-        flightTimer = 0f;
+        isHookAttached = false;
+        grappleTimer = 0f;
+        attachedSurface = null;
 
-        // 禁用绳索
         if (lineRenderer != null)
         {
             lineRenderer.enabled = false;
         }
 
-        // 销毁钩子
         if (hookInstance != null)
         {
             Destroy(hookInstance);
             hookInstance = null;
-            Debug.Log("销毁了钩子实例");
         }
 
-        Debug.Log("停止抓钩");
+        // 重置物理变量
+        playerVelocity = Vector3.zero;
+        hookVelocity = Vector3.zero;
+
+        Debug.Log("钩爪系统已停止");
     }
 
-    // 更新绳索位置
-    private void UpdateRopePositions()
+    private void CreateImpactEffect(Vector3 position, bool successful)
     {
-        if (lineRenderer == null || Camera.main == null) return;
-
-        // 设置绳索起点（玩家手部位置）
-        Vector3 handPosition = Camera.main.transform.position +
-                              Camera.main.transform.right * 0.2f -
-                              Camera.main.transform.up * 0.1f;
-
-        lineRenderer.SetPosition(0, handPosition);
-
-        // 设置绳索终点（钩子位置）
-        if (hookInstance != null)
+        GameObject effect = successful ? hookImpactEffect : sparkEffect;
+        if (effect != null)
         {
-            lineRenderer.SetPosition(1, hookInstance.transform.position);
-        }
-        else
-        {
-            lineRenderer.SetPosition(1, grapplePoint);
+            GameObject instance = Instantiate(effect, position, Quaternion.identity);
+            Destroy(instance, 2f);
         }
     }
 
-    // 在Scene视图中绘制调试信息
+    private void PlaySound(AudioClip clip)
+    {
+        if (clip != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(clip);
+        }
+    }
+
+    // 可视化调试
     private void OnDrawGizmos()
     {
+        if (isHookAttached)
+        {
+            // 绘制附着点
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(attachPoint, 0.5f);
+
+            // 绘制绳索长度
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(transform.position, attachPoint);
+
+            // 绘制摆动半径
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(attachPoint, restRopeLength);
+        }
+
         if (isHookFlying && hookInstance != null)
         {
-            Vector3 hookPos = hookInstance.transform.position;
-
-            // 绘制钩爪碰撞球体
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(hookPos, hookCollisionRadius);
-
-            // 绘制速度向量
+            // 绘制飞行轨迹预测
             Gizmos.color = Color.red;
-            Gizmos.DrawRay(hookPos, hookVelocity.normalized * 3f);
-
-            // 绘制地面检测
-            Gizmos.color = Color.green;
-            Gizmos.DrawRay(hookPos, Vector3.down * groundDetectionDistance);
-
-            // 绘制预测轨迹
-            Gizmos.color = Color.cyan;
-            Vector3 pos = hookPos;
+            Vector3 pos = hookPosition;
             Vector3 vel = hookVelocity;
 
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 20; i++)
             {
                 Vector3 nextPos = pos + vel * 0.1f;
                 vel.y -= gravity * 0.1f;
 
                 Gizmos.DrawLine(pos, nextPos);
                 pos = nextPos;
-
-                // 如果轨迹太低就停止绘制
-                if (pos.y < hookStartPosition.y - 30f) break;
             }
         }
-
-        if (isGrappling && hookConnected)
-        {
-            // 绘制连接点
-            Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(grapplePoint, 0.5f);
-
-            // 绘制停止距离
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(grapplePoint, stopDistance);
-        }
     }
+
+    // 公共接口
+    public bool IsGrappling() => isGrappling;
+    public bool IsSwinging() => isHookAttached;
+    public float GetRopeLength() => currentRopeLength;
+    public Vector3 GetAttachPoint() => attachPoint;
 }

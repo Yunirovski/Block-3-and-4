@@ -4,30 +4,74 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Items/GrappleItem")]
 public class GrappleItem : BaseItem
 {
-    [Header("抓钩参数")]
-    public float maxDistance = 30f;  // 增加了最大距离
-    public float pullSpeed = 12f;    // 增加了拉力
+    [Header("钩爪参数")]
+    [Tooltip("最大射程")]
+    public float maxDistance = 40f;
+    [Tooltip("拉拽速度")]
+    public float pullSpeed = 15f;
+    [Tooltip("钩爪发射速度")]
+    public float hookSpeed = 50f;
 
     [Header("钩爪可视化")]
-    [Tooltip("抓钩模型 Prefab，由美术提供")]
+    [Tooltip("钩爪模型 Prefab")]
     public GameObject hookPrefab;
-    [Tooltip("钩爪飞行速度 (m/s)")]
-    public float hookTravelSpeed = 30f;  // 调整了飞行速度，配合物理系统
-    [Tooltip("绳索材质，用于 LineRenderer")]
+    [Tooltip("绳索材质")]
     public Material ropeMaterial;
     [Tooltip("钩爪和绳索的颜色")]
-    public Color ropeColor = new Color(0.545f, 0.271f, 0.075f);  // 棕色
+    public Color ropeColor = new Color(0.545f, 0.271f, 0.075f);
+
+    [Header("物理设置")]
+    [Tooltip("钩爪质量")]
+    public float hookMass = 2f;
+    [Tooltip("重力强度")]
+    public float gravity = 15f;
+    [Tooltip("绳索最大长度")]
+    public float maxRopeLength = 40f;
+    [Tooltip("绳索弹性")]
+    public float ropeElasticity = 0.2f;
+
+    [Header("摆动设置")]
+    [Tooltip("摆动力度")]
+    public float swingForce = 15f;
+    [Tooltip("攀爬速度")]
+    public float climbSpeed = 8f;
+    [Tooltip("动量保持率")]
+    public float momentumRetention = 0.8f;
 
     [Header("音效")]
-    [Tooltip("抓钩开铅音效")]
+    [Tooltip("钩爪发射音效")]
     public AudioClip grappleFireSound;
+    [Tooltip("钩爪命中音效")]
+    public AudioClip grappleHitSound;
+    [Tooltip("绳索拉紧音效")]
+    public AudioClip ropeTightSound;
+    [Tooltip("钩爪脱落音效")]
+    public AudioClip detachSound;
     [Tooltip("音效音量")]
     [Range(0f, 1f)] public float soundVolume = 0.8f;
 
+    [Header("视觉效果")]
+    [Tooltip("钩爪命中特效")]
+    public GameObject hookImpactEffect;
+    [Tooltip("火花特效")]
+    public GameObject sparkEffect;
+    [Tooltip("绳索拉紧特效")]
+    public GameObject ropeTensionEffect;
+
+    [Header("瞄准辅助")]
+    [Tooltip("显示瞄准轨迹")]
+    public bool showAimTrajectory = true;
+    [Tooltip("轨迹预测时间")]
+    public float trajectoryTime = 2f;
+    [Tooltip("轨迹分辨率")]
+    public int trajectoryResolution = 30;
+
     // 运行时缓存
-    Camera _cam;
-    GrappleController _grappler;
-    AudioSource _audioSource;
+    private Camera _cam;
+    private GrappleController _grappler;
+    private AudioSource _audioSource;
+    private LineRenderer _trajectoryRenderer;
+    private bool _isAiming = false;
 
     public override void OnSelect(GameObject model)
     {
@@ -38,16 +82,25 @@ public class GrappleItem : BaseItem
             return;
         }
 
-        // 假设 GrappleController 挂在相机的父对象上（玩家身上）
+        // 获取或创建钩爪控制器
         _grappler = _cam.GetComponentInParent<GrappleController>();
         if (_grappler == null)
         {
-            Debug.LogError("玩家物体上缺少 GrappleController 组件");
-            UIManager.Instance.UpdateCameraDebugText("抓钩控制器未找到");
-            return;
+            GameObject player = _cam.transform.parent?.gameObject;
+            if (player != null)
+            {
+                _grappler = player.AddComponent<GrappleController>();
+                Debug.Log("自动添加钩爪控制器组件");
+            }
+            else
+            {
+                Debug.LogError("玩家物体上缺少 GrappleController 组件且无法自动添加");
+                UIManager.Instance?.UpdateCameraDebugText("钩爪控制器未找到");
+                return;
+            }
         }
 
-        // 创建音频源，如果不存在
+        // 创建音频源
         _audioSource = _cam.GetComponent<AudioSource>();
         if (_audioSource == null)
         {
@@ -55,69 +108,298 @@ public class GrappleItem : BaseItem
             _audioSource.spatialBlend = 0f; // 全局音效
         }
 
-        // 注入钩爪可视化资源
-        _grappler.hookPrefab = hookPrefab;
-        _grappler.hookSpeed = hookTravelSpeed;
-        _grappler.ropeMaterial = ropeMaterial;
-        _grappler.ropeColor = ropeColor;
+        // 创建轨迹渲染器
+        SetupTrajectoryRenderer();
+
+        // 注入参数到钩爪控制器
+        ConfigureGrappleController();
+
+        // 初始化控制器
         _grappler.Initialize();
 
-        UIManager.Instance.UpdateCameraDebugText("抓钩就绪，左键发射");
+        UIManager.Instance?.UpdateCameraDebugText("真实钩爪就绪 - 左键发射，Q键/右键释放");
+    }
+
+    private void SetupTrajectoryRenderer()
+    {
+        if (!showAimTrajectory) return;
+
+        GameObject trajectoryObject = new GameObject("GrappleTrajectory");
+        trajectoryObject.transform.SetParent(_cam.transform);
+
+        _trajectoryRenderer = trajectoryObject.AddComponent<LineRenderer>();
+        _trajectoryRenderer.positionCount = trajectoryResolution;
+        _trajectoryRenderer.startWidth = 0.02f;
+        _trajectoryRenderer.endWidth = 0.01f;
+        _trajectoryRenderer.material = ropeMaterial;
+        _trajectoryRenderer.startColor = new Color(ropeColor.r, ropeColor.g, ropeColor.b, 0.5f);
+        _trajectoryRenderer.endColor = new Color(ropeColor.r, ropeColor.g, ropeColor.b, 0.1f);
+        _trajectoryRenderer.enabled = false;
+        _trajectoryRenderer.useWorldSpace = true;
+
+        Debug.Log("轨迹渲染器设置完成");
+    }
+
+    private void ConfigureGrappleController()
+    {
+        // 注入资源
+        _grappler.hookPrefab = hookPrefab;
+        _grappler.hookSpeed = hookSpeed;
+        _grappler.ropeMaterial = ropeMaterial;
+        _grappler.ropeColor = ropeColor;
+
+        // 设置物理参数
+        var controller = _grappler;
+        controller.hookMass = hookMass;
+        controller.gravity = gravity;
+        controller.maxRopeLength = maxRopeLength;
+        controller.ropeElasticity = ropeElasticity;
+        controller.swingForce = swingForce;
+        controller.climbSpeed = climbSpeed;
+        controller.momentumRetention = momentumRetention;
+
+        // 设置特效
+        controller.hookImpactEffect = hookImpactEffect;
+        controller.sparkEffect = sparkEffect;
+        controller.ropeTensionEffect = ropeTensionEffect;
+
+        // 设置音效
+        controller.hookFireSound = grappleFireSound;
+        controller.hookHitSound = grappleHitSound;
+        controller.ropeTightSound = ropeTightSound;
+        controller.hookDetachSound = detachSound;
     }
 
     public override void OnUse()
     {
         if (_grappler == null || _cam == null)
         {
-            UIManager.Instance.UpdateCameraDebugText("抓钩系统未准备好");
+            UIManager.Instance?.UpdateCameraDebugText("钩爪系统未准备好");
             return;
         }
 
-        // 播放开铅音效
+        // 如果已经在使用钩爪，则释放
+        if (_grappler.IsGrappling())
+        {
+            _grappler.StopGrapple();
+            UIManager.Instance?.UpdateCameraDebugText("钩爪已释放");
+            return;
+        }
+
+        // 计算目标点
+        Vector3 targetPoint = CalculateTargetPoint();
+
+        // 播放发射音效
         if (grappleFireSound != null && _audioSource != null)
         {
             _audioSource.PlayOneShot(grappleFireSound, soundVolume);
         }
 
-        // 从屏幕中心发射射线
-        Ray ray = _cam.ScreenPointToRay(
-            new Vector3(Screen.width / 2f, Screen.height / 2f)
-        );
+        // 发射钩爪
+        _grappler.StartGrapple(targetPoint, pullSpeed);
 
-        Vector3 targetPoint;
+        UIManager.Instance?.UpdateCameraDebugText("钩爪已发射");
+    }
 
-        // 尝试命中物体
-        if (Physics.Raycast(ray, out RaycastHit hit, maxDistance))
+    public override void HandleUpdate()
+    {
+        if (_grappler == null || _cam == null) return;
+
+        // 更新瞄准状态
+        UpdateAiming();
+
+        // 显示钩爪状态信息
+        UpdateStatusDisplay();
+
+        // 处理快捷键
+        HandleHotkeys();
+    }
+
+    private void UpdateAiming()
+    {
+        if (!showAimTrajectory || _trajectoryRenderer == null) return;
+
+        bool shouldShowTrajectory = !_grappler.IsGrappling() &&
+                                   (Input.GetMouseButton(0) || Input.GetKey(KeyCode.LeftAlt));
+
+        if (shouldShowTrajectory && !_isAiming)
         {
-            // 命中了物体，使用命中点作为目标
-            targetPoint = hit.point;
+            _isAiming = true;
+            _trajectoryRenderer.enabled = true;
+        }
+        else if (!shouldShowTrajectory && _isAiming)
+        {
+            _isAiming = false;
+            _trajectoryRenderer.enabled = false;
+        }
 
-            if (hit.collider.gameObject.isStatic)
+        if (_isAiming)
+        {
+            UpdateTrajectoryVisual();
+        }
+    }
+
+    private void UpdateTrajectoryVisual()
+    {
+        Vector3 firePoint = _cam.transform.position;
+        Vector3 targetPoint = CalculateTargetPoint();
+
+        // 计算初始速度
+        Vector3 direction = (targetPoint - firePoint).normalized;
+        Vector3 velocity = direction * hookSpeed;
+
+        // 预测轨迹
+        Vector3[] points = new Vector3[trajectoryResolution];
+        Vector3 currentPos = firePoint;
+        Vector3 currentVel = velocity;
+
+        float timeStep = trajectoryTime / trajectoryResolution;
+
+        for (int i = 0; i < trajectoryResolution; i++)
+        {
+            points[i] = currentPos;
+
+            // 应用物理
+            currentVel.y -= gravity * timeStep;
+            currentPos += currentVel * timeStep;
+
+            // 检查碰撞
+            RaycastHit hit;
+            if (Physics.Raycast(points[i], (currentPos - points[i]).normalized,
+                               out hit, Vector3.Distance(points[i], currentPos)))
             {
-                UIManager.Instance.UpdateCameraDebugText("瞄准静态物体，发射抓钩");
+                // 在碰撞点截断轨迹
+                points[i] = hit.point;
+                _trajectoryRenderer.positionCount = i + 1;
+                _trajectoryRenderer.SetPositions(points);
+                return;
+            }
+        }
+
+        _trajectoryRenderer.positionCount = trajectoryResolution;
+        _trajectoryRenderer.SetPositions(points);
+    }
+
+    private Vector3 CalculateTargetPoint()
+    {
+        // 从屏幕中心发射射线
+        Ray ray = _cam.ScreenPointToRay(new Vector3(Screen.width / 2f, Screen.height / 2f));
+
+        // 尝试命中目标
+        RaycastHit hit;
+        if (Physics.Raycast(ray, out hit, maxDistance))
+        {
+            return hit.point;
+        }
+        else
+        {
+            // 如果没有命中，向射程最大距离发射
+            return ray.origin + ray.direction * maxDistance;
+        }
+    }
+
+    private void UpdateStatusDisplay()
+    {
+        if (UIManager.Instance == null) return;
+
+        string status = "";
+
+        if (_grappler.IsGrappling())
+        {
+            if (_grappler.IsSwinging())
+            {
+                float ropeLength = _grappler.GetRopeLength();
+                status = $"摆动中 - 绳长: {ropeLength:F1}m (WASD控制, Q/右键释放)";
             }
             else
             {
-                UIManager.Instance.UpdateCameraDebugText("瞄准动态物体，抓钩将尝试穿过");
+                status = "钩爪飞行中...";
             }
         }
         else
         {
-            // 没有命中物体，向最大射程方向发射
-            targetPoint = ray.origin + ray.direction * maxDistance;
-            UIManager.Instance.UpdateCameraDebugText("向空中发射抓钩");
+            // 检查瞄准目标
+            Vector3 targetPoint = CalculateTargetPoint();
+            float distance = Vector3.Distance(_cam.transform.position, targetPoint);
+
+            if (distance <= maxDistance)
+            {
+                status = $"瞄准目标 - 距离: {distance:F1}m (左键发射)";
+            }
+            else
+            {
+                status = $"目标过远 - 距离: {distance:F1}m (最大: {maxDistance}m)";
+            }
         }
 
-        // 发射抓钩（新的物理系统会处理重力和碰撞）
-        _grappler.StartGrapple(targetPoint, pullSpeed);
+        UIManager.Instance.UpdateCameraDebugText(status);
+    }
+
+    private void HandleHotkeys()
+    {
+        // R键快速释放
+        if (Input.GetKeyDown(KeyCode.R) && _grappler.IsGrappling())
+        {
+            _grappler.StopGrapple();
+            UIManager.Instance?.UpdateCameraDebugText("强制释放钩爪");
+        }
+
+        // T键切换轨迹显示
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            showAimTrajectory = !showAimTrajectory;
+            if (_trajectoryRenderer != null)
+            {
+                _trajectoryRenderer.enabled = showAimTrajectory && _isAiming;
+            }
+            UIManager.Instance?.UpdateCameraDebugText($"轨迹显示: {(showAimTrajectory ? "开启" : "关闭")}");
+        }
     }
 
     public override void OnDeselect()
     {
-        // 确保抓钩在切换物品时被取消，防止钩爪残留
+        // 确保钩爪在切换道具时被释放
         if (_grappler != null)
         {
             _grappler.StopGrapple();
         }
+
+        // 清理轨迹渲染器
+        if (_trajectoryRenderer != null)
+        {
+            if (_trajectoryRenderer.gameObject != null)
+            {
+                Object.DestroyImmediate(_trajectoryRenderer.gameObject);
+            }
+            _trajectoryRenderer = null;
+        }
+
+        _isAiming = false;
+    }
+
+    public override void OnUnready()
+    {
+        OnDeselect();
+    }
+
+    // 获取钩爪状态（供其他系统查询）
+    public bool IsCurrentlyGrappling()
+    {
+        return _grappler != null && _grappler.IsGrappling();
+    }
+
+    public bool IsCurrentlySwinging()
+    {
+        return _grappler != null && _grappler.IsSwinging();
+    }
+
+    public float GetCurrentRopeLength()
+    {
+        return _grappler != null ? _grappler.GetRopeLength() : 0f;
+    }
+
+    public Vector3 GetCurrentAttachPoint()
+    {
+        return _grappler != null ? _grappler.GetAttachPoint() : Vector3.zero;
     }
 }
