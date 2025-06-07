@@ -330,6 +330,12 @@ public class AnimalBehavior : MonoBehaviour
                     foodState = FoodState.Idle;
                     wanderCenter = transform.position;
                     SetNewWanderTarget();
+
+                    // ✅ 修复：确保完全恢复正常状态
+                    if (agent != null)
+                    {
+                        agent.isStopped = false;
+                    }
                 }
                 break;
         }

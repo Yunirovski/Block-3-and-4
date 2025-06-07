@@ -64,6 +64,7 @@
     <Compile Include="Assets\Script\Button\opensavefolder.cs" />
     <Compile Include="Assets\Script\book\PhotoBookController.cs" />
     <Compile Include="Assets\Script\Log\ConfirmationDialog.cs" />
+    <Compile Include="Assets\Script\player\IGrappable.cs" />
     <Compile Include="Assets\Script\Food\FoodSupplyCrate.cs" />
     <Compile Include="Assets\Script\Ui\InventorySystemEvents.cs" />
     <Compile Include="Assets\Script\Ui\RadialInventoryUI.cs" />
@@ -98,6 +99,7 @@
     <Compile Include="Assets\Script\Inventory System\SkateboardItem.cs" />
     <Compile Include="Assets\Script\Food\FoodWorld.cs" />
     <Compile Include="Assets\Script\Ui\LogController.cs" />
+    <Compile Include="Assets\Script\player\GrappableSurface.cs" />
     <Compile Include="Assets\Script\ScoreManager.cs" />
     <Compile Include="Assets\Script\player\GrappleController.cs" />
     <Compile Include="Assets\Script\Inventory System\FoodItem.cs" />
@@ -121,6 +123,7 @@
     <Compile Include="Assets\Script\Inventory System\CameraItem.cs" />
     <Compile Include="Assets\Script\Inventory System\Progresscanvascontroller.cs" />
     <Compile Include="Assets\Script\InventoryCycler.cs" />
+    <Compile Include="Assets\Script\navmeshagent.cs" />
     <Compile Include="Assets\Script\Log\ReplacePhotoSelector.cs" />
     <Compile Include="Assets\Script\System\TextureScale.cs" />
     <Compile Include="Assets\Script\System\GameManager.cs" />

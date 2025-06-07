@@ -2099,8 +2099,8 @@ MonoBehaviour:
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
-  eatDuration: 5
-  graceDuration: 10
+  eatDuration: 2
+  graceDuration: 8
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &287987263
 Animator:
@@ -3294,8 +3294,8 @@ MonoBehaviour:
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
-  eatDuration: 5
-  graceDuration: 10
+  eatDuration: 2
+  graceDuration: 8
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &386279632
 Animator:
@@ -4786,8 +4786,8 @@ MonoBehaviour:
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
-  eatDuration: 5
-  graceDuration: 10
+  eatDuration: 2
+  graceDuration: 8
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &549699201
 Animator:
@@ -7444,6 +7444,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 831817299}
   m_CullTransparentMesh: 1
+--- !u!1 &842423925
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 842423927}
+  - component: {fileID: 842423926}
+  m_Layer: 0
+  m_Name: Navmesh agent
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &842423926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 842423925}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fca04e60704e93f49b867e0b393856e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  removeRigidbody: 1
+  ensureNavMeshAgent: 1
+  autoConfigureAgent: 1
+--- !u!4 &842423927
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 842423925}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1214.8906, y: 28.299486, z: 436.15067}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &864199288
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9541,8 +9588,8 @@ MonoBehaviour:
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
-  eatDuration: 5
-  graceDuration: 10
+  eatDuration: 2
+  graceDuration: 8
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &1042835097
 Animator:
@@ -14294,8 +14341,8 @@ MonoBehaviour:
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
-  eatDuration: 5
-  graceDuration: 10
+  eatDuration: 2
+  graceDuration: 8
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &1476964614
 Animator:
@@ -15255,8 +15302,8 @@ MonoBehaviour:
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
-  eatDuration: 5
-  graceDuration: 10
+  eatDuration: 2
+  graceDuration: 8
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &1578227386
 Animator:
@@ -16717,8 +16764,8 @@ MonoBehaviour:
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
-  eatDuration: 1
-  graceDuration: 5
+  eatDuration: 2
+  graceDuration: 8
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &1794395418
 Animator:
@@ -18198,8 +18245,8 @@ MonoBehaviour:
   temperament: 0
   foodDetectionRadius: 20
   playerSafeDistance: 15
-  eatDuration: 5
-  graceDuration: 10
+  eatDuration: 2
+  graceDuration: 8
   modelRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!95 &1933338210
 Animator:
@@ -19851,3 +19898,4 @@ SceneRoots:
   - {fileID: 262275295}
   - {fileID: 1519914226}
   - {fileID: 1220960306}
+  - {fileID: 842423927}
