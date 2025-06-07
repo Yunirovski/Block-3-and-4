@@ -1191,15 +1191,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1269
+      value: 1284.65
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 53
+      value: 42.96
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 149.1
+      value: 186.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
       propertyPath: m_LocalRotation.w
@@ -4911,8 +4911,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.316162, y: 1.1543231, z: 2.85141}
-  m_Center: {x: 0.068115234, y: 0.64914036, z: -0.42024994}
+  m_Size: {x: 3.316162, y: 1.760226, z: 2.85141}
+  m_Center: {x: 0.068115234, y: 0.3461889, z: -0.42024994}
 --- !u!95 &549699201
 Animator:
   serializedVersion: 7
@@ -4982,30 +4982,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b6211fb36799a1449f204214e39d1cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 5
-  wanderRadius: 40
-  minWanderTime: 2
-  maxWanderTime: 5
-  minFlightHeight: 8
-  maxFlightHeight: 15
-  heightChangeSpeed: 2
-  groundCheckDistance: 50
-  avoidObstacles: 1
-  obstacleDetectionDistance: 3
-  escapeSpeed: 8
-  detectionRadius: 15
-  safeDistance: 20
-  forcedEscapeDuration: 8
-  temperament: 1
-  foodDetectionRadius: 25
-  playerSafeDistance: 20
+  flySpeed: 6
+  flightHeight: 12
+  heightVariation: 3
+  landingSpeed: 8
+  takeoffSpeed: 6
+  wanderRadius: 30
+  changeDirectionTime: 5
+  rotationSpeed: 2
+  foodDetectionRadius: 8
   eatDuration: 3
-  graceDuration: 5
-  takeoffDuration: 2
-  stoppingDistance: 0.3
-  sampleDistance: 8
-  forceAgentRadius: 0.3
-  modelRotationOffset: {x: 0, y: 0, z: 0}
+  restDuration: 4
+  temperament: 0
+  playerSafeDistance: 15
+  escapeSpeed: 10
+  detectionRadius: 12
+  escapeHeight: 18
 --- !u!1 &550735585
 GameObject:
   m_ObjectHideFlags: 0
