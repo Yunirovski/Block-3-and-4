@@ -690,7 +690,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 3
-  wanderRadius: 40
+  wanderRadius: 100
   minWanderTime: 2
   maxWanderTime: 5
   escapeSpeed: 6
@@ -2930,7 +2930,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 3
-  wanderRadius: 40
+  wanderRadius: 100
   minWanderTime: 2
   maxWanderTime: 5
   escapeSpeed: 6
@@ -6041,11 +6041,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2eecd7a97c615544857ae1124321135, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 3
+  moveSpeed: 8
   wanderRadius: 40
   minWanderTime: 2
   maxWanderTime: 5
-  escapeSpeed: 6
+  escapeSpeed: 15
   detectionRadius: 20
   safeDistance: 8
   forcedEscapeDuration: 10
@@ -8079,34 +8079,18 @@ MonoBehaviour:
   ropeColor: {r: 0.545, g: 0.271, b: 0.075, a: 1}
   hookMass: 2
   gravity: 9.81
-  airResistance: 0.1
-  hookCollisionRadius: 0.5
   maxRopeLength: 40
   ropeElasticity: 0.2
-  ropeDamping: 0.95
-  ropeSegments: 20
   swingForce: 15
-  playerMass: 70
-  swingDamping: 0.98
-  maxSwingSpeed: 20
-  "grappableTags\u0631\u0627":
-  - Grappable
-  - Wall
-  - Rock
-  - Building
-  edgeDetectionDistance: 2
-  hookPenetration: 0.5
-  attachmentStrength: 100
   climbSpeed: 8
   momentumRetention: 0.8
-  minReleaseHeight: 2
-  hookImpactEffect: {fileID: 0}
-  ropeTensionEffect: {fileID: 0}
-  sparkEffect: {fileID: 0}
   hookFireSound: {fileID: 0}
   hookHitSound: {fileID: 0}
   ropeTightSound: {fileID: 0}
   hookDetachSound: {fileID: 0}
+  hookImpactEffect: {fileID: 0}
+  sparkEffect: {fileID: 0}
+  ropeTensionEffect: {fileID: 0}
 --- !u!82 &931300886
 AudioSource:
   m_ObjectHideFlags: 0
@@ -12842,7 +12826,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 3
-  wanderRadius: 40
+  wanderRadius: 100
   minWanderTime: 2
   maxWanderTime: 5
   escapeSpeed: 6
@@ -17426,7 +17410,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 3
-  wanderRadius: 40
+  wanderRadius: 100
   minWanderTime: 2
   maxWanderTime: 5
   escapeSpeed: 6
@@ -17527,11 +17511,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2eecd7a97c615544857ae1124321135, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 3
+  moveSpeed: 8
   wanderRadius: 40
   minWanderTime: 2
   maxWanderTime: 5
-  escapeSpeed: 6
+  escapeSpeed: 15
   detectionRadius: 20
   safeDistance: 8
   forcedEscapeDuration: 10
@@ -17702,11 +17686,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2eecd7a97c615544857ae1124321135, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 3
+  moveSpeed: 8
   wanderRadius: 40
   minWanderTime: 2
   maxWanderTime: 5
-  escapeSpeed: 6
+  escapeSpeed: 15
   detectionRadius: 20
   safeDistance: 8
   forcedEscapeDuration: 10
