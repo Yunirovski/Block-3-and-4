@@ -1,312 +1,242 @@
-// Assets/Scripts/Projectiles/DartProjectile.cs
+﻿// Assets/Scripts/Projectiles/DartProjectile.cs - 简化版本
 using UnityEngine;
 
 /// <summary>
-/// Handles dart projectile physics, collision detection, and lifetime
+/// 简化的麻醉镖物理和碰撞处理
+/// 像扔苹果一样简单，但命中动物时有昏迷效果
 /// </summary>
-[RequireComponent(typeof(Rigidbody))]
-[RequireComponent(typeof(Collider))]
 public class DartProjectile : MonoBehaviour
 {
-    [Header("Dart Physics")]
-    [Tooltip("Gravity multiplier")]
-    public float gravityMultiplier = 1f;
-    [Tooltip("Air drag coefficient")]
-    public float dragCoefficient = 0.1f;
-    [Tooltip("Minimum speed before dart drops")]
-    public float minimumSpeed = 1f;
+    [Header("麻醉镖设置")]
+    [Tooltip("昏迷持续时间")]
+    public float stunDuration = 10f;
 
-    [Header("Collision")]
-    [Tooltip("Layer mask for valid targets")]
-    public LayerMask targetLayers = -1;
-    [Tooltip("Minimum impact velocity for sticking")]
-    public float stickThreshold = 5f;
+    [Tooltip("镖的生命周期（秒）")]
+    public float lifetime = 30f;
 
-    [Header("Lifetime")]
-    [Tooltip("Maximum flight time before auto-destruction")]
-    public float maxFlightTime = 10f;
-    [Tooltip("Time to stay stuck in surface")]
-    public float stuckDuration = 30f;
+    [Tooltip("击中动物时的音效")]
+    public AudioClip hitAnimalSound;
 
-    [Header("Visual")]
-    [Tooltip("Trail renderer for dart trail")]
-    public TrailRenderer dartTrail;
+    [Tooltip("击中其他物体时的音效")]
+    public AudioClip hitObjectSound;
 
-    // State tracking
-    private Vector3 velocity;
-    private Vector3 startPosition;
-    private float maxRange;
-    private float stunDuration;
-    private DartGunController controller;
-    private Rigidbody rb;
-    private Collider col;
+    [Range(0f, 1f)]
+    [Tooltip("音效音量")]
+    public float soundVolume = 0.8f;
+
+    // 内部状态
     private bool hasHit = false;
-    private bool isInitialized = false;
-    private float flightTimer = 0f;
+    private AudioSource audioSource;
+    private Rigidbody rb;
+    private float spawnTime;
 
-    // Physics cache
-    private Vector3 lastPosition;
-    private float lastSpeed;
-
-    void Awake()
+    void Start()
     {
+        // 记录生成时间
+        spawnTime = Time.time;
+
+        // 获取组件
         rb = GetComponent<Rigidbody>();
-        col = GetComponent<Collider>();
 
-        // Configure rigidbody
-        rb.useGravity = false; // We'll handle gravity manually
-        rb.isKinematic = false;
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
-
-        // Configure collider
-        if (col.isTrigger)
+        // 添加音频源
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
         {
-            col.isTrigger = false; // Ensure it's not a trigger for proper collision
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 1f; // 3D音效
+            audioSource.playOnAwake = false;
         }
 
-        // Setup trail if available
-        if (dartTrail == null)
-        {
-            dartTrail = GetComponent<TrailRenderer>();
-        }
+        // 设置自动销毁
+        Destroy(gameObject, lifetime);
 
-        lastPosition = transform.position;
+        Debug.Log($"麻醉镖已生成，将在 {lifetime} 秒后自动销毁");
     }
 
-    public void Initialize(Vector3 initialVelocity, float range, float stun, DartGunController gunController)
+    void Update()
     {
-        velocity = initialVelocity;
-        startPosition = transform.position;
-        maxRange = range;
-        stunDuration = stun;
-        controller = gunController;
-        isInitialized = true;
-
-        // Set initial physics
-        rb.linearVelocity = velocity;
-        lastSpeed = velocity.magnitude;
-
-        Debug.Log($"Dart initialized with velocity: {velocity}, range: {range}");
-    }
-
-    void FixedUpdate()
-    {
-        if (!isInitialized || hasHit) return;
-
-        flightTimer += Time.fixedDeltaTime;
-
-        // Check max flight time
-        if (flightTimer > maxFlightTime)
+        // 让镖朝向飞行方向（如果还在飞行中）
+        if (!hasHit && rb != null && rb.linearVelocity.magnitude > 0.5f)
         {
-            DestroyDart();
-            return;
-        }
-
-        // Check max range
-        float distanceTraveled = Vector3.Distance(startPosition, transform.position);
-        if (distanceTraveled > maxRange)
-        {
-            DestroyDart();
-            return;
-        }
-
-        // Update physics
-        UpdateDartPhysics();
-
-        // Update rotation to face velocity direction
-        UpdateRotation();
-
-        // Cache position for next frame
-        lastPosition = transform.position;
-    }
-
-    private void UpdateDartPhysics()
-    {
-        Vector3 currentVelocity = rb.linearVelocity;
-
-        // Apply gravity
-        Vector3 gravity = Physics.gravity * gravityMultiplier;
-        currentVelocity += gravity * Time.fixedDeltaTime;
-
-        // Apply drag
-        if (currentVelocity.magnitude > 0.1f)
-        {
-            Vector3 dragForce = -currentVelocity.normalized * (currentVelocity.sqrMagnitude * dragCoefficient);
-            currentVelocity += dragForce * Time.fixedDeltaTime;
-        }
-
-        // Check minimum speed
-        if (currentVelocity.magnitude < minimumSpeed)
-        {
-            DestroyDart();
-            return;
-        }
-
-        rb.linearVelocity = currentVelocity;
-        lastSpeed = currentVelocity.magnitude;
-    }
-
-    private void UpdateRotation()
-    {
-        Vector3 currentVelocity = rb.linearVelocity;
-        if (currentVelocity.magnitude > 0.1f)
-        {
-            transform.rotation = Quaternion.LookRotation(currentVelocity.normalized);
+            transform.rotation = Quaternion.LookRotation(rb.linearVelocity.normalized);
         }
     }
 
     void OnCollisionEnter(Collision collision)
     {
-        if (hasHit || !isInitialized) return;
+        if (hasHit) return; // 避免重复处理
 
         hasHit = true;
         Vector3 hitPoint = collision.contacts[0].point;
         Collider hitCollider = collision.collider;
 
-        Debug.Log($"Dart hit: {hitCollider.name} at {hitPoint}");
+        Debug.Log($"麻醉镖击中: {hitCollider.name}");
 
-        // Stop physics
-        rb.isKinematic = true;
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-
-        // Disable trail
-        if (dartTrail != null)
+        // 停止物理运动
+        if (rb != null)
         {
-            dartTrail.enabled = false;
+            rb.isKinematic = true;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
         }
 
-        // Check if we should stick to the surface
-        bool shouldStick = ShouldStickToSurface(collision, hitCollider);
-
-        if (shouldStick)
-        {
-            StickToSurface(collision);
-        }
-
-        // Notify controller
-        if (controller != null)
-        {
-            controller.OnDartHit(hitPoint, hitCollider, gameObject);
-        }
-
-        // Schedule destruction
-        if (shouldStick)
-        {
-            Invoke(nameof(DestroyDart), stuckDuration);
-        }
-        else
-        {
-            Invoke(nameof(DestroyDart), 1f); // Quick cleanup for non-stick surfaces
-        }
-    }
-
-    private bool ShouldStickToSurface(Collision collision, Collider hitCollider)
-    {
-        // Check impact velocity
-        if (lastSpeed < stickThreshold)
-        {
-            return false;
-        }
-
-        // Check if surface is valid for sticking
-        if (hitCollider.CompareTag("Player"))
-        {
-            return false; // Don't stick to player
-        }
-
-        // Check if it's an animal (should stick for tranquilizer effect)
+        // 检查是否击中动物
         AnimalBehavior animal = hitCollider.GetComponent<AnimalBehavior>();
         if (animal != null)
         {
-            return true;
+            HandleAnimalHit(animal, hitPoint);
         }
-
-        // Check if surface is static or has sufficient mass
-        Rigidbody hitRb = hitCollider.GetComponent<Rigidbody>();
-        if (hitRb == null || hitRb.isKinematic || hitRb.mass > 10f)
+        else
         {
-            return true;
+            HandleObjectHit(hitCollider, hitPoint);
         }
 
-        return false;
+        // 让镖稍微嵌入表面
+        EmbedInSurface(collision);
     }
 
-    private void StickToSurface(Collision collision)
+    /// <summary>
+    /// 处理击中动物
+    /// </summary>
+    private void HandleAnimalHit(AnimalBehavior animal, Vector3 hitPoint)
     {
-        // Position dart slightly embedded in surface
+        Debug.Log($"麻醉镖击中动物: {animal.name}，昏迷 {stunDuration} 秒");
+
+        // 让动物昏迷
+        animal.Stun(stunDuration);
+
+        // 播放击中动物音效
+        PlaySound(hitAnimalSound);
+
+        // 显示效果信息
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateCameraDebugText($"击中 {animal.name}! 昏迷 {stunDuration}s");
+        }
+
+        // 镖在击中动物后很快消失
+        Destroy(gameObject, 2f);
+    }
+
+    /// <summary>
+    /// 处理击中其他物体
+    /// </summary>
+    private void HandleObjectHit(Collider hitCollider, Vector3 hitPoint)
+    {
+        Debug.Log($"麻醉镖击中物体: {hitCollider.name}");
+
+        // 播放击中物体音效
+        PlaySound(hitObjectSound);
+
+        // 镖会留在地上一段时间
+        // 已经通过Start()中的Destroy设置了自动销毁
+    }
+
+    /// <summary>
+    /// 让镖嵌入表面
+    /// </summary>
+    private void EmbedInSurface(Collision collision)
+    {
+        if (collision.contacts.Length == 0) return;
+
         Vector3 normal = collision.contacts[0].normal;
-        Vector3 surfacePoint = collision.contacts[0].point;
+        Vector3 hitPoint = collision.contacts[0].point;
 
-        // Embed dart slightly into surface
-        transform.position = surfacePoint - normal * 0.1f;
+        // 将镖稍微嵌入表面
+        transform.position = hitPoint - normal * 0.05f;
 
-        // Align dart with surface normal
+        // 让镖朝向撞击法线的反方向
         transform.rotation = Quaternion.LookRotation(-normal);
 
-        // Parent to hit object if it moves
-        Transform hitTransform = collision.collider.transform;
-        if (hitTransform.GetComponent<Rigidbody>() != null)
+        // 如果击中的是会移动的物体，将镖附加到上面
+        Rigidbody hitRb = collision.collider.GetComponent<Rigidbody>();
+        if (hitRb != null && !hitRb.isKinematic)
         {
-            transform.SetParent(hitTransform);
+            transform.SetParent(collision.transform);
+            Debug.Log($"麻醉镖附加到移动物体: {collision.collider.name}");
         }
-
-        Debug.Log($"Dart stuck to: {collision.collider.name}");
     }
 
-    private void DestroyDart()
+    /// <summary>
+    /// 播放音效
+    /// </summary>
+    private void PlaySound(AudioClip clip)
     {
-        if (controller != null)
+        if (clip != null && audioSource != null)
         {
-            // This will remove the dart from the active darts list
-            controller.OnDartHit(transform.position, null, gameObject);
+            audioSource.PlayOneShot(clip, soundVolume);
         }
-
-        Destroy(gameObject);
     }
 
-    // Visualization for debugging
+    void OnDestroy()
+    {
+        // 从活跃列表中移除
+        DartGunItem.RemoveDartFromActiveList(gameObject);
+
+        Debug.Log("麻醉镖已销毁");
+    }
+
+    /// <summary>
+    /// 检查镖是否还在飞行中
+    /// </summary>
+    public bool IsFlying()
+    {
+        return !hasHit && rb != null && rb.linearVelocity.magnitude > 0.5f;
+    }
+
+    /// <summary>
+    /// 获取镖的飞行时间
+    /// </summary>
+    public float GetFlightTime()
+    {
+        return Time.time - spawnTime;
+    }
+
+    /// <summary>
+    /// 强制销毁镖（外部调用）
+    /// </summary>
+    public void ForceDestroy()
+    {
+        if (gameObject != null)
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    // 调试可视化
     void OnDrawGizmos()
     {
         if (!Application.isPlaying) return;
 
-        // Draw velocity vector
-        Gizmos.color = Color.red;
-        if (rb != null && !hasHit)
-        {
-            Gizmos.DrawRay(transform.position, rb.linearVelocity.normalized * 2f);
-        }
+        // 显示镖的状态
+        Gizmos.color = hasHit ? Color.red : Color.green;
+        Gizmos.DrawWireSphere(transform.position, 0.2f);
 
-        // Draw range sphere from start position
-        if (isInitialized)
+        // 如果还在飞行，显示速度向量
+        if (IsFlying())
         {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(startPosition, maxRange);
+            Gizmos.color = Color.blue;
+            Gizmos.DrawRay(transform.position, rb.linearVelocity.normalized * 2f);
         }
     }
 
     void OnDrawGizmosSelected()
     {
-        // Draw detailed flight path prediction
-        if (!Application.isPlaying || hasHit) return;
-
-        Gizmos.color = Color.cyan;
-        Vector3 pos = transform.position;
-        Vector3 vel = rb != null ? rb.linearVelocity : velocity;
-
-        // Predict next few seconds of flight
-        for (int i = 0; i < 20; i++)
+        // 显示详细信息
+        if (Application.isPlaying)
         {
-            float dt = 0.2f;
-            Vector3 nextPos = pos + vel * dt;
+            // 显示生命周期进度
+            float remainingTime = lifetime - (Time.time - spawnTime);
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(transform.position + Vector3.up * 2f, remainingTime / lifetime);
 
-            // Apply gravity prediction
-            vel += Physics.gravity * gravityMultiplier * dt;
-
-            Gizmos.DrawLine(pos, nextPos);
-            pos = nextPos;
-
-            if (pos.y < startPosition.y - 50f) break; // Stop predicting if too far down
+#if UNITY_EDITOR
+            UnityEditor.Handles.Label(transform.position + Vector3.up * 1f,
+                $"飞行时间: {GetFlightTime():F1}s\n" +
+                $"剩余时间: {remainingTime:F1}s\n" +
+                $"状态: {(hasHit ? "已击中" : "飞行中")}\n" +
+                $"速度: {(rb != null ? rb.linearVelocity.magnitude.ToString("F1") : "0")} m/s");
+#endif
         }
     }
 }

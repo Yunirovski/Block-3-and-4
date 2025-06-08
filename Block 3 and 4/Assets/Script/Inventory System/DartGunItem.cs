@@ -1,323 +1,283 @@
-// Assets/Scripts/Items/DartGunItem.cs
+﻿// Assets/Scripts/Items/DartGunItem.cs - 简化版本，像扔苹果一样
 using UnityEngine;
+using System.Collections.Generic;
 
 [CreateAssetMenu(menuName = "Items/DartGunItem")]
 public class DartGunItem : BaseItem
 {
     [Header("Dart Settings")]
-    [Tooltip("Dart projectile prefab")]
+    [Tooltip("Dart prefab")]
     public GameObject dartPrefab;
-    [Tooltip("Dart firing speed")]
-    public float dartSpeed = 30f;
-    [Tooltip("Maximum effective range")]
-    public float maxRange = 50f;
-    [Tooltip("Fire rate cooldown")]
+
+    [Tooltip("投掷距离")]
+    public float spawnDistance = 2f;
+
+    [Tooltip("投掷力度")]
+    public float throwForce = 25f;
+
+    [Tooltip("冷却时间")]
     public float fireCooldown = 1f;
 
-    [Header("Accuracy")]
-    [Tooltip("Accuracy spread (0 = perfect accuracy)")]
-    [Range(0f, 5f)] public float accuracy = 0.5f;
-    [Tooltip("Movement accuracy penalty")]
-    [Range(0f, 2f)] public float movementPenalty = 1f;
-
-    [Header("Dart Effects")]
-    [Tooltip("Stun duration for animals")]
-    public float stunDuration = 30f;
-    [Tooltip("Dart impact effect")]
-    public GameObject impactEffect;
-    [Tooltip("Muzzle flash effect")]
-    public GameObject muzzleFlashEffect;
+    [Tooltip("昏迷持续时间")]
+    public float stunDuration = 10f;
 
     [Header("Audio")]
-    [Tooltip("Dart gun fire sound")]
+    [Tooltip("射击音效")]
     public AudioClip fireSound;
-    [Tooltip("Dart hit sound")]
-    public AudioClip hitSound;
-    [Tooltip("Empty chamber sound")]
-    public AudioClip emptySound;
-    [Tooltip("Reload sound")]
-    public AudioClip reloadSound;
     [Range(0f, 1f)] public float soundVolume = 0.8f;
 
-    [Header("Ammo System")]
-    [Tooltip("Enable ammo limitation")]
-    public bool useAmmoSystem = true;
-    [Tooltip("Darts per reload")]
-    public int magazineSize = 6;
-    [Tooltip("Reload time")]
-    public float reloadTime = 2f;
+    // 运行时状态
+    private Camera playerCamera;
+    private Transform playerTransform;
+    private AudioSource audioSource;
+    private float nextFireTime = 0f;
 
-    // Runtime variables
-    private Camera _camera;
-    private DartGunController _controller;
-    private AudioSource _audioSource;
-    private float _nextFireTime = 0f;
-    private int _currentAmmo;
-    private bool _isReloading = false;
+    // 管理地上的dart数量
+    private static List<GameObject> activeDarts = new List<GameObject>();
+    private static int maxActiveDarts = 3;
 
     public override void OnSelect(GameObject model)
     {
-        _camera = Camera.main;
-        if (_camera == null)
+        // 获取玩家相机和位置
+        playerCamera = Camera.main;
+        if (playerCamera != null)
         {
-            Debug.LogError("DartGun: Main camera not found");
-            return;
+            playerTransform = playerCamera.transform;
         }
 
-        // Get or create controller
-        _controller = _camera.GetComponentInParent<DartGunController>();
-        if (_controller == null)
+        // 设置音频源
+        audioSource = playerCamera.GetComponent<AudioSource>();
+        if (audioSource == null)
         {
-            GameObject player = _camera.transform.parent?.gameObject;
-            if (player != null)
-            {
-                _controller = player.AddComponent<DartGunController>();
-                Debug.Log("DartGun: Added DartGunController component");
-            }
-            else
-            {
-                Debug.LogError("DartGun: Cannot add controller component");
-                return;
-            }
+            audioSource = playerCamera.gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 0f;
         }
 
-        // Setup audio
-        _audioSource = _camera.GetComponent<AudioSource>();
-        if (_audioSource == null)
-        {
-            _audioSource = _camera.gameObject.AddComponent<AudioSource>();
-            _audioSource.spatialBlend = 0f;
-        }
-
-        // Configure controller
-        ConfigureController();
-
-        // Initialize ammo
-        if (useAmmoSystem)
-        {
-            _currentAmmo = magazineSize;
-        }
-
-        _controller.Initialize();
-        UIManager.Instance?.UpdateCameraDebugText("Dart Gun ready - Left click to fire, R to reload");
+        Debug.Log($"DartGun 已选中");
     }
 
-    private void ConfigureController()
+    public override void OnReady()
     {
-        _controller.dartPrefab = dartPrefab;
-        _controller.dartSpeed = dartSpeed;
-        _controller.maxRange = maxRange;
-        _controller.accuracy = accuracy;
-        _controller.movementPenalty = movementPenalty;
-        _controller.stunDuration = stunDuration;
-        _controller.impactEffect = impactEffect;
-        _controller.muzzleFlashEffect = muzzleFlashEffect;
-        _controller.fireSound = fireSound;
-        _controller.hitSound = hitSound;
-        _controller.soundVolume = soundVolume;
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateCameraDebugText("左键射击麻醉镖");
+        }
     }
 
     public override void OnUse()
     {
-        if (_controller == null || _camera == null)
-        {
-            UIManager.Instance?.UpdateCameraDebugText("Dart Gun not ready");
-            return;
-        }
-
-        if (_isReloading)
-        {
-            UIManager.Instance?.UpdateCameraDebugText("Reloading...");
-            return;
-        }
-
-        if (Time.time < _nextFireTime)
-        {
-            float cooldown = _nextFireTime - Time.time;
-            UIManager.Instance?.UpdateCameraDebugText($"Cooldown: {cooldown:F1}s");
-            return;
-        }
-
-        if (useAmmoSystem && _currentAmmo <= 0)
-        {
-            PlaySound(emptySound);
-            UIManager.Instance?.UpdateCameraDebugText("No ammo! Press R to reload");
-            return;
-        }
-
-        // Fire dart
-        Vector3 firePoint = _camera.transform.position;
-        Vector3 fireDirection = CalculateFireDirection();
-
-        bool success = _controller.FireDart(firePoint, fireDirection);
-
-        if (success)
-        {
-            _nextFireTime = Time.time + fireCooldown;
-
-            if (useAmmoSystem)
-            {
-                _currentAmmo--;
-            }
-
-            PlaySound(fireSound);
-            CreateMuzzleFlash();
-
-            UIManager.Instance?.UpdateCameraDebugText(useAmmoSystem ?
-                $"Fired! Ammo: {_currentAmmo}/{magazineSize}" : "Fired!");
-        }
+        FireDart();
     }
 
     public override void HandleUpdate()
     {
-        if (_controller == null) return;
-
-        // Handle reload
-        if (useAmmoSystem && Input.GetKeyDown(KeyCode.R) && !_isReloading && _currentAmmo < magazineSize)
+        // 更新冷却状态
+        if (Time.time < nextFireTime)
         {
-            StartReload();
-        }
-
-        // Update status display
-        UpdateStatusDisplay();
-    }
-
-    private void StartReload()
-    {
-        _isReloading = true;
-        PlaySound(reloadSound);
-        UIManager.Instance?.StartItemCooldown(this, reloadTime);
-
-        // Schedule reload completion
-        if (_controller != null)
-        {
-            _controller.StartCoroutine(CompleteReload());
-        }
-    }
-
-    private System.Collections.IEnumerator CompleteReload()
-    {
-        yield return new WaitForSeconds(reloadTime);
-
-        _currentAmmo = magazineSize;
-        _isReloading = false;
-
-        UIManager.Instance?.UpdateCameraDebugText($"Reloaded! Ammo: {_currentAmmo}/{magazineSize}");
-    }
-
-    private Vector3 CalculateFireDirection()
-    {
-        // Base direction from camera
-        Vector3 direction = _camera.transform.forward;
-
-        // Add accuracy spread
-        float currentAccuracy = accuracy;
-
-        // Increase spread if moving
-        if (IsPlayerMoving())
-        {
-            currentAccuracy += movementPenalty;
-        }
-
-        if (currentAccuracy > 0f)
-        {
-            Vector3 spread = new Vector3(
-                Random.Range(-currentAccuracy, currentAccuracy),
-                Random.Range(-currentAccuracy, currentAccuracy),
-                0f
-            );
-
-            direction = (_camera.transform.forward + _camera.transform.TransformDirection(spread * 0.01f)).normalized;
-        }
-
-        return direction;
-    }
-
-    private bool IsPlayerMoving()
-    {
-        // Check if player is moving
-        float inputMagnitude = Mathf.Abs(Input.GetAxis("Horizontal")) + Mathf.Abs(Input.GetAxis("Vertical"));
-        return inputMagnitude > 0.1f;
-    }
-
-    private void CreateMuzzleFlash()
-    {
-        if (muzzleFlashEffect != null && _camera != null)
-        {
-            Vector3 muzzlePosition = _camera.transform.position + _camera.transform.forward * 0.5f;
-            GameObject flash = Instantiate(muzzleFlashEffect, muzzlePosition, _camera.transform.rotation);
-            Destroy(flash, 0.2f);
-        }
-    }
-
-    private void PlaySound(AudioClip clip)
-    {
-        if (clip != null && _audioSource != null)
-        {
-            _audioSource.PlayOneShot(clip, soundVolume);
-        }
-    }
-
-    private void UpdateStatusDisplay()
-    {
-        if (UIManager.Instance == null) return;
-
-        string status = "";
-
-        if (_isReloading)
-        {
-            status = "Reloading...";
-        }
-        else if (Time.time < _nextFireTime)
-        {
-            float cooldown = _nextFireTime - Time.time;
-            status = $"Cooldown: {cooldown:F1}s";
-        }
-        else if (useAmmoSystem)
-        {
-            if (_currentAmmo <= 0)
+            float cooldown = nextFireTime - Time.time;
+            if (UIManager.Instance != null)
             {
-                status = "No ammo! Press R to reload";
-            }
-            else
-            {
-                status = $"Ready - Ammo: {_currentAmmo}/{magazineSize} (R to reload)";
+                UIManager.Instance.UpdateCameraDebugText($"冷却中: {cooldown:F1}s");
             }
         }
         else
         {
-            status = "Ready to fire";
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText("麻醉枪就绪 - 左键射击");
+            }
         }
-
-        UIManager.Instance.UpdateCameraDebugText(status);
     }
 
-    public override void OnDeselect()
+    /// <summary>
+    /// 射击麻醉镖
+    /// </summary>
+    private void FireDart()
     {
-        if (_controller != null)
+        if (playerCamera == null || playerTransform == null)
         {
-            _controller.Cleanup();
+            Debug.LogError("DartGun: 找不到玩家相机或位置");
+            return;
+        }
+
+        // 检查冷却
+        if (Time.time < nextFireTime)
+        {
+            float cooldown = nextFireTime - Time.time;
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText($"冷却中: {cooldown:F1}s");
+            }
+            return;
+        }
+
+        // 确定要使用的预制体
+        if (dartPrefab == null)
+        {
+            Debug.LogError("DartGun: 没有设置麻醉镖预制体");
+            return;
+        }
+
+        // 生成位置（玩家前方）
+        Vector3 spawnPosition = playerTransform.position + playerTransform.forward * spawnDistance;
+
+        // 创建麻醉镖
+        GameObject thrownDart = Instantiate(dartPrefab, spawnPosition, Quaternion.identity);
+
+        // 设置麻醉镖
+        SetupThrownDart(thrownDart);
+
+        // 应用抛掷力
+        ApplyThrowForce(thrownDart);
+
+        // 管理最大数量
+        ManageActiveDarts(thrownDart);
+
+        // 设置冷却
+        nextFireTime = Time.time + fireCooldown;
+
+        // 播放音效
+        PlayFireSound();
+
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateCameraDebugText($"射击! 冷却 {fireCooldown}s");
+        }
+
+        Debug.Log($"DartGun: 射击麻醉镖到 {spawnPosition}");
+    }
+
+    /// <summary>
+    /// 设置抛出的麻醉镖
+    /// </summary>
+    private void SetupThrownDart(GameObject thrownDart)
+    {
+        // 确保有Rigidbody
+        Rigidbody rb = thrownDart.GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = thrownDart.AddComponent<Rigidbody>();
+            Debug.Log("DartGun: 添加了Rigidbody到麻醉镖");
+        }
+
+        // 设置Rigidbody属性
+        rb.mass = 0.2f; // 轻一些
+        rb.linearDamping = 0.1f; // 少量阻力
+        rb.angularDamping = 0.5f;
+        rb.useGravity = true;
+        rb.isKinematic = false;
+
+        // 确保有Collider
+        Collider col = thrownDart.GetComponent<Collider>();
+        if (col == null)
+        {
+            // 添加胶囊碰撞体（更像镖的形状）
+            CapsuleCollider capsuleCol = thrownDart.AddComponent<CapsuleCollider>();
+            capsuleCol.radius = 0.1f;
+            capsuleCol.height = 0.5f;
+            capsuleCol.direction = 2; // Z轴方向
+            capsuleCol.isTrigger = false;
+            Debug.Log("DartGun: 添加了CapsuleCollider到麻醉镖");
+        }
+        else
+        {
+            col.enabled = true;
+            col.isTrigger = false;
+        }
+
+        // 添加或获取DartProjectile脚本
+        DartProjectile dartScript = thrownDart.GetComponent<DartProjectile>();
+        if (dartScript == null)
+        {
+            dartScript = thrownDart.AddComponent<DartProjectile>();
+            Debug.Log("DartGun: 添加了DartProjectile脚本");
+        }
+
+        // 设置麻醉镖属性
+        dartScript.stunDuration = stunDuration;
+        dartScript.lifetime = 30f; // 30秒后自动消失
+    }
+
+    /// <summary>
+    /// 应用抛掷力
+    /// </summary>
+    private void ApplyThrowForce(GameObject thrownDart)
+    {
+        Rigidbody rb = thrownDart.GetComponent<Rigidbody>();
+        if (rb == null) return;
+
+        // 抛掷方向（玩家看的方向，稍微向上）
+        Vector3 throwDirection = playerTransform.forward;
+        throwDirection.y += 0.1f; // 轻微向上
+        throwDirection = throwDirection.normalized;
+
+        // 应用力
+        rb.AddForce(throwDirection * throwForce, ForceMode.VelocityChange);
+
+        // 添加轻微旋转
+        Vector3 randomTorque = new Vector3(
+            Random.Range(-2f, 2f),
+            Random.Range(-2f, 2f),
+            Random.Range(-2f, 2f)
+        );
+        rb.AddTorque(randomTorque, ForceMode.VelocityChange);
+
+        // 让镖朝向飞行方向
+        thrownDart.transform.rotation = Quaternion.LookRotation(throwDirection);
+
+        Debug.Log($"DartGun: 麻醉镖以力度 {throwDirection * throwForce} 发射");
+    }
+
+    /// <summary>
+    /// 管理活跃的麻醉镖数量
+    /// </summary>
+    private void ManageActiveDarts(GameObject newDart)
+    {
+        // 清理无效引用
+        activeDarts.RemoveAll(dart => dart == null);
+
+        // 添加新的镖
+        activeDarts.Add(newDart);
+
+        // 如果超过最大数量，销毁最老的
+        while (activeDarts.Count > maxActiveDarts)
+        {
+            if (activeDarts[0] != null)
+            {
+                Destroy(activeDarts[0]);
+                Debug.Log("DartGun: 销毁了最老的麻醉镖以保持数量限制");
+            }
+            activeDarts.RemoveAt(0);
+        }
+
+        Debug.Log($"DartGun: 当前活跃麻醉镖数量: {activeDarts.Count}/{maxActiveDarts}");
+    }
+
+    /// <summary>
+    /// 播放射击音效
+    /// </summary>
+    private void PlayFireSound()
+    {
+        if (fireSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(fireSound, soundVolume);
         }
     }
 
-    public override void OnUnready()
+    /// <summary>
+    /// 从活跃列表中移除麻醉镖（当镖被销毁时调用）
+    /// </summary>
+    public static void RemoveDartFromActiveList(GameObject dart)
     {
-        OnDeselect();
+        activeDarts.Remove(dart);
     }
 
-    // Public accessors for external systems
-    public bool IsReady()
+    /// <summary>
+    /// 获取当前活跃镖的数量
+    /// </summary>
+    public static int GetActiveDartCount()
     {
-        return !_isReloading && Time.time >= _nextFireTime && (!useAmmoSystem || _currentAmmo > 0);
-    }
-
-    public int GetCurrentAmmo()
-    {
-        return useAmmoSystem ? _currentAmmo : -1; // -1 means unlimited
-    }
-
-    public int GetMaxAmmo()
-    {
-        return useAmmoSystem ? magazineSize : -1;
+        activeDarts.RemoveAll(dart => dart == null);
+        return activeDarts.Count;
     }
 }

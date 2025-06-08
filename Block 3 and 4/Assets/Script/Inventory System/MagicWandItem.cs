@@ -1,68 +1,174 @@
-// Assets/Scripts/Items/MagicWandItem.cs
+ï»¿// Assets/Scripts/Items/MagicWandItem.cs
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Items/MagicWandItem")]
 public class MagicWandItem : BaseItem
 {
-    [Header("Ä§·¨ÉèÖÃ")]
-    [Tooltip("×÷ÓÃ°ë¾¶ (m)")]
-    public float radius = 30f;
-    [Tooltip("Ä§·¨ÀäÈ´Ê±¼ä (s)")]
-    public float cooldown = 30f;
-    [Tooltip("ÎüÒı³ÖĞøÊ±¼ä (s)")]
-    public float attractDuration = 10f;
+    [Header("Magic Wand Settings")]
+    [Tooltip("å¸å¼•åŠå¾„")]
+    public float radius = 15f;
 
-    // ÄÚ²¿ ÔËĞĞÊ±×´Ì¬ ±äÁ¿ 
-    float nextReadyTime = 0f;
-    Transform playerRoot;
+    [Tooltip("å†·å´æ—¶é—´")]
+    public float cooldown = 3f;
 
-    /// <summary>
-    /// ¿ª·¢Ä£Ê½ÏÂĞŞ¸ÄÀäÈ´Ê±¼ä
-    /// </summary>
-    public void SetCooldown(float cd)
-    {
-        cooldown = Mathf.Max(0f, cd);
-    }
+    [Tooltip("å¸å¼•æŒç»­æ—¶é—´")]
+    public float attractDuration = 8f;
+
+    [Header("Audio")]
+    [Tooltip("é­”æ³•æ£’ä½¿ç”¨éŸ³æ•ˆ")]
+    public AudioClip useSound;
+    [Range(0f, 1f)] public float soundVolume = 0.8f;
+
+    // è¿è¡Œæ—¶çŠ¶æ€
+    private Camera playerCamera;
+    private AudioSource audioSource;
+    private float nextUseTime = 0f;
 
     public override void OnSelect(GameObject model)
     {
-        // Ö±½ÓÒÔÏà»úÎªÎüÒıÄ¿±ê
-        if (Camera.main != null)
-            playerRoot = Camera.main.transform;
-        else
-            Debug.LogError("MagicWandItem: ÕÒ²»µ½Ïà»ú");
+        playerCamera = Camera.main;
+
+        // è®¾ç½®éŸ³é¢‘æº
+        if (playerCamera != null)
+        {
+            audioSource = playerCamera.GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = playerCamera.gameObject.AddComponent<AudioSource>();
+                audioSource.spatialBlend = 0f;
+            }
+        }
+
+        Debug.Log("é­”æ³•æ£’å·²é€‰ä¸­");
+    }
+
+    public override void OnReady()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateCameraDebugText("å·¦é”®ä½¿ç”¨é­”æ³•æ£’å¸å¼•åŠ¨ç‰©");
+        }
     }
 
     public override void OnUse()
     {
-        // ÀäÈ´ÅĞ¶Ï
-        if (Time.time < nextReadyTime)
+        UseMagicWand();
+    }
+
+    public override void HandleUpdate()
+    {
+        // æ›´æ–°å†·å´çŠ¶æ€
+        if (Time.time < nextUseTime)
         {
-            float remainTime = nextReadyTime - Time.time;
-            UIManager.Instance.UpdateCameraDebugText($"Ä§·¨°ôÀäÈ´ÖĞ: Ê£Óà {remainTime:F1}Ãë");
+            float cooldownRemaining = nextUseTime - Time.time;
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText($"é­”æ³•æ£’å†·å´ä¸­: {cooldownRemaining:F1}s");
+            }
+        }
+        else
+        {
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText($"é­”æ³•æ£’å°±ç»ª - å·¦é”®å¸å¼•åŠ¨ç‰© (èŒƒå›´: {radius}m)");
+            }
+        }
+    }
+
+    /// <summary>
+    /// ä½¿ç”¨é­”æ³•æ£’
+    /// </summary>
+    private void UseMagicWand()
+    {
+        if (playerCamera == null)
+        {
+            Debug.LogError("MagicWand: æ‰¾ä¸åˆ°ç©å®¶ç›¸æœº");
             return;
         }
-        if (playerRoot == null) return;
 
-        // ÒÔÍæ¼ÒÎ»ÖÃ·¢³öÎüÒıĞ§¹û
-        Collider[] hits = Physics.OverlapSphere(playerRoot.position, radius);
-        int count = 0;
-        foreach (var col in hits)
+        // æ£€æŸ¥å†·å´
+        if (Time.time < nextUseTime)
         {
-            var animal = col.GetComponent<AnimalBehavior>();
-            if (animal != null)
+            float cooldownRemaining = nextUseTime - Time.time;
+            if (UIManager.Instance != null)
             {
-                animal.Attract(playerRoot, attractDuration);
-                count++;
+                UIManager.Instance.UpdateCameraDebugText($"å†·å´ä¸­: {cooldownRemaining:F1}s");
+            }
+            return;
+        }
+
+        Vector3 playerPosition = playerCamera.transform.position;
+
+        // æ‰¾åˆ°èŒƒå›´å†…çš„æ‰€æœ‰åŠ¨ç‰©
+        AnimalBehavior[] allAnimals = Object.FindObjectsOfType<AnimalBehavior>();
+        int attractedCount = 0;
+
+        foreach (AnimalBehavior animal in allAnimals)
+        {
+            if (animal == null) continue;
+
+            float distance = Vector3.Distance(playerPosition, animal.transform.position);
+            if (distance <= radius)
+            {
+                // å¸å¼•åŠ¨ç‰©åˆ°ç©å®¶ä½ç½®
+                animal.Attract(playerCamera.transform, attractDuration);
+                attractedCount++;
+
+                Debug.Log($"é­”æ³•æ£’å¸å¼•äº†åŠ¨ç‰©: {animal.name} (è·ç¦»: {distance:F1}m)");
             }
         }
 
-        UIManager.Instance.UpdateCameraDebugText($"ÎüÒıÁË {count} Ö»¶¯Îï£¬³ÖĞø {attractDuration}Ãë");
+        // è®¾ç½®å†·å´
+        nextUseTime = Time.time + cooldown;
 
-        // ¼ÇÂ¼ÏÂ´Î¿ÉÓÃÊ±¼ä
-        nextReadyTime = Time.time + cooldown;
+        // æ’­æ”¾éŸ³æ•ˆ
+        PlayUseSound();
 
-        // Ê¹ÓÃUIManagerÏÔÊ¾ÀäÈ´
-        UIManager.Instance.StartItemCooldown(this, cooldown);
+        // æ˜¾ç¤ºç»“æœ
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateCameraDebugText($"å¸å¼•äº† {attractedCount} åªåŠ¨ç‰©! å†·å´ {cooldown}s");
+        }
+
+        Debug.Log($"é­”æ³•æ£’ä½¿ç”¨: å¸å¼•äº† {attractedCount} åªåŠ¨ç‰©ï¼ŒåŠå¾„ {radius}m");
+    }
+
+    /// <summary>
+    /// æ’­æ”¾ä½¿ç”¨éŸ³æ•ˆ
+    /// </summary>
+    private void PlayUseSound()
+    {
+        if (useSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(useSound, soundVolume);
+        }
+    }
+
+    // è°ƒè¯•å¯è§†åŒ–
+    void OnDrawGizmosSelected()
+    {
+        if (!Application.isPlaying) return;
+
+        if (playerCamera != null)
+        {
+            // æ˜¾ç¤ºå¸å¼•èŒƒå›´
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawWireSphere(playerCamera.transform.position, radius);
+
+            // æ˜¾ç¤ºèŒƒå›´å†…çš„åŠ¨ç‰©
+            AnimalBehavior[] allAnimals = Object.FindObjectsOfType<AnimalBehavior>();
+            foreach (AnimalBehavior animal in allAnimals)
+            {
+                if (animal == null) continue;
+
+                float distance = Vector3.Distance(playerCamera.transform.position, animal.transform.position);
+                if (distance <= radius)
+                {
+                    Gizmos.color = Color.cyan;
+                    Gizmos.DrawLine(playerCamera.transform.position, animal.transform.position);
+                    Gizmos.DrawWireSphere(animal.transform.position, 1f);
+                }
+            }
+        }
     }
 }
