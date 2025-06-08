@@ -25,26 +25,30 @@ public class GrappleItem : BaseItem
     public float hookMass = 2f;
     [Tooltip("重力强度")]
     public float gravity = 15f;
-    [Tooltip("绳索最大长度")]
-    public float maxRopeLength = 40f;
-    [Tooltip("绳索弹性")]
-    public float ropeElasticity = 0.2f;
 
-    [Header("摆动设置")]
-    [Tooltip("摆动力度")]
-    public float swingForce = 15f;
-    [Tooltip("攀爬速度")]
-    public float climbSpeed = 8f;
-    [Tooltip("动量保持率")]
-    public float momentumRetention = 0.8f;
+    [Header("拉拽设置")]
+    [Tooltip("拉拽加速度")]
+    public float pullAcceleration = 20f;
+    [Tooltip("到达目标的距离阈值")]
+    public float arrivalDistance = 3f;
+    [Tooltip("是否到达后自动释放")]
+    public bool autoReleaseOnArrival = true;
+    [Tooltip("拉拽时保持的重力")]
+    public float pullGravity = 5f;
+
+    [Header("控制设置")]
+    [Tooltip("是否允许控制拉拽方向")]
+    public bool allowDirectionalControl = true;
+    [Tooltip("方向控制力度")]
+    public float directionalForce = 8f;
 
     [Header("音效")]
     [Tooltip("钩爪发射音效")]
     public AudioClip grappleFireSound;
     [Tooltip("钩爪命中音效")]
     public AudioClip grappleHitSound;
-    [Tooltip("绳索拉紧音效")]
-    public AudioClip ropeTightSound;
+    [Tooltip("拉拽开始音效")]
+    public AudioClip pullStartSound;
     [Tooltip("钩爪脱落音效")]
     public AudioClip detachSound;
     [Tooltip("音效音量")]
@@ -53,10 +57,10 @@ public class GrappleItem : BaseItem
     [Header("视觉效果")]
     [Tooltip("钩爪命中特效")]
     public GameObject hookImpactEffect;
-    [Tooltip("火花特效")]
-    public GameObject sparkEffect;
-    [Tooltip("绳索拉紧特效")]
-    public GameObject ropeTensionEffect;
+    [Tooltip("拉拽特效")]
+    public GameObject pullEffect;
+    [Tooltip("到达特效")]
+    public GameObject arrivalEffect;
 
     [Header("瞄准辅助")]
     [Tooltip("显示瞄准轨迹")]
@@ -117,7 +121,7 @@ public class GrappleItem : BaseItem
         // 初始化控制器
         _grappler.Initialize();
 
-        UIManager.Instance?.UpdateCameraDebugText("真实钩爪就绪 - 左键发射，Q键/右键释放");
+        UIManager.Instance?.UpdateCameraDebugText("钩爪就绪 - 左键发射，Q键/右键释放");
     }
 
     private void SetupTrajectoryRenderer()
@@ -149,25 +153,31 @@ public class GrappleItem : BaseItem
         _grappler.ropeColor = ropeColor;
 
         // 设置物理参数
-        var controller = _grappler;
-        controller.hookMass = hookMass;
-        controller.gravity = gravity;
-        controller.maxRopeLength = maxRopeLength;
-        controller.ropeElasticity = ropeElasticity;
-        controller.swingForce = swingForce;
-        controller.climbSpeed = climbSpeed;
-        controller.momentumRetention = momentumRetention;
+        _grappler.hookMass = hookMass;
+        _grappler.gravity = gravity;
+        _grappler.maxRopeLength = maxDistance;
+
+        // 设置拉拽参数
+        _grappler.pullSpeed = pullSpeed;
+        _grappler.pullAcceleration = pullAcceleration;
+        _grappler.arrivalDistance = arrivalDistance;
+        _grappler.autoReleaseOnArrival = autoReleaseOnArrival;
+        _grappler.pullGravity = pullGravity;
+
+        // 设置控制参数
+        _grappler.allowDirectionalControl = allowDirectionalControl;
+        _grappler.directionalForce = directionalForce;
 
         // 设置特效
-        controller.hookImpactEffect = hookImpactEffect;
-        controller.sparkEffect = sparkEffect;
-        controller.ropeTensionEffect = ropeTensionEffect;
+        _grappler.hookImpactEffect = hookImpactEffect;
+        _grappler.pullEffect = pullEffect;
+        _grappler.arrivalEffect = arrivalEffect;
 
         // 设置音效
-        controller.hookFireSound = grappleFireSound;
-        controller.hookHitSound = grappleHitSound;
-        controller.ropeTightSound = ropeTightSound;
-        controller.hookDetachSound = detachSound;
+        _grappler.hookFireSound = grappleFireSound;
+        _grappler.hookHitSound = grappleHitSound;
+        _grappler.pullStartSound = pullStartSound;
+        _grappler.hookDetachSound = detachSound;
     }
 
     public override void OnUse()
@@ -306,10 +316,11 @@ public class GrappleItem : BaseItem
 
         if (_grappler.IsGrappling())
         {
-            if (_grappler.IsSwinging())
+            if (_grappler.IsPulling())
             {
                 float ropeLength = _grappler.GetRopeLength();
-                status = $"摆动中 - 绳长: {ropeLength:F1}m (WASD控制, Q/右键释放)";
+                float pullSpeed = _grappler.GetPullSpeed();
+                status = $"拉拽中 - 距离: {ropeLength:F1}m, 速度: {pullSpeed:F1}m/s (WASD控制, Q/右键释放)";
             }
             else
             {
@@ -388,9 +399,9 @@ public class GrappleItem : BaseItem
         return _grappler != null && _grappler.IsGrappling();
     }
 
-    public bool IsCurrentlySwinging()
+    public bool IsCurrentlyPulling()
     {
-        return _grappler != null && _grappler.IsSwinging();
+        return _grappler != null && _grappler.IsPulling();
     }
 
     public float GetCurrentRopeLength()
