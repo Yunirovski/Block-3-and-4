@@ -17,20 +17,9 @@ MonoBehaviour:
   holdPosition: {x: 0.06, y: -0.04, z: 0.28}
   holdRotation: {x: 0, y: 90, z: 0}
   modelScale: {x: 1, y: 1, z: 1}
-  dartPrefab: {fileID: 8150190952280149502, guid: eef44e566ddd1c345bc655882bb84388, type: 3}
-  dartSpeed: 30
-  maxRange: 50
-  fireCooldown: 1.5
-  accuracy: 0.5
-  movementPenalty: 1
+  dartPrefab: {fileID: 4989332806673302364, guid: eef44e566ddd1c345bc655882bb84388, type: 3}
+  spawnDistance: 2
+  throwForce: 25
   stunDuration: 10
-  impactEffect: {fileID: 0}
-  muzzleFlashEffect: {fileID: 0}
   fireSound: {fileID: 0}
-  hitSound: {fileID: 0}
-  emptySound: {fileID: 0}
-  reloadSound: {fileID: 0}
   soundVolume: 0.8
-  useAmmoSystem: 1
-  magazineSize: 6
-  reloadTime: 2
