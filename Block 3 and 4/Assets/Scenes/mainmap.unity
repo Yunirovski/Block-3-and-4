@@ -20489,15 +20489,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 677042880648244330, guid: ebb4fba6f9b556f45bc556e36bd66b58, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1152.48
+      value: 1152.462
       objectReference: {fileID: 0}
     - target: {fileID: 677042880648244330, guid: ebb4fba6f9b556f45bc556e36bd66b58, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 52.92
+      value: 52.698
       objectReference: {fileID: 0}
     - target: {fileID: 677042880648244330, guid: ebb4fba6f9b556f45bc556e36bd66b58, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 205.92
+      value: 205.902
       objectReference: {fileID: 0}
     - target: {fileID: 677042880648244330, guid: ebb4fba6f9b556f45bc556e36bd66b58, type: 3}
       propertyPath: m_LocalRotation.w
@@ -20530,8 +20530,38 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 157210668788790992, guid: ebb4fba6f9b556f45bc556e36bd66b58, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7422614130314517085}
   m_SourcePrefab: {fileID: 100100000, guid: ebb4fba6f9b556f45bc556e36bd66b58, type: 3}
+--- !u!1 &7422614130314517084 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 157210668788790992, guid: ebb4fba6f9b556f45bc556e36bd66b58, type: 3}
+  m_PrefabInstance: {fileID: 7422614130314517083}
+  m_PrefabAsset: {fileID: 0}
+--- !u!64 &7422614130314517085
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7422614130314517084}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -5495902117074765545, guid: ea67cd585abc790489d5e434674c77e4, type: 3}
 --- !u!1001 &8617573364843850420
 PrefabInstance:
   m_ObjectHideFlags: 0
