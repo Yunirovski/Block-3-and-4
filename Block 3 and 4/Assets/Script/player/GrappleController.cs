@@ -5,14 +5,23 @@ using UnityEngine;
 /// <summary>
 /// 钩爪控制器 - 拉拽版本
 /// 玩家抓住物体后会被拉向目标
+/// 支持自定义发射点
 /// </summary>
 public class GrappleController : MonoBehaviour
 {
     [Header("钩爪设置")]
     [HideInInspector] public GameObject hookPrefab;
-    [HideInInspector] public float hookSpeed = 80f; // 增加飞行速度
+    [HideInInspector] public float hookSpeed = 80f;
     [HideInInspector] public Material ropeMaterial;
     [HideInInspector] public Color ropeColor = new Color(0.545f, 0.271f, 0.075f);
+
+    [Header("发射点设置")]
+    [Tooltip("自定义发射点Transform，如果为空则使用摄像机位置")]
+    public Transform customFirePoint;
+    [Tooltip("发射点偏移（相对于发射点Transform）")]
+    public Vector3 firePointOffset = Vector3.zero;
+    [Tooltip("是否使用玩家朝向而非摄像机朝向")]
+    public bool usePlayerOrientation = false;
 
     [Header("钩爪物理")]
     [Tooltip("钩爪质量")]
@@ -24,9 +33,9 @@ public class GrappleController : MonoBehaviour
 
     [Header("拉拽设置")]
     [Tooltip("拉拽速度")]
-    public float pullSpeed = 20f; // 增加拉拽速度
+    public float pullSpeed = 20f;
     [Tooltip("拉拽加速度")]
-    public float pullAcceleration = 25f; // 增加拉拽加速度
+    public float pullAcceleration = 25f;
     [Tooltip("到达目标的距离阈值")]
     public float arrivalDistance = 3f;
     [Tooltip("是否到达后自动释放")]
@@ -34,7 +43,7 @@ public class GrappleController : MonoBehaviour
     [Tooltip("拉拽时保持的重力")]
     public float pullGravity = 5f;
     [Tooltip("向上拉拽时的额外力度")]
-    public float upwardPullBoost = 1.5f; // 新增：向上拉拽增强
+    public float upwardPullBoost = 1.5f;
 
     [Header("控制设置")]
     [Tooltip("是否允许控制拉拽方向")]
@@ -79,6 +88,7 @@ public class GrappleController : MonoBehaviour
     private Vector3 pullVelocity;
     private float currentPullSpeed;
     private float currentRopeLength;
+    private Vector3 currentFirePoint; // 当前发射点
 
     // 计时器和安全限制
     private float grappleTimer;
@@ -129,6 +139,88 @@ public class GrappleController : MonoBehaviour
         lineRenderer.useWorldSpace = true;
     }
 
+    /// <summary>
+    /// 获取当前的发射点位置
+    /// </summary>
+    /// <returns>发射点的世界坐标</returns>
+    public Vector3 GetFirePoint()
+    {
+        Vector3 basePoint;
+
+        if (customFirePoint != null)
+        {
+            // 使用自定义发射点
+            basePoint = customFirePoint.position;
+        }
+        else
+        {
+            // 默认使用摄像机位置
+            basePoint = Camera.main != null ? Camera.main.transform.position : transform.position + Vector3.up * 1.8f;
+        }
+
+        // 应用偏移
+        if (customFirePoint != null)
+        {
+            // 相对于自定义发射点的局部偏移
+            basePoint += customFirePoint.TransformDirection(firePointOffset);
+        }
+        else
+        {
+            // 相对于摄像机的偏移
+            Camera cam = Camera.main;
+            if (cam != null)
+            {
+                basePoint += cam.transform.TransformDirection(firePointOffset);
+            }
+            else
+            {
+                basePoint += firePointOffset;
+            }
+        }
+
+        return basePoint;
+    }
+
+    /// <summary>
+    /// 获取发射方向（用于瞄准）
+    /// </summary>
+    /// <returns>发射方向的向量</returns>
+    public Vector3 GetFireDirection()
+    {
+        if (usePlayerOrientation)
+        {
+            // 使用玩家朝向
+            return transform.forward;
+        }
+        else
+        {
+            // 使用摄像机朝向
+            return Camera.main != null ? Camera.main.transform.forward : transform.forward;
+        }
+    }
+
+    /// <summary>
+    /// 设置自定义发射点
+    /// </summary>
+    /// <param name="firePoint">发射点Transform</param>
+    /// <param name="offset">相对偏移</param>
+    public void SetFirePoint(Transform firePoint, Vector3 offset = default)
+    {
+        customFirePoint = firePoint;
+        firePointOffset = offset;
+        Debug.Log($"设置发射点: {(firePoint != null ? firePoint.name : "摄像机")}, 偏移: {offset}");
+    }
+
+    /// <summary>
+    /// 清除自定义发射点，恢复使用摄像机位置
+    /// </summary>
+    public void ClearCustomFirePoint()
+    {
+        customFirePoint = null;
+        firePointOffset = Vector3.zero;
+        Debug.Log("清除自定义发射点，恢复使用摄像机位置");
+    }
+
     void Update()
     {
         if (isGrappling || isHookFlying)
@@ -177,8 +269,9 @@ public class GrappleController : MonoBehaviour
             pullSpeed = pullSpeedOverride;
         }
 
-        // 计算发射起点
-        Vector3 firePoint = Camera.main.transform.position;
+        // 获取发射起点
+        Vector3 firePoint = GetFirePoint();
+        currentFirePoint = firePoint; // 记录当前发射点
 
         // 创建钩爪实例
         if (hookPrefab != null)
@@ -204,7 +297,37 @@ public class GrappleController : MonoBehaviour
         // 播放发射音效
         PlaySound(hookFireSound);
 
-        Debug.Log($"钩爪发射：方向 {direction}, 速度 {hookVelocity.magnitude}");
+        Debug.Log($"钩爪从 {firePoint} 发射：方向 {direction}, 速度 {hookVelocity.magnitude}");
+    }
+
+    /// <summary>
+    /// 重载方法：使用指定的发射点和目标点发射钩爪
+    /// </summary>
+    /// <param name="fromPoint">发射起点</param>
+    /// <param name="targetPoint">目标点</param>
+    /// <param name="pullSpeedOverride">拉拽速度覆盖</param>
+    public void StartGrappleFromPoint(Vector3 fromPoint, Vector3 targetPoint, float pullSpeedOverride = 0f)
+    {
+        // 临时设置发射点
+        Vector3 originalOffset = firePointOffset;
+        Transform originalFirePoint = customFirePoint;
+
+        // 创建临时发射点
+        GameObject tempFirePoint = new GameObject("TempFirePoint");
+        tempFirePoint.transform.position = fromPoint;
+
+        customFirePoint = tempFirePoint.transform;
+        firePointOffset = Vector3.zero;
+
+        // 发射钩爪
+        StartGrapple(targetPoint, pullSpeedOverride);
+
+        // 恢复原设置
+        customFirePoint = originalFirePoint;
+        firePointOffset = originalOffset;
+
+        // 清理临时对象
+        Destroy(tempFirePoint);
     }
 
     private void UpdateHookFlight()
@@ -223,16 +346,16 @@ public class GrappleController : MonoBehaviour
             return; // 钩爪已附着或已停止
         }
 
-        // 检查是否超出最大距离
-        float distanceFromPlayer = Vector3.Distance(transform.position, hookPosition);
-        if (distanceFromPlayer > maxRopeLength)
+        // 检查是否超出最大距离（从当前发射点计算）
+        float distanceFromFirePoint = Vector3.Distance(currentFirePoint, hookPosition);
+        if (distanceFromFirePoint > maxRopeLength)
         {
             Debug.Log("钩爪飞行距离超出限制");
             StopGrapple();
             return;
         }
 
-        // 检查钩爪是否在空中飞行太久（允许更长时间）
+        // 检查钩爪是否在空中飞行太久
         if (grappleTimer > 8f && !isHookAttached)
         {
             Debug.Log("钩爪飞行时间过长，自动停止");
@@ -265,7 +388,7 @@ public class GrappleController : MonoBehaviour
             {
                 // 钩爪弹开 - 不能附着的表面，但继续飞行
                 Vector3 reflection = Vector3.Reflect(hookVelocity.normalized, hit.normal);
-                hookVelocity = reflection * hookVelocity.magnitude * 0.7f; // 减少反弹损失
+                hookVelocity = reflection * hookVelocity.magnitude * 0.7f;
                 hookPosition = hit.point + hit.normal * 0.5f;
 
                 Debug.Log($"钩爪从 {hit.collider.name} 弹开 - 继续飞行");
@@ -302,14 +425,14 @@ public class GrappleController : MonoBehaviour
             return true;
         }
 
-        // 检查静态物体（地形、建筑等）
+        // 检查静态物体
         if (collider.gameObject.isStatic)
         {
             Debug.Log($"钩爪可以附着到静态物体: {collider.name}");
             return true;
         }
 
-        // 检查大质量刚体（重物体）
+        // 检查大质量刚体
         Rigidbody rb = collider.GetComponent<Rigidbody>();
         if (rb != null && !rb.isKinematic && rb.mass > 100f)
         {
@@ -317,7 +440,6 @@ public class GrappleController : MonoBehaviour
             return true;
         }
 
-        // 其他情况都不能附着
         Debug.Log($"钩爪无法附着到: {collider.name} (非有效目标)");
         return false;
     }
@@ -339,7 +461,7 @@ public class GrappleController : MonoBehaviour
         isHookFlying = false;
         isHookAttached = true;
         isPulling = true;
-        currentPullSpeed = 0f; // 从0开始加速
+        currentPullSpeed = 0f;
         pullVelocity = Vector3.zero;
 
         Debug.Log($"钩爪成功附着到 {surface.name}，距离: {currentRopeLength:F1}m，开始拉拽");
@@ -393,11 +515,10 @@ public class GrappleController : MonoBehaviour
         pullVelocity = pullDirection * currentPullSpeed;
 
         // 向上拉拽时增加额外力度
-        if (pullDirection.y > 0.3f) // 如果拉拽方向主要向上
+        if (pullDirection.y > 0.3f)
         {
             float upwardComponent = pullDirection.y;
             pullVelocity += Vector3.up * (upwardComponent * upwardPullBoost * currentPullSpeed);
-            Debug.Log($"向上拉拽增强: {upwardComponent:F2} x {upwardPullBoost}");
         }
 
         // 应用方向控制
@@ -406,7 +527,7 @@ public class GrappleController : MonoBehaviour
             ApplyDirectionalControl(ref pullVelocity);
         }
 
-        // 应用重力（减弱版本）
+        // 应用重力
         pullVelocity.y -= pullGravity * Time.deltaTime;
 
         // 移动玩家
@@ -414,14 +535,6 @@ public class GrappleController : MonoBehaviour
 
         // 更新绳索长度
         currentRopeLength = Vector3.Distance(transform.position, attachPoint);
-
-        // 显示拉拽状态
-        if (UIManager.Instance != null)
-        {
-            string heightInfo = attachPoint.y > transform.position.y + 5f ? " [向上拉拽]" : "";
-            UIManager.Instance.UpdateCameraDebugText(
-                $"拉拽中 - 距离: {distanceToTarget:F1}m, 速度: {currentPullSpeed:F1}m/s{heightInfo} (Q/右键释放)");
-        }
     }
 
     private void ApplyDirectionalControl(ref Vector3 velocity)
@@ -431,7 +544,6 @@ public class GrappleController : MonoBehaviour
 
         if (Mathf.Abs(horizontal) > 0.1f || Mathf.Abs(vertical) > 0.1f)
         {
-            // 获取相对于相机的方向
             Vector3 cameraForward = Camera.main.transform.forward;
             Vector3 cameraRight = Camera.main.transform.right;
             cameraForward.y = 0;
@@ -439,23 +551,18 @@ public class GrappleController : MonoBehaviour
             cameraForward.Normalize();
             cameraRight.Normalize();
 
-            // 计算输入方向
             Vector3 inputDirection = (cameraForward * vertical + cameraRight * horizontal).normalized;
-
-            // 添加到拉拽速度
             velocity += inputDirection * directionalForce;
         }
     }
 
     private void HandlePlayerInput()
     {
-        // 释放钩爪 (Q键或右键)
         if (Input.GetKeyDown(KeyCode.Q) || Input.GetMouseButtonDown(1))
         {
             ReleaseGrapple();
         }
 
-        // 手动重新开始拉拽（如果停止了拉拽但仍然连接）
         if (isHookAttached && !isPulling && Input.GetKeyDown(KeyCode.Space))
         {
             isPulling = true;
@@ -469,10 +576,20 @@ public class GrappleController : MonoBehaviour
     {
         if (lineRenderer == null) return;
 
-        Vector3 playerPos = transform.position + Vector3.up * 1.5f;
+        // 绳索起点使用当前发射点位置（如果还在飞行）或玩家位置（如果已附着）
+        Vector3 ropeStart;
+        if (isHookFlying)
+        {
+            ropeStart = currentFirePoint;
+        }
+        else
+        {
+            ropeStart = transform.position + Vector3.up * 1.5f;
+        }
+
         Vector3 hookPos = isHookAttached ? attachPoint : hookPosition;
 
-        lineRenderer.SetPosition(0, playerPos);
+        lineRenderer.SetPosition(0, ropeStart);
         lineRenderer.SetPosition(1, hookPos);
 
         // 根据拉拽状态调整绳索颜色
@@ -493,17 +610,6 @@ public class GrappleController : MonoBehaviour
         if (!isHookAttached) return;
 
         Debug.Log("主动释放钩爪");
-
-        // 保持一些前进动量
-        if (isPulling && pullVelocity.magnitude > 0)
-        {
-            Vector3 forwardDirection = transform.forward;
-            float forwardMomentum = Vector3.Dot(pullVelocity, forwardDirection);
-
-            // 这里可以将动量应用到玩家移动系统
-            // 由于CharacterController的限制，我们通过其他方式处理
-        }
-
         StopGrapple();
         PlaySound(hookDetachSound);
     }
@@ -556,7 +662,7 @@ public class GrappleController : MonoBehaviour
 
     // 公共接口
     public bool IsGrappling() => isGrappling;
-    public bool IsSwinging() => isHookAttached; // 兼容旧接口名
+    public bool IsSwinging() => isHookAttached;
     public bool IsPulling() => isPulling;
     public float GetRopeLength() => currentRopeLength;
     public Vector3 GetAttachPoint() => attachPoint;
@@ -565,6 +671,16 @@ public class GrappleController : MonoBehaviour
     // 可视化调试
     private void OnDrawGizmos()
     {
+        // 绘制当前发射点
+        Vector3 firePoint = GetFirePoint();
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(firePoint, 0.2f);
+
+        // 绘制发射方向
+        Vector3 fireDirection = GetFireDirection();
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawRay(firePoint, fireDirection * 3f);
+
         if (isHookAttached)
         {
             // 绘制附着点
@@ -578,14 +694,6 @@ public class GrappleController : MonoBehaviour
             // 绘制到达距离
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(attachPoint, arrivalDistance);
-
-            // 显示拉拽方向
-            if (isPulling)
-            {
-                Vector3 pullDir = (attachPoint - transform.position).normalized;
-                Gizmos.color = Color.cyan;
-                Gizmos.DrawRay(transform.position, pullDir * 5f);
-            }
         }
 
         if (isHookFlying)
@@ -611,20 +719,20 @@ public class GrappleController : MonoBehaviour
     private void OnDrawGizmosSelected()
     {
         // 绘制最大射程
+        Vector3 firePoint = GetFirePoint();
         Gizmos.color = Color.white;
-        Gizmos.DrawWireSphere(transform.position, maxRopeLength);
+        Gizmos.DrawWireSphere(firePoint, maxRopeLength);
 
-        // 绘制拉拽设置信息
-        if (isHookAttached)
+        // 绘制发射点偏移信息
+        if (customFirePoint != null)
         {
-            Vector3 labelPos = attachPoint + Vector3.up * 2f;
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(customFirePoint.position, 0.3f);
 
-#if UNITY_EDITOR
-            UnityEditor.Handles.Label(labelPos, 
-                $"距离: {currentRopeLength:F1}m\n" +
-                $"拉拽速度: {currentPullSpeed:F1}m/s\n" +
-                $"状态: {(isPulling ? "拉拽中" : "已停止")}");
-#endif
+            if (firePointOffset != Vector3.zero)
+            {
+                Gizmos.DrawLine(customFirePoint.position, firePoint);
+            }
         }
     }
 }

@@ -1253,6 +1253,37 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 549699204}
   m_SourcePrefab: {fileID: 100100000, guid: 1af7982c0d4ce40478ed39b25631ee29, type: 3}
+--- !u!1 &174267963
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 174267964}
+  m_Layer: 0
+  m_Name: FootAnchor (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &174267964
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 174267963}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.45, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 931300884}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &178156701
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8799,6 +8830,7 @@ Transform:
   m_Children:
   - {fileID: 645104806}
   - {fileID: 1820164817}
+  - {fileID: 174267964}
   m_Father: {fileID: 80456380}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &931300885
@@ -8817,6 +8849,9 @@ MonoBehaviour:
   hookSpeed: 70
   ropeMaterial: {fileID: 0}
   ropeColor: {r: 0.545, g: 0.271, b: 0.075, a: 1}
+  customFirePoint: {fileID: 174267964}
+  firePointOffset: {x: 0, y: 0, z: 0}
+  usePlayerOrientation: 0
   hookMass: 2
   gravity: 9.81
   maxRopeLength: 40

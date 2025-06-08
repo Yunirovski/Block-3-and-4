@@ -12,6 +12,14 @@ public class GrappleItem : BaseItem
     [Tooltip("钩爪发射速度")]
     public float hookSpeed = 50f;
 
+    [Header("发射点设置")]
+    [Tooltip("自定义发射点Transform（可选）")]
+    public Transform customFirePoint;
+    [Tooltip("发射点偏移（相对于发射点Transform）")]
+    public Vector3 firePointOffset = Vector3.zero;
+    [Tooltip("是否使用玩家朝向而非摄像机朝向")]
+    public bool usePlayerOrientation = false;
+
     [Header("钩爪可视化")]
     [Tooltip("钩爪模型 Prefab")]
     public GameObject hookPrefab;
@@ -152,6 +160,11 @@ public class GrappleItem : BaseItem
         _grappler.ropeMaterial = ropeMaterial;
         _grappler.ropeColor = ropeColor;
 
+        // 设置发射点配置
+        _grappler.customFirePoint = customFirePoint;
+        _grappler.firePointOffset = firePointOffset;
+        _grappler.usePlayerOrientation = usePlayerOrientation;
+
         // 设置物理参数
         _grappler.hookMass = hookMass;
         _grappler.gravity = gravity;
@@ -178,6 +191,41 @@ public class GrappleItem : BaseItem
         _grappler.hookHitSound = grappleHitSound;
         _grappler.pullStartSound = pullStartSound;
         _grappler.hookDetachSound = detachSound;
+    }
+
+    /// <summary>
+    /// 设置自定义发射点
+    /// </summary>
+    /// <param name="firePoint">发射点Transform</param>
+    /// <param name="offset">相对偏移</param>
+    public void SetFirePoint(Transform firePoint, Vector3 offset = default)
+    {
+        customFirePoint = firePoint;
+        firePointOffset = offset;
+
+        // 如果钩爪控制器已初始化，同步设置
+        if (_grappler != null)
+        {
+            _grappler.SetFirePoint(firePoint, offset);
+        }
+
+        Debug.Log($"GrappleItem: 设置发射点: {(firePoint != null ? firePoint.name : "摄像机")}, 偏移: {offset}");
+    }
+
+    /// <summary>
+    /// 清除自定义发射点
+    /// </summary>
+    public void ClearCustomFirePoint()
+    {
+        customFirePoint = null;
+        firePointOffset = Vector3.zero;
+
+        if (_grappler != null)
+        {
+            _grappler.ClearCustomFirePoint();
+        }
+
+        Debug.Log("GrappleItem: 清除自定义发射点");
     }
 
     public override void OnUse()
@@ -251,7 +299,8 @@ public class GrappleItem : BaseItem
 
     private void UpdateTrajectoryVisual()
     {
-        Vector3 firePoint = _cam.transform.position;
+        // 使用钩爪控制器的发射点
+        Vector3 firePoint = _grappler.GetFirePoint();
         Vector3 targetPoint = CalculateTargetPoint();
 
         // 计算初始速度
@@ -292,8 +341,18 @@ public class GrappleItem : BaseItem
 
     private Vector3 CalculateTargetPoint()
     {
-        // 从屏幕中心发射射线
-        Ray ray = _cam.ScreenPointToRay(new Vector3(Screen.width / 2f, Screen.height / 2f));
+        // 获取发射起点和方向
+        Vector3 firePoint = _grappler != null ? _grappler.GetFirePoint() : _cam.transform.position;
+        Vector3 fireDirection = _grappler != null ? _grappler.GetFireDirection() : _cam.transform.forward;
+
+        // 创建射线
+        Ray ray = new Ray(firePoint, fireDirection);
+
+        // 如果使用摄像机瞄准，则从屏幕中心发射射线
+        if (!usePlayerOrientation && _grappler.customFirePoint == null)
+        {
+            ray = _cam.ScreenPointToRay(new Vector3(Screen.width / 2f, Screen.height / 2f));
+        }
 
         // 尝试命中目标
         RaycastHit hit;
@@ -331,15 +390,22 @@ public class GrappleItem : BaseItem
         {
             // 检查瞄准目标
             Vector3 targetPoint = CalculateTargetPoint();
-            float distance = Vector3.Distance(_cam.transform.position, targetPoint);
+            Vector3 firePoint = _grappler.GetFirePoint();
+            float distance = Vector3.Distance(firePoint, targetPoint);
+
+            string firePointInfo = "";
+            if (_grappler.customFirePoint != null)
+            {
+                firePointInfo = $" [从 {_grappler.customFirePoint.name} 发射]";
+            }
 
             if (distance <= maxDistance)
             {
-                status = $"瞄准目标 - 距离: {distance:F1}m (左键发射)";
+                status = $"瞄准目标 - 距离: {distance:F1}m{firePointInfo} (左键发射)";
             }
             else
             {
-                status = $"目标过远 - 距离: {distance:F1}m (最大: {maxDistance}m)";
+                status = $"目标过远 - 距离: {distance:F1}m (最大: {maxDistance}m){firePointInfo}";
             }
         }
 
@@ -364,6 +430,17 @@ public class GrappleItem : BaseItem
                 _trajectoryRenderer.enabled = showAimTrajectory && _isAiming;
             }
             UIManager.Instance?.UpdateCameraDebugText($"轨迹显示: {(showAimTrajectory ? "开启" : "关闭")}");
+        }
+
+        // F键切换发射点模式（仅用于调试）
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            usePlayerOrientation = !usePlayerOrientation;
+            if (_grappler != null)
+            {
+                _grappler.usePlayerOrientation = usePlayerOrientation;
+            }
+            UIManager.Instance?.UpdateCameraDebugText($"发射方向: {(usePlayerOrientation ? "玩家朝向" : "摄像机朝向")}");
         }
     }
 
@@ -412,5 +489,10 @@ public class GrappleItem : BaseItem
     public Vector3 GetCurrentAttachPoint()
     {
         return _grappler != null ? _grappler.GetAttachPoint() : Vector3.zero;
+    }
+
+    public Vector3 GetCurrentFirePoint()
+    {
+        return _grappler != null ? _grappler.GetFirePoint() : Vector3.zero;
     }
 }
