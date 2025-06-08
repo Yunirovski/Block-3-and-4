@@ -2479,6 +2479,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: txtSpeed
+      value: 0.075
+      objectReference: {fileID: 0}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'lines.Array.data[6]'
+      value: Amazing, traveller. Well done!
+      objectReference: {fileID: 0}
     - target: {fileID: 9214953042083742312, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
       propertyPath: m_Name
       value: txtBox
