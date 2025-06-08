@@ -31,7 +31,7 @@ public class DartGunController : MonoBehaviour
     private List<GameObject> activeDarts = new List<GameObject>();
 
     // Performance optimization
-    private int maxActiveDarts = 20;
+    private int maxActiveDarts = 3;
 
     public void Initialize()
     {

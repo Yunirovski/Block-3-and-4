@@ -12,7 +12,7 @@ public class DartGunItem : BaseItem
     [Tooltip("Maximum effective range")]
     public float maxRange = 50f;
     [Tooltip("Fire rate cooldown")]
-    public float fireCooldown = 1.5f;
+    public float fireCooldown = 1f;
 
     [Header("Accuracy")]
     [Tooltip("Accuracy spread (0 = perfect accuracy)")]
