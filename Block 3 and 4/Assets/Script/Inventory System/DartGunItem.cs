@@ -1,4 +1,4 @@
-﻿// Assets/Scripts/Items/DartGunItem.cs - 简化版本，类似苹果逻辑
+﻿// Assets/Scripts/Items/DartGunItem.cs - 防暂停问题版本
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Items/DartGunItem")]
@@ -31,43 +31,24 @@ public class DartGunItem : BaseItem
     private AudioSource audioSource;
     private float nextFireTime = 0f;
 
+    // 防暂停问题：使用实时时间
+    private float lastRealTime = 0f;
+    private float cooldownStartTime = 0f;
+    private bool isCoolingDown = false;
+
     public override void OnSelect(GameObject model)
     {
-        // 获取玩家相机和位置
-        playerCamera = Camera.main;
-
-        // 设置音频源
-        if (playerCamera != null)
-        {
-            audioSource = playerCamera.GetComponent<AudioSource>();
-            if (audioSource == null)
-            {
-                audioSource = playerCamera.gameObject.AddComponent<AudioSource>();
-                audioSource.spatialBlend = 0f;
-            }
-        }
+        // 确保引用有效
+        EnsureValidReferences();
 
         Debug.Log("麻醉枪已选中 - 子弹无限");
     }
 
     public override void OnReady()
     {
-        // OnReady时立即检查状态
-        if (Time.time < nextFireTime)
-        {
-            float remainingTime = nextFireTime - Time.time;
-            if (UIManager.Instance != null)
-            {
-                UIManager.Instance.UpdateCameraDebugText($"麻醉枪冷却中: {remainingTime:F1}s");
-            }
-        }
-        else
-        {
-            if (UIManager.Instance != null)
-            {
-                UIManager.Instance.UpdateCameraDebugText("麻醉枪就绪 - 左键射击 (子弹无限)");
-            }
-        }
+        // 每次Ready时重新检查引用
+        EnsureValidReferences();
+        UpdateUI();
     }
 
     public override void OnUse()
@@ -77,11 +58,87 @@ public class DartGunItem : BaseItem
 
     public override void HandleUpdate()
     {
-        // 检查冷却状态并更新UI
-        if (Time.time < nextFireTime)
+        // 每帧都检查引用（性能开销很小）
+        EnsureValidReferences();
+
+        // 更新冷却状态（使用实时时间）
+        UpdateCooldownState();
+
+        // 更新UI
+        UpdateUI();
+    }
+
+    /// <summary>
+    /// 确保所有引用都有效（防暂停问题）
+    /// </summary>
+    private void EnsureValidReferences()
+    {
+        // 重新获取相机引用
+        if (playerCamera == null)
         {
-            // 在冷却中
-            float remainingTime = nextFireTime - Time.time;
+            playerCamera = Camera.main;
+            if (playerCamera == null)
+            {
+                // 尝试通过GameObject.Find寻找
+                GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+                if (playerObj != null)
+                {
+                    playerCamera = playerObj.GetComponentInChildren<Camera>();
+                }
+            }
+        }
+
+        // 重新获取音频源
+        if (audioSource == null && playerCamera != null)
+        {
+            audioSource = playerCamera.GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = playerCamera.gameObject.AddComponent<AudioSource>();
+                audioSource.spatialBlend = 0f;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 更新冷却状态（使用实时时间，不受Time.timeScale影响）
+    /// </summary>
+    private void UpdateCooldownState()
+    {
+        if (isCoolingDown)
+        {
+            float realTimeElapsed = Time.realtimeSinceStartup - cooldownStartTime;
+            if (realTimeElapsed >= cooldownTime)
+            {
+                isCoolingDown = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 获取剩余冷却时间
+    /// </summary>
+    private float GetRemainingCooldown()
+    {
+        if (!isCoolingDown) return 0f;
+
+        float realTimeElapsed = Time.realtimeSinceStartup - cooldownStartTime;
+        return Mathf.Max(0f, cooldownTime - realTimeElapsed);
+    }
+
+    /// <summary>
+    /// 检查是否在冷却中
+    /// </summary>
+    private bool IsOnCooldown()
+    {
+        return isCoolingDown && GetRemainingCooldown() > 0f;
+    }
+
+    private void UpdateUI()
+    {
+        if (IsOnCooldown())
+        {
+            float remainingTime = GetRemainingCooldown();
             if (UIManager.Instance != null)
             {
                 UIManager.Instance.UpdateCameraDebugText($"麻醉枪冷却中: {remainingTime:F1}s");
@@ -89,7 +146,6 @@ public class DartGunItem : BaseItem
         }
         else
         {
-            // 可以射击
             if (UIManager.Instance != null)
             {
                 UIManager.Instance.UpdateCameraDebugText("麻醉枪就绪 - 左键射击 (子弹无限)");
@@ -102,23 +158,59 @@ public class DartGunItem : BaseItem
     /// </summary>
     private void FireDart()
     {
+        // 确保引用有效
+        EnsureValidReferences();
+
+        // 详细的错误检查和反馈
         if (playerCamera == null)
         {
-            Debug.LogError("DartGun: 找不到玩家相机");
-            return;
+            Debug.LogError("DartGun: 找不到玩家相机，尝试重新获取...");
+
+            // 强制重新查找相机
+            playerCamera = Camera.main;
+            if (playerCamera == null)
+            {
+                GameObject[] allCameras = GameObject.FindGameObjectsWithTag("MainCamera");
+                if (allCameras.Length > 0)
+                {
+                    playerCamera = allCameras[0].GetComponent<Camera>();
+                }
+            }
+
+            if (playerCamera == null)
+            {
+                if (UIManager.Instance != null)
+                {
+                    UIManager.Instance.UpdateCameraDebugText("错误：找不到玩家相机");
+                }
+                return;
+            }
+            else
+            {
+                Debug.Log("DartGun: 成功重新获取相机引用");
+            }
         }
 
         // 检查冷却时间
-        if (Time.time < nextFireTime)
+        if (IsOnCooldown())
         {
-            // 在冷却中，不显示任何信息
+            float remainingTime = GetRemainingCooldown();
+            Debug.Log($"DartGun: 冷却中，剩余时间: {remainingTime:F1}s");
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText($"冷却中: {remainingTime:F1}s");
+            }
             return;
         }
 
-        // 确定要使用的预制体
+        // 检查预制体
         if (dartPrefab == null)
         {
-            Debug.LogError("DartGun: 没有设置麻醉镖预制体");
+            Debug.LogError("DartGun: 没有设置麻醉镖预制体！请在Inspector中设置dartPrefab");
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText("错误：未设置麻醉镖预制体");
+            }
             return;
         }
 
@@ -128,19 +220,44 @@ public class DartGunItem : BaseItem
         // 创建麻醉镖
         GameObject thrownDart = Instantiate(dartPrefab, spawnPosition, Quaternion.identity);
 
+        if (thrownDart == null)
+        {
+            Debug.LogError("DartGun: 无法实例化麻醉镖");
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText("错误：无法生成麻醉镖");
+            }
+            return;
+        }
+
         // 设置麻醉镖
         SetupThrownDart(thrownDart);
 
         // 应用抛掷力
         ApplyThrowForce(thrownDart);
 
-        // 设置冷却时间
-        nextFireTime = Time.time + cooldownTime;
+        // 设置冷却时间（使用实时时间）
+        StartCooldown();
 
         // 播放音效
         PlayFireSound();
 
-        Debug.Log($"DartGun: 射击麻醉镖到 {spawnPosition}，下次可射击时间: {nextFireTime}");
+        // 成功反馈
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateCameraDebugText($"发射成功！冷却 {cooldownTime}s");
+        }
+
+        Debug.Log($"DartGun: 成功发射麻醉镖到 {spawnPosition}");
+    }
+
+    /// <summary>
+    /// 开始冷却（使用实时时间）
+    /// </summary>
+    private void StartCooldown()
+    {
+        isCoolingDown = true;
+        cooldownStartTime = Time.realtimeSinceStartup;
     }
 
     /// <summary>
@@ -157,8 +274,8 @@ public class DartGunItem : BaseItem
         }
 
         // 设置Rigidbody属性
-        rb.mass = 0.2f; // 轻一些
-        rb.linearDamping = 0.1f; // 少量阻力
+        rb.mass = 0.2f;
+        rb.linearDamping = 0.1f;
         rb.angularDamping = 0.5f;
         rb.useGravity = true;
         rb.isKinematic = false;
@@ -167,7 +284,6 @@ public class DartGunItem : BaseItem
         Collider col = thrownDart.GetComponent<Collider>();
         if (col == null)
         {
-            // 添加胶囊碰撞体（更像镖的形状）
             CapsuleCollider capsuleCol = thrownDart.AddComponent<CapsuleCollider>();
             capsuleCol.radius = 0.1f;
             capsuleCol.height = 0.5f;
@@ -191,7 +307,7 @@ public class DartGunItem : BaseItem
 
         // 设置麻醉镖属性
         dartScript.stunDuration = stunDuration;
-        dartScript.lifetime = 30f; // 30秒后自动消失
+        dartScript.lifetime = 30f;
     }
 
     /// <summary>
@@ -204,7 +320,7 @@ public class DartGunItem : BaseItem
 
         // 抛掷方向（玩家看的方向，稍微向上）
         Vector3 throwDirection = playerCamera.transform.forward;
-        throwDirection.y += 0.1f; // 轻微向上
+        throwDirection.y += 0.1f;
         throwDirection = throwDirection.normalized;
 
         // 应用力
@@ -229,9 +345,25 @@ public class DartGunItem : BaseItem
     /// </summary>
     private void PlayFireSound()
     {
+        // 确保音频源有效
+        EnsureValidReferences();
+
         if (fireSound != null && audioSource != null)
         {
             audioSource.PlayOneShot(fireSound, soundVolume);
         }
+    }
+
+    /// <summary>
+    /// 重置状态（供外部调用，比如场景重新加载时）
+    /// </summary>
+    public void ResetState()
+    {
+        isCoolingDown = false;
+        cooldownStartTime = 0f;
+        playerCamera = null;
+        audioSource = null;
+
+        Debug.Log("DartGun: 状态已重置");
     }
 }
