@@ -21,6 +21,7 @@ public class Dialog : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // skip text or show next line
         if(Input.GetKeyDown(KeyCode.KeypadEnter)  || Input.GetKeyDown(KeyCode.T)){
             Debug.Log("key pressed");
             if (textComponent.text == lines[index]){
@@ -41,6 +42,7 @@ public class Dialog : MonoBehaviour
 
     }
 
+    // write lines by character
     IEnumerator TypeLine()
     {
         foreach (char c in lines[index].ToCharArray())
@@ -50,6 +52,7 @@ public class Dialog : MonoBehaviour
         }
     }
 
+    // go to next line
     void NextLine(){
 
         Debug.Log("NextLine");
