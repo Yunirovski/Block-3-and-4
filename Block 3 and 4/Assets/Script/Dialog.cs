@@ -2,12 +2,16 @@ using UnityEngine;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.Audio;
+
 
 public class Dialog : MonoBehaviour
 {
     public TextMeshProUGUI textComponent;
     public string[] lines;
     public float txtSpeed;
+
+ 
 
     private int index = 0;
 
@@ -16,6 +20,7 @@ public class Dialog : MonoBehaviour
     {
         textComponent.text = string.Empty;
         StartDialog();
+        
     }
 
     // Update is called once per frame
@@ -67,5 +72,7 @@ public class Dialog : MonoBehaviour
             gameObject.SetActive(false);
         }
     }
+
+    
 
 }
