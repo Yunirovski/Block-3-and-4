@@ -17,6 +17,10 @@ public class DartGunItem : BaseItem
     [Tooltip("昏迷持续时间")]
     public float stunDuration = 10f;
 
+    [Header("Cooldown Settings")]
+    [Tooltip("冷却时间（秒）")]
+    public float cooldownTime = 1f;
+
     [Header("Audio")]
     [Tooltip("射击音效")]
     public AudioClip fireSound;
@@ -25,6 +29,7 @@ public class DartGunItem : BaseItem
     // 运行时状态
     private Camera playerCamera;
     private AudioSource audioSource;
+    private float nextFireTime = 0f;
 
     public override void OnSelect(GameObject model)
     {
@@ -47,9 +52,21 @@ public class DartGunItem : BaseItem
 
     public override void OnReady()
     {
-        if (UIManager.Instance != null)
+        // OnReady时立即检查状态
+        if (Time.time < nextFireTime)
         {
-            UIManager.Instance.UpdateCameraDebugText("左键射击麻醉镖 - 子弹无限");
+            float remainingTime = nextFireTime - Time.time;
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText($"麻醉枪冷却中: {remainingTime:F1}s");
+            }
+        }
+        else
+        {
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText("麻醉枪就绪 - 左键射击 (子弹无限)");
+            }
         }
     }
 
@@ -60,10 +77,23 @@ public class DartGunItem : BaseItem
 
     public override void HandleUpdate()
     {
-        // 更新UI显示
-        if (UIManager.Instance != null)
+        // 检查冷却状态并更新UI
+        if (Time.time < nextFireTime)
         {
-            UIManager.Instance.UpdateCameraDebugText("麻醉枪就绪 - 左键射击 (子弹无限)");
+            // 在冷却中
+            float remainingTime = nextFireTime - Time.time;
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText($"麻醉枪冷却中: {remainingTime:F1}s");
+            }
+        }
+        else
+        {
+            // 可以射击
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText("麻醉枪就绪 - 左键射击 (子弹无限)");
+            }
         }
     }
 
@@ -75,6 +105,13 @@ public class DartGunItem : BaseItem
         if (playerCamera == null)
         {
             Debug.LogError("DartGun: 找不到玩家相机");
+            return;
+        }
+
+        // 检查冷却时间
+        if (Time.time < nextFireTime)
+        {
+            // 在冷却中，不显示任何信息
             return;
         }
 
@@ -97,15 +134,13 @@ public class DartGunItem : BaseItem
         // 应用抛掷力
         ApplyThrowForce(thrownDart);
 
+        // 设置冷却时间
+        nextFireTime = Time.time + cooldownTime;
+
         // 播放音效
         PlayFireSound();
 
-        if (UIManager.Instance != null)
-        {
-            UIManager.Instance.UpdateCameraDebugText("射击! 子弹无限");
-        }
-
-        Debug.Log($"DartGun: 射击麻醉镖到 {spawnPosition}");
+        Debug.Log($"DartGun: 射击麻醉镖到 {spawnPosition}，下次可射击时间: {nextFireTime}");
     }
 
     /// <summary>
