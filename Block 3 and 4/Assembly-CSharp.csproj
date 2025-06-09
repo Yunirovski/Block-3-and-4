@@ -88,6 +88,7 @@
     <Compile Include="Assets\Script\Animal\spawner1.cs" />
     <Compile Include="Assets\Script\System\IMoveController.cs" />
     <Compile Include="Assets\Script\Log\AnimalInfo.cs" />
+    <Compile Include="Assets\Script\Animal\animalsound.cs" />
     <Compile Include="Assets\Script\voiceoverManager.cs" />
     <Compile Include="Assets\Script\System\PhotoDetector.cs" />
     <Compile Include="Assets\Script\Photo\PhotoScorer.cs" />
