@@ -10792,12 +10792,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1064336229}
   slotImages:
+  - {fileID: 101176294}
   - {fileID: 922993875}
   - {fileID: 1076001776}
   - {fileID: 2013405179}
   - {fileID: 1454098963}
   - {fileID: 383525196}
-  - {fileID: 101176294}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   highlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   lockedColor: {r: 0.3, g: 0.3, b: 0.3, a: 0.6}
@@ -16248,7 +16248,7 @@ MonoBehaviour:
   skateboardItem: {fileID: 11400000, guid: 2bd9a362c2bfcf64db5e1ce31728ae66, type: 2}
   dartGunItem: {fileID: 11400000, guid: f093cc49d96a83f43a78859e3ea86556, type: 2}
   magicWandItem: {fileID: 11400000, guid: 28f72fbb89339d7479505ac06bb16362, type: 2}
-  ManualUnlockCamera: 1
+  ManualUnlockCamera: 0
   ManualUnlockGrapple: 0
   ManualUnlockSkateboard: 0
   ManualUnlockDartGun: 0
