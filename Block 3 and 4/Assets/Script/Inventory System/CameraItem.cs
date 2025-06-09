@@ -28,9 +28,7 @@ public class CameraItem : BaseItem
 
     public void Init(Camera c)
     {
-        // Save camera and add sound player
         cam = c;
-
         if (cam != null && audioSource == null)
         {
             audioSource = cam.gameObject.GetComponent<AudioSource>();
@@ -53,7 +51,6 @@ public class CameraItem : BaseItem
 
     public override void OnReady()
     {
-        // Update help text with UI Manager
         UIManager.Instance.UpdateCameraDebugText("Right-click to use camera");
     }
 
@@ -70,17 +67,14 @@ public class CameraItem : BaseItem
 
     public void HandleInput()
     {
-        // 检查是否在相机模式下
         if (isCamMode)
         {
-            // 右键或Q键退出相机模式
             if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Q))
             {
                 ExitCameraMode();
                 return;
             }
 
-            // 左键拍照
             if (Input.GetMouseButtonDown(0))
             {
                 if (justEntered)
@@ -90,13 +84,9 @@ public class CameraItem : BaseItem
                 }
                 TryShoot();
             }
-
-            // ESC键也可以退出相机模式
-           
         }
         else
         {
-            // 不在相机模式时，右键进入相机模式
             if (Input.GetMouseButtonDown(1))
             {
                 EnterCameraMode();
@@ -104,7 +94,6 @@ public class CameraItem : BaseItem
         }
     }
 
-    // 确保HandleUpdate也被调用
     public override void HandleUpdate()
     {
         HandleInput();
@@ -112,7 +101,6 @@ public class CameraItem : BaseItem
 
     void EnterCameraMode()
     {
-        // Turn on camera mode
         isCamMode = true;
         justEntered = true;
         nextShotTime = 0f;
@@ -120,36 +108,29 @@ public class CameraItem : BaseItem
         if (currentModel != null)
             currentModel.SetActive(false);
 
-        // Show camera screen
         UIManager.Instance.EnterCameraMode();
     }
 
     void ExitCameraMode()
     {
-        // Turn off camera mode
         if (!isCamMode) return;
         isCamMode = false;
 
         if (currentModel != null)
             currentModel.SetActive(true);
 
-        // Hide camera screen
         UIManager.Instance.ExitCameraMode();
     }
 
     void ResetUI()
     {
-        // Reset to normal state
         isCamMode = false;
-
-        // Show normal screen
         UIManager.Instance.SetCameraHUDVisible(false);
         UIManager.Instance.SetMainHUDVisible(true);
     }
 
     void TryShoot()
     {
-        // Check if camera is ready
         if (Time.time < nextShotTime)
         {
             float remain = nextShotTime - Time.time;
@@ -157,16 +138,12 @@ public class CameraItem : BaseItem
             return;
         }
 
-        // Check if we have film
-        // 片段：检查胶卷
         if (ConsumableManager.Instance == null || !ConsumableManager.Instance.UseFilm())
         {
             UIManager.Instance.UpdateCameraDebugText("No film left");
             return;
         }
 
-
-        // Take the photo
         nextShotTime = Time.time + shootCooldown;
         ScreenshotHelper.Instance.StartCoroutine(CapRoutine());
     }
@@ -192,6 +169,9 @@ public class CameraItem : BaseItem
         tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
         tex.Apply();
 
+        // ✅ Flash effect: real light
+        TriggerFlashLight();
+
         if (shutterSound != null && audioSource != null)
         {
             audioSource.PlayOneShot(shutterSound);
@@ -201,12 +181,39 @@ public class CameraItem : BaseItem
             canvases[i].enabled = states[i];
 
         ProcessShot(tex);
-        // Removed ExitCameraMode() to keep in camera mode after taking a photo
     }
+
+    void TriggerFlashLight()
+    {
+        if (cam == null) return;
+
+        Debug.Log("⚡ Triggering spot flash...");
+
+        GameObject flash = new GameObject("SpotFlashLight");
+        flash.transform.position = cam.transform.position + cam.transform.forward * 0.3f;
+        flash.transform.rotation = cam.transform.rotation;
+
+        Light light = flash.AddComponent<Light>();
+        light.type = LightType.Spot;
+        light.spotAngle = 60f;
+        light.innerSpotAngle = 25f;
+        light.range = 90f;
+        light.intensity = 1000f;
+        light.color = Color.white;
+        light.shadows = LightShadows.None;
+
+        // Optional: parent it to camera so it moves with shake or recoil
+        flash.transform.SetParent(cam.transform);
+
+        // Auto destroy after 0.1 seconds
+        Destroy(flash, 0.5f);
+    }
+
+
+
 
     void ProcessShot(Texture2D tex)
     {
-        // Make folders for each animal type
         string baseDir = Application.persistentDataPath;
         string[] folderNames = new string[] {
             "Camel", "Donkey", "Giraffe", "Goat", "Hippo", "Lion", "Pigeon", "Rhino", "nothing"
@@ -262,7 +269,6 @@ public class CameraItem : BaseItem
 
         if (bestAE == null)
         {
-            // No animal in photo, save to "nothing" folder
             targetFolder = "nothing";
             UIManager.Instance.UpdateCameraResultText("No animals found");
         }
@@ -281,9 +287,7 @@ public class CameraItem : BaseItem
             if (bestAE.isEasterEgg)
                 final = Mathf.Clamp(final + 1, 1, 5);
 
-            // Animal is in photo, save to animal folder
             targetFolder = bestAE.animalName;
-            // If folder not made yet, make it now
             string animalFolder = Path.Combine(baseDir, targetFolder);
             if (!Directory.Exists(animalFolder))
             {
@@ -295,7 +299,6 @@ public class CameraItem : BaseItem
             UIManager.Instance.UpdateCameraResultText($"{bestAE.animalName}: {final}★ (近:{nearCount} 扣:{penalty})");
         }
 
-        // Make file name with animal name and date
         string fname = $"{targetFolder}_{uniqueId}.png";
         string path = Path.Combine(baseDir, targetFolder, fname);
         File.WriteAllBytes(path, tex.EncodeToPNG());
@@ -309,8 +312,6 @@ public class CameraItem : BaseItem
             if (!added)
             {
                 UIManager.Instance.UpdateCameraResultText($"{UIManager.Instance.cameraResultText.text}\nPhoto limit reached ({PhotoLibrary.MaxPerAnimal})");
-
-                // Show full photo alert
                 UIManager.Instance.ShowPhotoFullAlert(bestAE.animalName, path, cache[bestAE].stars);
             }
         }
