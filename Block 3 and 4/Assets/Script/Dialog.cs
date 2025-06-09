@@ -99,13 +99,9 @@ public class Dialog : MonoBehaviour
         }
 
         // Check for any other key (continue to next line)
-        if (Input.anyKeyDown && !isTyping)
+        if (Input.GetKeyDown(KeyCode.T) && !isTyping)
         {
-            // Ignore mouse clicks and specific keys we don't want
-            if (!Input.GetMouseButtonDown(0) && !Input.GetMouseButtonDown(1) && !Input.GetMouseButtonDown(2))
-            {
-                NextLine();
-            }
+            NextLine();
         }
     }
 
