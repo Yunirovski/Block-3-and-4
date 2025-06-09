@@ -2221,8 +2221,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 4b0cc61750046614cb7f6b66df4ff2c6, type: 3}
   - {fileID: 8300000, guid: 63acfa440a07f3349ab6aba66284fc0f, type: 3}
   - {fileID: 8300000, guid: 81b06ecb1b1b50a4fbb89c4c629a0cfa, type: 3}
-  minInterval: 7
-  maxInterval: 15
+  minInterval: 5
+  maxInterval: 10
   soundVolume: 1
   triggerDistance: 25
   playerTag: Player
@@ -3612,8 +3612,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: a0be8a753133d98468b4a0774ecc3343, type: 3}
   - {fileID: 8300000, guid: 9c2c18710f6424a46838d0e19465d979, type: 3}
   - {fileID: 8300000, guid: cf0eec642b1792545a2d57668cee7412, type: 3}
-  minInterval: 7
-  maxInterval: 15
+  minInterval: 5
+  maxInterval: 10
   soundVolume: 1
   triggerDistance: 25
   playerTag: Player
@@ -5672,8 +5672,8 @@ MonoBehaviour:
   animalSounds:
   - {fileID: 8300000, guid: 9bcab52238a5b244d85fe938559ce6bb, type: 3}
   - {fileID: 8300000, guid: 3989d71a2accc814ca92480275cd4f60, type: 3}
-  minInterval: 7
-  maxInterval: 15
+  minInterval: 5
+  maxInterval: 10
   soundVolume: 1
   triggerDistance: 25
   playerTag: Player
@@ -10925,8 +10925,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animalSounds:
   - {fileID: 8300000, guid: 830223460431ff54a9bfa7413f20aa81, type: 3}
-  minInterval: 7
-  maxInterval: 15
+  minInterval: 5
+  maxInterval: 10
   soundVolume: 1
   triggerDistance: 25
   playerTag: Player
@@ -15896,8 +15896,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: f7c6592b03aecb84e9345c65b587bc7f, type: 3}
   - {fileID: 8300000, guid: 02ac7984cefb7cd45ab9d04aa99165c8, type: 3}
   - {fileID: 8300000, guid: b19825d9497594f479979e74fdb953b5, type: 3}
-  minInterval: 7
-  maxInterval: 15
+  minInterval: 5
+  maxInterval: 10
   soundVolume: 1
   triggerDistance: 25
   playerTag: Player
@@ -16975,8 +16975,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: ec249bf3ae577434cbb0d23da087812d, type: 3}
   - {fileID: 8300000, guid: ef8407fe3bb33c24bb8cf6f1eb8d7805, type: 3}
   - {fileID: 8300000, guid: dfbdb99981b34ef47a3deb372eab474e, type: 3}
-  minInterval: 7
-  maxInterval: 15
+  minInterval: 5
+  maxInterval: 10
   soundVolume: 1
   triggerDistance: 25
   playerTag: Player
@@ -18567,8 +18567,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: dd690264976eaa549ae56a0c20238ce2, type: 3}
   - {fileID: 8300000, guid: 16f51b62000620a4cb71019f494bc6e6, type: 3}
   - {fileID: 8300000, guid: 7de6a1e2478f072498944d5e5456667f, type: 3}
-  minInterval: 7
-  maxInterval: 15
+  minInterval: 5
+  maxInterval: 10
   soundVolume: 1
   triggerDistance: 25
   playerTag: Player
@@ -20236,8 +20236,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 5f5d4739cc731dd4a945e563e4c2268e, type: 3}
   - {fileID: 8300000, guid: 1301c4c1b86f5384ab413715e55122e7, type: 3}
   - {fileID: 8300000, guid: ffc46c324a9e1cb46aed80eafd07467c, type: 3}
-  minInterval: 7
-  maxInterval: 15
+  minInterval: 5
+  maxInterval: 10
   soundVolume: 1
   triggerDistance: 25
   playerTag: Player
