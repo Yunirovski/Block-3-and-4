@@ -1,4 +1,4 @@
-﻿// Assets/Scripts/Items/DartGunItem.cs - Fix for ScriptableObject keeping old state
+﻿// Assets/Scripts/Items/DartGunItem.cs - 改进版本，支持发射点高度调节
 
 using UnityEngine;
 
@@ -18,6 +18,21 @@ public class DartGunItem : BaseItem
 
     [Tooltip("How long the target is stunned")]
     public float stunDuration = 10f;
+
+    [Header("Fire Point Settings")]
+    [Tooltip("发射点高度偏移（相对于相机）")]
+    public float firePointHeightOffset = 0.2f;
+
+    [Tooltip("发射点前方偏移")]
+    public float firePointForwardOffset = 0.5f;
+
+    [Tooltip("发射角度向上偏移（度数）")]
+    [Range(-10f, 45f)]
+    public float upwardAngle = 2f;
+
+    [Header("Dart Lifetime")]
+    [Tooltip("Dart存在时间（秒）")]
+    public float dartLifetime = 7f;
 
     [Header("Cooldown Settings")]
     [Tooltip("Time before shooting again (seconds)")]
@@ -163,9 +178,49 @@ public class DartGunItem : BaseItem
         {
             if (UIManager.Instance != null)
             {
-                UIManager.Instance.UpdateCameraDebugText("Ready - Left click to shoot (infinite ammo)");
+                UIManager.Instance.UpdateCameraDebugText($"Ready - Left click to shoot (lifetime: {dartLifetime}s)");
             }
         }
+    }
+
+    /// <summary>
+    /// 计算改进的发射点位置
+    /// </summary>
+    private Vector3 GetFirePoint()
+    {
+        if (playerCamera == null) return Vector3.zero;
+
+        Vector3 cameraPos = playerCamera.transform.position;
+        Vector3 cameraForward = playerCamera.transform.forward;
+        Vector3 cameraUp = playerCamera.transform.up;
+        Vector3 cameraRight = playerCamera.transform.right;
+
+        // 计算发射点：相机位置 + 前方偏移 + 高度偏移
+        Vector3 firePoint = cameraPos
+                          + cameraForward * firePointForwardOffset
+                          + cameraUp * firePointHeightOffset;
+
+        return firePoint;
+    }
+
+    /// <summary>
+    /// 计算改进的发射方向
+    /// </summary>
+    private Vector3 GetFireDirection()
+    {
+        if (playerCamera == null) return Vector3.forward;
+
+        Vector3 baseDirection = playerCamera.transform.forward;
+
+        // 添加向上的角度偏移
+        if (upwardAngle > 0f)
+        {
+            Vector3 cameraRight = playerCamera.transform.right;
+            Quaternion upwardRotation = Quaternion.AngleAxis(upwardAngle, cameraRight);
+            baseDirection = upwardRotation * baseDirection;
+        }
+
+        return baseDirection.normalized;
     }
 
     private void FireDart()
@@ -215,7 +270,8 @@ public class DartGunItem : BaseItem
             return;
         }
 
-        Vector3 spawnPosition = playerCamera.transform.position + playerCamera.transform.forward * spawnDistance;
+        // 使用改进的发射点计算
+        Vector3 spawnPosition = GetFirePoint();
         GameObject thrownDart = Instantiate(dartPrefab, spawnPosition, Quaternion.identity);
 
         if (thrownDart == null)
@@ -235,10 +291,10 @@ public class DartGunItem : BaseItem
 
         if (UIManager.Instance != null)
         {
-            UIManager.Instance.UpdateCameraDebugText($"Fired! Cooldown: {cooldownTime}s");
+            UIManager.Instance.UpdateCameraDebugText($"Fired! Cooldown: {cooldownTime}s, Dart lifetime: {dartLifetime}s");
         }
 
-        Debug.Log($"DartGun: Dart fired at {spawnPosition}");
+        Debug.Log($"DartGun: Dart fired at {spawnPosition} with {dartLifetime}s lifetime");
     }
 
     private void StartCooldown()
@@ -286,8 +342,9 @@ public class DartGunItem : BaseItem
             Debug.Log("DartGun: DartProjectile script added");
         }
 
+        // 设置dart参数，包括新的生命周期
         dartScript.stunDuration = stunDuration;
-        dartScript.lifetime = 30f;
+        dartScript.lifetime = dartLifetime; // 使用新的7秒生命周期
     }
 
     private void ApplyThrowForce(GameObject thrownDart)
@@ -295,9 +352,8 @@ public class DartGunItem : BaseItem
         Rigidbody rb = thrownDart.GetComponent<Rigidbody>();
         if (rb == null) return;
 
-        Vector3 throwDirection = playerCamera.transform.forward;
-        throwDirection.y += 0.1f;
-        throwDirection = throwDirection.normalized;
+        // 使用改进的发射方向
+        Vector3 throwDirection = GetFireDirection();
 
         rb.AddForce(throwDirection * throwForce, ForceMode.VelocityChange);
 
@@ -310,7 +366,7 @@ public class DartGunItem : BaseItem
 
         thrownDart.transform.rotation = Quaternion.LookRotation(throwDirection);
 
-        Debug.Log($"DartGun: Dart thrown with force {throwDirection * throwForce}");
+        Debug.Log($"DartGun: Dart thrown with improved trajectory - Direction: {throwDirection}, Angle: {upwardAngle}°");
     }
 
     private void PlayFireSound()
@@ -335,5 +391,59 @@ public class DartGunItem : BaseItem
         {
             ForceReinitialize();
         }
+    }
+
+    /// <summary>
+    /// 获取当前发射点位置（用于调试可视化）
+    /// </summary>
+    public Vector3 GetDebugFirePoint()
+    {
+        return GetFirePoint();
+    }
+
+    /// <summary>
+    /// 获取当前发射方向（用于调试可视化）
+    /// </summary>
+    public Vector3 GetDebugFireDirection()
+    {
+        return GetFireDirection();
+    }
+
+    // 调试可视化
+    void OnDrawGizmosSelected()
+    {
+        if (!Application.isPlaying || playerCamera == null) return;
+
+        // 显示发射点
+        Vector3 firePoint = GetFirePoint();
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(firePoint, 0.1f);
+
+        // 显示发射方向和轨迹预测
+        Vector3 fireDirection = GetFireDirection();
+        Gizmos.color = Color.red;
+        Gizmos.DrawRay(firePoint, fireDirection * 5f);
+
+        // 绘制轨迹预测（考虑重力）
+        Vector3 pos = firePoint;
+        Vector3 velocity = fireDirection * throwForce;
+
+        Gizmos.color = Color.yellow;
+        for (int i = 0; i < 20; i++)
+        {
+            Vector3 nextPos = pos + velocity * 0.1f;
+            velocity.y -= 9.81f * 0.1f; // 重力
+
+            Gizmos.DrawLine(pos, nextPos);
+            pos = nextPos;
+
+            if (pos.y < playerCamera.transform.position.y - 10f) break;
+        }
+
+        // 显示原来的发射点作为对比
+        Vector3 oldFirePoint = playerCamera.transform.position + playerCamera.transform.forward * spawnDistance;
+        Gizmos.color = Color.gray;
+        Gizmos.DrawWireSphere(oldFirePoint, 0.05f);
+        Gizmos.DrawLine(firePoint, oldFirePoint);
     }
 }
