@@ -23,8 +23,11 @@ MonoBehaviour:
   stunDuration: 10
   firePointHeightOffset: 0
   firePointForwardOffset: 1
-  upwardAngle: 5
+  upwardAngle: -10
   dartLifetime: 7
   cooldownTime: 1
   fireSound: {fileID: 8300000, guid: aa586a2a5aed3c1498501abfea857313, type: 3}
   soundVolume: 0.8
+  absolutePrecision: 1
+  showTrajectoryPreview: 1
+  useFixedPhysics: 1
