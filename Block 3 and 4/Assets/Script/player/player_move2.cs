@@ -21,21 +21,29 @@ public class player_move2 : MonoBehaviour, IMoveController
     public float normalHeight = 2f;
     public float crouchTransitionSpeed = 5f;
 
+    [Header("Footstep Settings")]
+    public AudioSource footstepAudioSource;
+
+    [Header("Loop Footstep Clips")]
+    public AudioClip walkLoopClip;
+    public AudioClip runLoopClip;
+    public AudioClip crouchLoopClip;
+
     [Header("Jump & Landing Sounds")]
     public AudioClip jumpClip;
     public AudioClip landClip;
     [Tooltip("Minimum time in air before a landing sound is played")]
     public float minAirTimeForLandSound = 0.2f;
 
+    [Header("Extra Audio")]
+    public AudioSource effectAudioSource;
+
     [Header("Audio Settings")]
     [Range(0f, 1f)] public float stepVolume = 0.7f;
+    public float pitchMin = 0.9f;
+    public float pitchMax = 1.1f;
 
-    // 组件引用
     private CharacterController controller;
-    private AudioSource effectAudioSource;
-    private TerrainFootstepSystem footstepSystem; // 新增：地形脚步声系统引用
-
-    // 移动状态
     private Vector3 velocity;
     private float verticalRotation = 0f;
     private bool isCrouching = false;
@@ -43,14 +51,6 @@ public class player_move2 : MonoBehaviour, IMoveController
     private bool isInAir = false;
     private float airTimeCounter = 0f;
 
-    // 移动状态缓存（供脚步声系统使用）
-    public bool IsWalking { get; private set; }
-    public bool IsRunning { get; private set; }
-    public bool IsCrouching => isCrouching;
-    public bool IsGrounded => controller.isGrounded;
-    public float HorizontalSpeed { get; private set; }
-
-    // 速度修改
     private float baseWalkSpeed;
     private float baseRunSpeed;
 
@@ -58,20 +58,22 @@ public class player_move2 : MonoBehaviour, IMoveController
     {
         controller = GetComponent<CharacterController>();
 
-        // 设置效果音频源
-        effectAudioSource = GetComponent<AudioSource>();
+        if (footstepAudioSource == null)
+        {
+            footstepAudioSource = GetComponent<AudioSource>();
+            if (footstepAudioSource == null)
+            {
+                footstepAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
         if (effectAudioSource == null)
         {
             effectAudioSource = gameObject.AddComponent<AudioSource>();
+            effectAudioSource.playOnAwake = false;
         }
-        effectAudioSource.playOnAwake = false;
 
-        // 获取地形脚步声系统
-        footstepSystem = GetComponent<TerrainFootstepSystem>();
-        if (footstepSystem == null)
-        {
-            Debug.LogWarning("TerrainFootstepSystem not found! Footstep sounds will not work properly.");
-        }
+        footstepAudioSource.loop = true;
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -86,7 +88,7 @@ public class player_move2 : MonoBehaviour, IMoveController
         HandleMovement();
         HandleJump();
         HandleCrouchToggle();
-        UpdateMovementStates(); // 新增：更新移动状态供脚步声系统使用
+        HandleFootsteps();
         DetectLanding();
     }
 
@@ -106,7 +108,7 @@ public class player_move2 : MonoBehaviour, IMoveController
     {
         float inputX = Input.GetAxis("Horizontal");
         float inputZ = Input.GetAxis("Vertical");
-        bool isRunning = Input.GetButton("Fire3"); // Shift键
+        bool isRunning = Input.GetButton("Fire3");
         float speed = isCrouching ? crouchSpeed : (isRunning ? runSpeed : walkSpeed);
 
         Vector3 move = (transform.right * inputX + transform.forward * inputZ) * speed;
@@ -147,22 +149,43 @@ public class player_move2 : MonoBehaviour, IMoveController
         controller.center = center;
     }
 
-    /// <summary>
-    /// 更新移动状态，供脚步声系统使用
-    /// </summary>
-    private void UpdateMovementStates()
+    private void HandleFootsteps()
     {
-        // 计算水平速度
-        HorizontalSpeed = new Vector3(controller.velocity.x, 0, controller.velocity.z).magnitude;
-
-        // 判断移动状态
-        IsWalking = controller.isGrounded && HorizontalSpeed > 0.1f && !Input.GetButton("Fire3");
-        IsRunning = controller.isGrounded && HorizontalSpeed > 0.1f && Input.GetButton("Fire3");
-
-        // 通知脚步声系统更新
-        if (footstepSystem != null)
+        if (!controller.isGrounded)
         {
-            footstepSystem.UpdateFootstepState(IsWalking, IsRunning, isCrouching, HorizontalSpeed);
+            StopFootstepLoop();
+            return;
+        }
+
+        float horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z).magnitude;
+        if (horizontalVelocity < 0.1f)
+        {
+            StopFootstepLoop();
+            return;
+        }
+
+        AudioClip targetClip = isCrouching ? crouchLoopClip :
+                               (Input.GetButton("Fire3") ? runLoopClip : walkLoopClip);
+
+        if (footstepAudioSource.clip != targetClip)
+        {
+            footstepAudioSource.clip = targetClip;
+            footstepAudioSource.loop = true;
+            footstepAudioSource.volume = stepVolume;
+            footstepAudioSource.pitch = Random.Range(pitchMin, pitchMax);
+            footstepAudioSource.Play();
+        }
+        else if (!footstepAudioSource.isPlaying)
+        {
+            footstepAudioSource.Play();
+        }
+    }
+
+    private void StopFootstepLoop()
+    {
+        if (footstepAudioSource.isPlaying)
+        {
+            footstepAudioSource.Stop();
         }
     }
 
@@ -175,19 +198,9 @@ public class player_move2 : MonoBehaviour, IMoveController
         }
         else if (isInAir)
         {
-            // 着陆了
             if (airTimeCounter >= minAirTimeForLandSound)
             {
-                // 通知脚步声系统播放着陆音效
-                if (footstepSystem != null)
-                {
-                    footstepSystem.PlayLandingSound();
-                }
-                else
-                {
-                    // 备用：直接播放着陆音效
-                    PlayEffectOneShot(landClip);
-                }
+                PlayEffectOneShot(landClip);
             }
             isInAir = false;
             airTimeCounter = 0f;
@@ -208,14 +221,5 @@ public class player_move2 : MonoBehaviour, IMoveController
     {
         walkSpeed = baseWalkSpeed * multiplier;
         runSpeed = baseRunSpeed * multiplier;
-    }
-
-    /// <summary>
-    /// 获取当前移动状态信息（调试用）
-    /// </summary>
-    public string GetMovementStateInfo()
-    {
-        return $"Walking: {IsWalking}, Running: {IsRunning}, Crouching: {IsCrouching}, " +
-               $"Grounded: {IsGrounded}, Speed: {HorizontalSpeed:F2}";
     }
 }
