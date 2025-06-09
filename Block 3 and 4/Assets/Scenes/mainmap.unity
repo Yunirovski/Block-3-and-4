@@ -2513,12 +2513,72 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
       propertyPath: txtSpeed
-      value: 0.075
+      value: 0.045
       objectReference: {fileID: 0}
     - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
       propertyPath: 'lines.Array.data[6]'
       value: Amazing, traveller. Well done!
       objectReference: {fileID: 0}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 8cdd9e7c7948f1041b17878cde836c8b, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 05656dd4da2cb884d820d4b83740d217, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[2]'
+      value: 
+      objectReference: {fileID: 8300000, guid: ab8312e785d67d24abfd571961dc28d4, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[3]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 0ee3a25b4cfca87408c7fc6c90f73968, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[4]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 3a5d8adf6f5ca194a846d82aeff1e700, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[5]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 5f26f479cbcab8f4094d290a99d04c67, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[6]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 53420544ce69d57488cdae922c9cd838, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[7]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 9342f7c994a11494087317c21b8a7ae5, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[8]'
+      value: 
+      objectReference: {fileID: 8300000, guid: f8a7df74e88ac1245b5dead814f57670, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[9]'
+      value: 
+      objectReference: {fileID: 8300000, guid: fab09c7cd81c35b4796160a06284fc11, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[10]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 75b7d4b00ac988f4994eb5423a0d09d3, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[11]'
+      value: 
+      objectReference: {fileID: 8300000, guid: eb1d614595163644f81198d69255e23e, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[12]'
+      value: 
+      objectReference: {fileID: 8300000, guid: bec518aa05acaf642bbea5019285034a, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[13]'
+      value: 
+      objectReference: {fileID: 8300000, guid: a4d0f73b403b06142a891e77bfa2ccc5, type: 3}
+    - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: 'dialogAudioClips.Array.data[14]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 29f62dae97d475b48b0d43c4c525ece8, type: 3}
     - target: {fileID: 9214953042083742312, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
       propertyPath: m_Name
       value: txtBox
