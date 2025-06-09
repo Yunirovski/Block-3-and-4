@@ -17,8 +17,8 @@ MonoBehaviour:
   holdPosition: {x: 0.5, y: 0.5, z: 1}
   holdRotation: {x: 0, y: 90, z: 0}
   modelScale: {x: 0.2, y: 0.2, z: 0.2}
-  maxDistance: 40
-  pullSpeed: 25
+  maxDistance: 60
+  pullSpeed: 35
   hookSpeed: 50
   customFirePoint: {fileID: 0}
   firePointOffset: {x: 0, y: 0, z: 0}
@@ -28,7 +28,7 @@ MonoBehaviour:
   ropeColor: {r: 0.545, g: 0.271, b: 0.075, a: 1}
   hookMass: 2
   gravity: 15
-  pullAcceleration: 20
+  pullAcceleration: 35
   arrivalDistance: 3
   autoReleaseOnArrival: 1
   pullGravity: 5
