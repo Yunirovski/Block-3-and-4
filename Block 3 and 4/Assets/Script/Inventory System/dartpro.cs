@@ -23,6 +23,12 @@ public class DartProjectile : MonoBehaviour
     [Tooltip("击中目标时的特效")]
     public GameObject hitEffect;
 
+    [Header("Debug Settings")]
+    [Tooltip("显示镖的调试信息（屏幕UI）")]
+    public bool showDebugUI = false;
+
+    [Tooltip("显示镖的Gizmos调试线框")]
+    public bool showDebugGizmos = false;
     // 内部状态
     private bool hasHit = false;
     private float timer = 0f;
@@ -266,7 +272,7 @@ public class DartProjectile : MonoBehaviour
     // 调试显示
     void OnDrawGizmosSelected()
     {
-        if (!Application.isPlaying) return;
+        if (!Application.isPlaying || !showDebugGizmos) return;
 
         // 显示生命周期状态
         float remaining = GetRemainingLifetime();
@@ -302,7 +308,7 @@ public class DartProjectile : MonoBehaviour
 
     void OnGUI()
     {
-        if (!Application.isPlaying) return;
+        if (!Application.isPlaying || !showDebugUI) return;  // 添加开关控制
 
         // 在Scene视图中显示调试信息
         if (Camera.main != null)
@@ -319,4 +325,5 @@ public class DartProjectile : MonoBehaviour
             }
         }
     }
+
 }

@@ -47,7 +47,7 @@ public class DartGunItem : BaseItem
     public bool absolutePrecision = true;
 
     [Tooltip("显示弹道预测线")]
-    public bool showTrajectoryPreview = true;
+    public bool showTrajectoryPreview = false;
 
     [Tooltip("固定物理设置（确保一致性）")]
     public bool useFixedPhysics = true;
