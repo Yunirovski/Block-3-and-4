@@ -12445,7 +12445,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   filmCap: 999
   filmStart: 999
-  foodCap: 5
+  foodCap: 10
   foodStart: 5
 --- !u!1 &917225747
 GameObject:
@@ -28908,6 +28908,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: supplybox
       objectReference: {fileID: 0}
+    - target: {fileID: 5478173249516775704, guid: b53045926b898364496f07a8fa47cbd3, type: 3}
+      propertyPath: filmAmount
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5478173249516775704, guid: b53045926b898364496f07a8fa47cbd3, type: 3}
+      propertyPath: collectSound
+      value: 
+      objectReference: {fileID: 8300000, guid: 5ae21bfdd6fd1ce4e9eb10200b403251, type: 3}
     - target: {fileID: 5824529689271887819, guid: b53045926b898364496f07a8fa47cbd3, type: 3}
       propertyPath: target
       value: 

@@ -1,71 +1,126 @@
-// Assets/Scripts/World/FoodSupplyCrate.cs
+// Assets/Scripts/Food/FoodSupplyCrate.cs
 using UnityEngine;
-using System.Collections;
 
-[RequireComponent(typeof(Collider))]
+/// <summary>
+/// Simple Food Supply Crate: Gives food, disappears, respawns after cooldown
+/// </summary>
 public class FoodSupplyCrate : MonoBehaviour
 {
-    [Tooltip("被使用后刷新所需时间（秒），0 = 一次性箱子")]
-    public float respawnTime = 120f;
+    [Header("Settings")]
+    public int foodAmount = 3;
+    public float cooldownTime = 10f;
+    public AudioClip collectSound;
 
-    Collider _col;
-    MeshRenderer[] _renderers;
+    private bool isAvailable = true;
+    private AudioSource audioSource;
+    private Renderer crateRenderer;
+    private Collider crateCollider;
 
-    bool playerNearby;          // 玩家是否在范围内
-    const KeyCode USE_KEY = KeyCode.F;
-
-    void Awake()
+    void Start()
     {
-        _col = GetComponent<Collider>();
-        _col.isTrigger = true;
-        _renderers = GetComponentsInChildren<MeshRenderer>();
+        // Setup audio
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        // Get components
+        crateRenderer = GetComponent<Renderer>();
+        crateCollider = GetComponent<Collider>();
+
+        // Setup trigger
+        if (crateCollider == null)
+        {
+            crateCollider = gameObject.AddComponent<BoxCollider>();
+        }
+        crateCollider.isTrigger = true;
+
+        Debug.Log($"Food Crate Ready: +{foodAmount} food, {cooldownTime}s cooldown");
     }
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
-            playerNearby = true;
+        if (!isAvailable) return;
+
+        // Check if player
+        if (other.CompareTag("Player") || other.GetComponent<CharacterController>())
+        {
+            CollectFood();
+        }
     }
 
-    void OnTriggerExit(Collider other)
+    void CollectFood()
     {
-        if (other.CompareTag("Player"))
-            playerNearby = false;
-    }
+        if (ConsumableManager.Instance == null) return;
 
-    void Update()
-    {
-        if (playerNearby && Input.GetKeyDown(USE_KEY))
-            ActivateCrate();
-    }
+        // Add food
+        int oldFood = ConsumableManager.Instance.Food;
+        ConsumableManager.Instance.AddFood(foodAmount);
+        int newFood = ConsumableManager.Instance.Food;
 
-    /* ────────── 补给逻辑 ────────── */
-    void ActivateCrate()
-    {
-        var con = ConsumableManager.Instance;
-        if (con == null) return;
+        if (newFood > oldFood)
+        {
+            // Success - play sound and hide crate
+            PlaySound();
+            HideCrate();
+            ShowMessage($"Collected {foodAmount} Food!");
 
-        con.RefillFilm();
-        con.RefillFood();
-
-        UIManager.Instance?.ShowPopup("已补满胶卷与食物！");
-
-        if (respawnTime <= 0f)
-            Destroy(gameObject);
+            // Start respawn timer
+            Invoke(nameof(ShowCrate), cooldownTime);
+        }
         else
-            StartCoroutine(RespawnRoutine());
+        {
+            ShowMessage("Food Inventory Full!");
+        }
     }
 
-    IEnumerator RespawnRoutine()
+    void PlaySound()
     {
-        SetCrateVisible(false);
-        yield return new WaitForSeconds(respawnTime);
-        SetCrateVisible(true);
+        if (collectSound && audioSource)
+        {
+            audioSource.PlayOneShot(collectSound);
+        }
     }
 
-    void SetCrateVisible(bool show)
+    void HideCrate()
     {
-        _col.enabled = show;
-        foreach (var r in _renderers) r.enabled = show;
+        isAvailable = false;
+        crateRenderer.enabled = false;
+        crateCollider.enabled = false;
+        Debug.Log("Food crate collected - hidden for " + cooldownTime + "s");
+    }
+
+    void ShowCrate()
+    {
+        isAvailable = true;
+        crateRenderer.enabled = true;
+        crateCollider.enabled = true;
+        Debug.Log("Food crate respawned!");
+    }
+
+    void ShowMessage(string msg)
+    {
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateCameraDebugText(msg);
+        }
+        Debug.Log("Food Crate: " + msg);
+    }
+
+    // Visual debug
+    void OnDrawGizmos()
+    {
+        Collider col = GetComponent<Collider>();
+        if (col)
+        {
+            Gizmos.color = isAvailable ? Color.green : Color.red;
+            Gizmos.matrix = transform.localToWorldMatrix;
+
+            if (col is BoxCollider box)
+                Gizmos.DrawWireCube(box.center, box.size);
+            else if (col is SphereCollider sphere)
+                Gizmos.DrawWireSphere(sphere.center, sphere.radius);
+        }
     }
 }
