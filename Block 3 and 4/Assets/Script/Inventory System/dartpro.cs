@@ -1,4 +1,4 @@
-﻿// Assets/Scripts/Projectiles/DartProjectile.cs - 简单的麻醉镖行为
+﻿// Assets/Scripts/Projectiles/DartProjectile.cs - 修改后支持鸟类的版本
 using UnityEngine;
 
 public class DartProjectile : MonoBehaviour
@@ -56,7 +56,7 @@ public class DartProjectile : MonoBehaviour
         GameObject hitObject = collision.gameObject;
         Debug.Log($"麻醉镖击中: {hitObject.name}");
 
-        // 检查是否击中动物
+        // 检查是否击中普通动物
         AnimalBehavior animal = hitObject.GetComponent<AnimalBehavior>();
         if (animal != null)
         {
@@ -77,14 +77,37 @@ public class DartProjectile : MonoBehaviour
                 // 不粘住就直接销毁
                 DestroySelf();
             }
+            return;
         }
-        else
+
+        // 检查是否击中鸟类 (新增支持!)
+        PigeonBehavior bird = hitObject.GetComponent<PigeonBehavior>();
+        if (bird != null)
         {
-            // 击中其他物体，停止运动并粘住
+            // 让鸟类昏迷
+            bird.Stun(stunDuration);
+            Debug.Log($"鸟类 {bird.name} 被麻醉，持续 {stunDuration} 秒");
+
+            // 标记击中
             hasHit = true;
-            StickToTarget(collision);
-            Debug.Log($"麻醉镖击中 {hitObject.name}，已粘住");
+
+            // 粘住目标
+            if (stickToTarget)
+            {
+                StickToTarget(collision);
+            }
+            else
+            {
+                // 不粘住就直接销毁
+                DestroySelf();
+            }
+            return;
         }
+
+        // 击中其他物体，停止运动并粘住
+        hasHit = true;
+        StickToTarget(collision);
+        Debug.Log($"麻醉镖击中 {hitObject.name}，已粘住");
     }
 
     /// <summary>

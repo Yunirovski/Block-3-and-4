@@ -1,4 +1,4 @@
-﻿// Assets/Scripts/Items/MagicWandItem.cs
+﻿// Assets/Scripts/Items/MagicWandItem.cs - 修改后支持鸟类的版本
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Items/MagicWandItem")]
@@ -6,13 +6,13 @@ public class MagicWandItem : BaseItem
 {
     [Header("Magic Wand Settings")]
     [Tooltip("吸引半径")]
-    public float radius = 15f;
+    public float radius = 7800;
 
     [Tooltip("冷却时间")]
-    public float cooldown = 3f;
+    public float cooldown = 1;
 
     [Tooltip("吸引持续时间")]
-    public float attractDuration = 8f;
+    public float attractDuration = 10;
 
     [Header("Audio")]
     [Tooltip("魔法棒使用音效")]
@@ -98,11 +98,10 @@ public class MagicWandItem : BaseItem
         }
 
         Vector3 playerPosition = playerCamera.transform.position;
-
-        // 找到范围内的所有动物
-        AnimalBehavior[] allAnimals = Object.FindObjectsOfType<AnimalBehavior>();
         int attractedCount = 0;
 
+        // 吸引普通动物
+        AnimalBehavior[] allAnimals = Object.FindObjectsOfType<AnimalBehavior>();
         foreach (AnimalBehavior animal in allAnimals)
         {
             if (animal == null) continue;
@@ -115,6 +114,23 @@ public class MagicWandItem : BaseItem
                 attractedCount++;
 
                 Debug.Log($"魔法棒吸引了动物: {animal.name} (距离: {distance:F1}m)");
+            }
+        }
+
+        // 吸引鸟类 (新增支持!)
+        PigeonBehavior[] allBirds = Object.FindObjectsOfType<PigeonBehavior>();
+        foreach (PigeonBehavior bird in allBirds)
+        {
+            if (bird == null) continue;
+
+            float distance = Vector3.Distance(playerPosition, bird.transform.position);
+            if (distance <= radius)
+            {
+                // 吸引鸟类到玩家位置
+                bird.Attract(playerCamera.transform, attractDuration);
+                attractedCount++;
+
+                Debug.Log($"魔法棒吸引了鸟类: {bird.name} (距离: {distance:F1}m)");
             }
         }
 
@@ -155,7 +171,7 @@ public class MagicWandItem : BaseItem
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(playerCamera.transform.position, radius);
 
-            // 显示范围内的动物
+            // 显示范围内的普通动物
             AnimalBehavior[] allAnimals = Object.FindObjectsOfType<AnimalBehavior>();
             foreach (AnimalBehavior animal in allAnimals)
             {
@@ -167,6 +183,21 @@ public class MagicWandItem : BaseItem
                     Gizmos.color = Color.cyan;
                     Gizmos.DrawLine(playerCamera.transform.position, animal.transform.position);
                     Gizmos.DrawWireSphere(animal.transform.position, 1f);
+                }
+            }
+
+            // 显示范围内的鸟类 (新增支持!)
+            PigeonBehavior[] allBirds = Object.FindObjectsOfType<PigeonBehavior>();
+            foreach (PigeonBehavior bird in allBirds)
+            {
+                if (bird == null) continue;
+
+                float distance = Vector3.Distance(playerCamera.transform.position, bird.transform.position);
+                if (distance <= radius)
+                {
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawLine(playerCamera.transform.position, bird.transform.position);
+                    Gizmos.DrawWireSphere(bird.transform.position, 0.5f);
                 }
             }
         }

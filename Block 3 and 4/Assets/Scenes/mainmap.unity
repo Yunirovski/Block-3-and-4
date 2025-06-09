@@ -4388,6 +4388,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: txtBox
       objectReference: {fileID: 0}
+    - target: {fileID: 9214953042083742312, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
