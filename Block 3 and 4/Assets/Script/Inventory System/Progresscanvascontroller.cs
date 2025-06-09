@@ -149,10 +149,10 @@ public class ProgressCanvasController : MonoBehaviour
             ToggleCanvasByP();
         }
 
-        // R key add stars (for testing)
-        if (Input.GetKeyDown(KeyCode.R))
+        // + key add stars (for testing)
+        if (Input.GetKeyDown(KeyCode.Plus) || Input.GetKeyDown(KeyCode.KeypadPlus))
         {
-            Debug.Log("R key pressed!");
+            Debug.Log("+ key pressed!");
             AddStar();
         }
 

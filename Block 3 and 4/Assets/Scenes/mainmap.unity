@@ -2455,12 +2455,12 @@ MonoBehaviour:
   star3MinArea: 500
   star4MinArea: 1500
   maxDetectionDistance: 100
-  showDetailedDebug: 1
+  showDetailedDebug: 0
   multiTargetPenalty: 1
-  showDebugInfo: 1
-  showAnimalBounds: 1
-  showAreaInfo: 1
-  showDistanceInfo: 1
+  showDebugInfo: 0
+  showAnimalBounds: 0
+  showAreaInfo: 0
+  showDistanceInfo: 0
   star1Color: {r: 1, g: 0, b: 0, a: 1}
   star2Color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   star3Color: {r: 0, g: 1, b: 0, a: 1}

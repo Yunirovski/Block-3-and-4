@@ -96,6 +96,31 @@ public class PhotoDetector : MonoBehaviour
 
     void Update()
     {
+        // Toggle ALL debug modes with - key (simple version)
+        if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
+        {
+            // Check if any debug is currently on
+            bool anyOn = showDebugInfo || showDetailedDebug || showAnimalBounds ||
+                         showAreaInfo || showDistanceInfo;
+
+            // If any is on, turn ALL off; if all off, turn ALL on
+            bool newState = !anyOn;
+
+            showDebugInfo = newState;
+            showDetailedDebug = newState;
+            showAnimalBounds = newState;
+            showAreaInfo = newState;
+            showDistanceInfo = newState;
+
+            Debug.Log($"PhotoDetector: ALL Debug = {(newState ? "ON" : "OFF")}");
+
+            // Show status in UI
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateCameraDebugText($"Debug: {(newState ? "ALL ON" : "ALL OFF")}");
+            }
+        }
+
         if (showDebugInfo && Camera.main != null)
         {
             debugCamera = Camera.main;
