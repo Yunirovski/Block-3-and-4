@@ -19,9 +19,29 @@ MonoBehaviour:
   modelScale: {x: 0.2, y: 0.2, z: 0.2}
   maxDistance: 40
   pullSpeed: 25
+  hookSpeed: 50
+  customFirePoint: {fileID: 0}
+  firePointOffset: {x: 0, y: 0, z: 0}
+  usePlayerOrientation: 0
   hookPrefab: {fileID: 4132503947252268379, guid: 88a0653f8208e154aada1f6a267e8901, type: 3}
-  hookTravelSpeed: 50
   ropeMaterial: {fileID: 2100000, guid: 39d589e815aee4248a93c6c81a0d296e, type: 2}
   ropeColor: {r: 0.545, g: 0.271, b: 0.075, a: 1}
+  hookMass: 2
+  gravity: 15
+  pullAcceleration: 20
+  arrivalDistance: 3
+  autoReleaseOnArrival: 1
+  pullGravity: 5
+  allowDirectionalControl: 1
+  directionalForce: 8
   grappleFireSound: {fileID: 8300000, guid: f903933ea8964a14d8979346f86f8085, type: 3}
+  grappleHitSound: {fileID: 8300000, guid: 8421d6e933885dc4797d310fe636f623, type: 3}
+  pullStartSound: {fileID: 0}
+  detachSound: {fileID: 0}
   soundVolume: 0.68
+  hookImpactEffect: {fileID: 0}
+  pullEffect: {fileID: 0}
+  arrivalEffect: {fileID: 0}
+  showAimTrajectory: 1
+  trajectoryTime: 2
+  trajectoryResolution: 30
