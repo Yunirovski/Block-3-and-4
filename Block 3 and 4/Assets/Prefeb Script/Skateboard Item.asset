@@ -21,8 +21,5 @@ MonoBehaviour:
   turnSpeed: 40
   deceleration: 0.95
   minSpeed: 0.5
-  holdPosition: {x: 0, y: 0, z: 0}
-  holdRotation: {x: 0, y: 0, z: 0}
-  modelScale: {x: 1, y: 1, z: 1}
-  skateboardSound: {fileID: 8300000, guid: b8cefdab55de1aa458dfff7c3165a1aa, type: 3}
-  soundVolume: 0.8
+  skateboardSound: {fileID: 8300000, guid: ae3628defea908642965462003b352bc, type: 3}
+  soundVolume: 1
