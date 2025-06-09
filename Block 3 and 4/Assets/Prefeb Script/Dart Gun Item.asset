@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: 
   modelPrefab: {fileID: 8150190952280149502, guid: 352963cac7c653f48925da03dcfb9a50, type: 3}
-  holdPosition: {x: 0.06, y: -0.04, z: 0.28}
+  holdPosition: {x: 0.17, y: 0.9, z: 0.28}
   holdRotation: {x: 0, y: 90, z: 0}
-  modelScale: {x: 1, y: 1, z: 1}
+  modelScale: {x: 0.2, y: 0.2, z: 0.2}
   dartPrefab: {fileID: 2343890198144548927, guid: 0cc2e13e0d417db49b0c065cc02ac1db, type: 3}
   spawnDistance: 2
   throwForce: 40
