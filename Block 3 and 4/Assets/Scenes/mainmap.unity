@@ -12826,8 +12826,8 @@ MonoBehaviour:
   walkSpeed: 10
   runSpeed: 20
   crouchSpeed: 2
-  jumpHeight: 3
-  gravity: -18
+  jumpHeight: 3.5
+  gravity: -19
   mouseSensitivity: 2
   verticalLookLimit: 80
   cameraTransform: {fileID: 645104806}
@@ -12839,8 +12839,8 @@ MonoBehaviour:
   runLoopClip: {fileID: 8300000, guid: 0010ead41cc8a7c4ca22ec015c918dba, type: 3}
   crouchLoopClip: {fileID: 0}
   jumpClip: {fileID: 8300000, guid: 640d80af9edd4cb46bacf4488e8a7314, type: 3}
-  landClip: {fileID: 8300000, guid: 57c06392d84799948ae2f7e2266ff134, type: 3}
-  minAirTimeForLandSound: 0.2
+  landClip: {fileID: 8300000, guid: 16b21f8a9f9d84a4fa41e99ec4c90ae2, type: 3}
+  minAirTimeForLandSound: 0.3
   effectAudioSource: {fileID: 0}
   stepVolume: 0.8
   pitchMin: 0.9
