@@ -83,6 +83,7 @@
     <Compile Include="Assets\Script\MenuButtons.cs" />
     <Compile Include="Assets\Script\Photo\PhotoLibrary.cs" />
     <Compile Include="Assets\Script\Animal\Generator.cs" />
+    <Compile Include="Assets\Script\player\TerrainFootstepSystem.cs" />
     <Compile Include="Assets\Script\Inventory System\InventoryUI.cs" />
     <Compile Include="Assets\Script\Food\FoodType.cs" />
     <Compile Include="Assets\Script\Animal\spawner1.cs" />
