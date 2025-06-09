@@ -4322,7 +4322,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
       propertyPath: disablePlayerMovement
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7929249225968803240, guid: d6bad8e82f425d743af2aeaf30234870, type: 3}
       propertyPath: 'dialogAudioClips.Array.data[0]'
@@ -12445,8 +12445,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   filmCap: 999
   filmStart: 999
-  foodCap: 10
-  foodStart: 10
+  foodCap: 5
+  foodStart: 5
 --- !u!1 &917225747
 GameObject:
   m_ObjectHideFlags: 0
@@ -14755,7 +14755,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e80b63b53cc507341a58a16350bd18a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  foodText: {fileID: 0}
+  foodText: {fileID: 1956181185}
   filmText: {fileID: 0}
   starsText: {fileID: 0}
   foodFormat: 'Food: {0}/{1}'
@@ -25810,7 +25810,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 460, y: -118}
+  m_AnchoredPosition: {x: 747, y: -514}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1956181185
@@ -25860,8 +25860,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20
-  m_fontSizeBase: 20
+  m_fontSize: 50
+  m_fontSizeBase: 50
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -25898,7 +25898,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: 0, y: 12.878962, z: -187.57898, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
