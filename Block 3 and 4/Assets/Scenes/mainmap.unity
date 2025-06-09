@@ -21730,8 +21730,8 @@ MonoBehaviour:
   magicWandStarsNeeded: 24
   cameraItem: {fileID: 11400000, guid: 07ee67998a0a56d4da47943f3ede7072, type: 2}
   grappleItem: {fileID: 11400000, guid: 61e58ca49b3f83f4585d606903ab638a, type: 2}
-  skateboardItem: {fileID: 11400000, guid: 2bd9a362c2bfcf64db5e1ce31728ae66, type: 2}
-  dartGunItem: {fileID: 11400000, guid: f093cc49d96a83f43a78859e3ea86556, type: 2}
+  skateboardItem: {fileID: 11400000, guid: f093cc49d96a83f43a78859e3ea86556, type: 2}
+  dartGunItem: {fileID: 11400000, guid: 2bd9a362c2bfcf64db5e1ce31728ae66, type: 2}
   magicWandItem: {fileID: 11400000, guid: 28f72fbb89339d7479505ac06bb16362, type: 2}
   ManualUnlockCamera: 0
   ManualUnlockGrapple: 0
