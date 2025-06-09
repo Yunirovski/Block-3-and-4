@@ -9779,7 +9779,7 @@ MonoBehaviour:
   walkLoopClip: {fileID: 8300000, guid: 5eae75e68874b924eb418505e0a11279, type: 3}
   runLoopClip: {fileID: 8300000, guid: 0010ead41cc8a7c4ca22ec015c918dba, type: 3}
   crouchLoopClip: {fileID: 0}
-  jumpClip: {fileID: 8300000, guid: 9a5aa031320eda24fb78dd1eca171f60, type: 3}
+  jumpClip: {fileID: 8300000, guid: 640d80af9edd4cb46bacf4488e8a7314, type: 3}
   landClip: {fileID: 8300000, guid: 57c06392d84799948ae2f7e2266ff134, type: 3}
   minAirTimeForLandSound: 0.2
   effectAudioSource: {fileID: 0}
