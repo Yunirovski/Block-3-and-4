@@ -7698,8 +7698,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.316162, y: 3.8067157, z: 2.85141}
-  m_Center: {x: 0.068115234, y: -0.67705595, z: -0.42024994}
+  m_Size: {x: 3.84, y: 1.95, z: 2.85141}
+  m_Center: {x: 0.068115234, y: 0.62, z: -0.42024994}
 --- !u!95 &549699201
 Animator:
   serializedVersion: 7
@@ -8848,8 +8848,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.316162, y: 3.8067157, z: 2.85141}
-  m_Center: {x: 0.068115234, y: -0.67705595, z: -0.42024994}
+  m_Size: {x: 3.84, y: 1.95, z: 2.85141}
+  m_Center: {x: 0.068115234, y: 0.62, z: -0.42024994}
 --- !u!95 &623057269
 Animator:
   serializedVersion: 7
@@ -9766,8 +9766,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.316162, y: 3.8067157, z: 2.85141}
-  m_Center: {x: 0.068115234, y: -0.67705595, z: -0.42024994}
+  m_Size: {x: 3.84, y: 1.95, z: 2.85141}
+  m_Center: {x: 0.068115234, y: 0.62, z: -0.42024994}
 --- !u!95 &650716878
 Animator:
   serializedVersion: 7
@@ -11405,8 +11405,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.316162, y: 3.8067157, z: 2.85141}
-  m_Center: {x: 0.068115234, y: -0.67705595, z: -0.42024994}
+  m_Size: {x: 3.84, y: 1.95, z: 2.85141}
+  m_Center: {x: 0.068115234, y: 0.62, z: -0.42024994}
 --- !u!95 &795570025
 Animator:
   serializedVersion: 7
@@ -24561,8 +24561,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.316162, y: 3.8067157, z: 2.85141}
-  m_Center: {x: 0.068115234, y: -0.67705595, z: -0.42024994}
+  m_Size: {x: 3.84, y: 1.95, z: 2.85141}
+  m_Center: {x: 0.068115234, y: 0.62, z: -0.42024994}
 --- !u!95 &1820814372
 Animator:
   serializedVersion: 7
@@ -26828,8 +26828,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.316162, y: 3.8067157, z: 2.85141}
-  m_Center: {x: 0.068115234, y: -0.67705595, z: -0.42024994}
+  m_Size: {x: 3.84, y: 1.95, z: 2.85141}
+  m_Center: {x: 0.068115234, y: 0.62, z: -0.42024994}
 --- !u!95 &2007697274
 Animator:
   serializedVersion: 7
