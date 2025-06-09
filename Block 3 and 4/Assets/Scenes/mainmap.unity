@@ -5670,9 +5670,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animalSounds:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 8300000, guid: 9bcab52238a5b244d85fe938559ce6bb, type: 3}
+  - {fileID: 8300000, guid: 3989d71a2accc814ca92480275cd4f60, type: 3}
   minInterval: 7
   maxInterval: 15
   soundVolume: 1
