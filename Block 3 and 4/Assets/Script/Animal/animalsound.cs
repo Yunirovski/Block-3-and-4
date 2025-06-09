@@ -8,10 +8,10 @@ public class AnimalSound : MonoBehaviour
     public AudioClip[] animalSounds;
 
     [Tooltip("Minimum time between sounds (seconds)")]
-    public float minInterval = 5f;
+    public float minInterval = 7f;
 
     [Tooltip("Maximum time between sounds (seconds)")]
-    public float maxInterval = 10f;
+    public float maxInterval = 15f;
 
     [Range(0f, 1f)]
     [Tooltip("Volume of the sound (0 = silent, 1 = full volume)")]
@@ -19,7 +19,7 @@ public class AnimalSound : MonoBehaviour
 
     [Header("Trigger Settings")]
     [Tooltip("Distance at which the player triggers the sound")]
-    public float triggerDistance = 15f;
+    public float triggerDistance = 25f;
 
     [Tooltip("Tag used to identify the player object")]
     public string playerTag = "Player";
@@ -30,12 +30,16 @@ public class AnimalSound : MonoBehaviour
 
     void Start()
     {
-        // Get or setup AudioSource
+        // Setup AudioSource
         audioSource = GetComponent<AudioSource>();
         audioSource.spatialBlend = 1f; // 3D sound
+        audioSource.rolloffMode = AudioRolloffMode.Linear;
+        audioSource.minDistance = 1f;
+        audioSource.maxDistance = 40f; // 👈 allow sound to be heard farther away
+        audioSource.volume = soundVolume;
         audioSource.playOnAwake = false;
 
-        // Find player by tag
+        // Find player
         GameObject playerObj = GameObject.FindGameObjectWithTag(playerTag);
         if (playerObj != null)
         {
@@ -66,9 +70,9 @@ public class AnimalSound : MonoBehaviour
         int index = Random.Range(0, animalSounds.Length);
         AudioClip clip = animalSounds[index];
 
-        audioSource.volume = soundVolume;
+        audioSource.volume = soundVolume; // Make sure volume is applied every time
         audioSource.PlayOneShot(clip);
-        Debug.Log($"AnimalSound: Playing sound - {clip.name}");
+        Debug.Log($"AnimalSound: Playing sound - {clip.name} at volume {soundVolume}");
     }
 
     private void ScheduleNextSound()
