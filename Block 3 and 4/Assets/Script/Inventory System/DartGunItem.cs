@@ -1,4 +1,4 @@
-﻿// Assets/Scripts/Items/DartGunItem.cs - 防暂停问题版本
+﻿// Assets/Scripts/Items/DartGunItem.cs - 修复ScriptableObject状态残留问题
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Items/DartGunItem")]
@@ -26,21 +26,21 @@ public class DartGunItem : BaseItem
     public AudioClip fireSound;
     [Range(0f, 1f)] public float soundVolume = 0.8f;
 
-    // 运行时状态
-    private Camera playerCamera;
-    private AudioSource audioSource;
-    private float nextFireTime = 0f;
+    // 运行时状态 - 添加NonSerialized防止状态残留
+    [System.NonSerialized] private Camera playerCamera;
+    [System.NonSerialized] private AudioSource audioSource;
+    [System.NonSerialized] private float nextFireTime = 0f;
 
     // 防暂停问题：使用实时时间
-    private float lastRealTime = 0f;
-    private float cooldownStartTime = 0f;
-    private bool isCoolingDown = false;
+    [System.NonSerialized] private float lastRealTime = 0f;
+    [System.NonSerialized] private float cooldownStartTime = 0f;
+    [System.NonSerialized] private bool isCoolingDown = false;
+    [System.NonSerialized] private bool isInitialized = false;
 
     public override void OnSelect(GameObject model)
     {
-        // 确保引用有效
-        EnsureValidReferences();
-
+        // 强制重新初始化
+        ForceReinitialize();
         Debug.Log("麻醉枪已选中 - 子弹无限");
     }
 
@@ -58,6 +58,12 @@ public class DartGunItem : BaseItem
 
     public override void HandleUpdate()
     {
+        // 确保初始化
+        if (!isInitialized)
+        {
+            ForceReinitialize();
+        }
+
         // 每帧都检查引用（性能开销很小）
         EnsureValidReferences();
 
@@ -69,13 +75,37 @@ public class DartGunItem : BaseItem
     }
 
     /// <summary>
+    /// 强制重新初始化所有运行时状态
+    /// </summary>
+    private void ForceReinitialize()
+    {
+        // 清空所有引用
+        playerCamera = null;
+        audioSource = null;
+
+        // 重置冷却状态
+        isCoolingDown = false;
+        cooldownStartTime = 0f;
+        nextFireTime = 0f;
+
+        // 重新获取引用
+        EnsureValidReferences();
+
+        isInitialized = true;
+        Debug.Log("DartGun: 强制重新初始化完成");
+    }
+
+    /// <summary>
     /// 确保所有引用都有效（防暂停问题）
     /// </summary>
     private void EnsureValidReferences()
     {
-        // 重新获取相机引用
-        if (playerCamera == null)
+        // 检查相机引用是否有效
+        if (playerCamera == null || !IsValidUnityObject(playerCamera))
         {
+            playerCamera = null; // 确保清空无效引用
+
+            // 重新获取相机引用
             playerCamera = Camera.main;
             if (playerCamera == null)
             {
@@ -86,18 +116,39 @@ public class DartGunItem : BaseItem
                     playerCamera = playerObj.GetComponentInChildren<Camera>();
                 }
             }
+
+            if (playerCamera != null)
+            {
+                Debug.Log("DartGun: 重新获取到相机引用");
+            }
         }
 
-        // 重新获取音频源
-        if (audioSource == null && playerCamera != null)
+        // 检查音频源引用是否有效
+        if (playerCamera != null && (audioSource == null || !IsValidUnityObject(audioSource)))
         {
+            audioSource = null; // 确保清空无效引用
+
             audioSource = playerCamera.GetComponent<AudioSource>();
             if (audioSource == null)
             {
                 audioSource = playerCamera.gameObject.AddComponent<AudioSource>();
                 audioSource.spatialBlend = 0f;
             }
+
+            if (audioSource != null)
+            {
+                Debug.Log("DartGun: 重新获取到音频源引用");
+            }
         }
+    }
+
+    /// <summary>
+    /// 检查Unity对象是否仍然有效（未被销毁）
+    /// </summary>
+    private bool IsValidUnityObject(UnityEngine.Object obj)
+    {
+        // Unity的null检查，会检查对象是否被销毁
+        return obj != null && obj;
     }
 
     /// <summary>
@@ -111,6 +162,7 @@ public class DartGunItem : BaseItem
             if (realTimeElapsed >= cooldownTime)
             {
                 isCoolingDown = false;
+                Debug.Log("DartGun: 冷却结束");
             }
         }
     }
@@ -158,24 +210,23 @@ public class DartGunItem : BaseItem
     /// </summary>
     private void FireDart()
     {
+        // 确保初始化
+        if (!isInitialized)
+        {
+            ForceReinitialize();
+        }
+
         // 确保引用有效
         EnsureValidReferences();
 
         // 详细的错误检查和反馈
-        if (playerCamera == null)
+        if (playerCamera == null || !IsValidUnityObject(playerCamera))
         {
-            Debug.LogError("DartGun: 找不到玩家相机，尝试重新获取...");
+            Debug.LogError("DartGun: 找不到有效的玩家相机，尝试重新获取...");
 
             // 强制重新查找相机
-            playerCamera = Camera.main;
-            if (playerCamera == null)
-            {
-                GameObject[] allCameras = GameObject.FindGameObjectsWithTag("MainCamera");
-                if (allCameras.Length > 0)
-                {
-                    playerCamera = allCameras[0].GetComponent<Camera>();
-                }
-            }
+            playerCamera = null;
+            EnsureValidReferences();
 
             if (playerCamera == null)
             {
@@ -258,6 +309,7 @@ public class DartGunItem : BaseItem
     {
         isCoolingDown = true;
         cooldownStartTime = Time.realtimeSinceStartup;
+        Debug.Log($"DartGun: 开始冷却 {cooldownTime}s，开始时间: {cooldownStartTime}");
     }
 
     /// <summary>
@@ -348,7 +400,7 @@ public class DartGunItem : BaseItem
         // 确保音频源有效
         EnsureValidReferences();
 
-        if (fireSound != null && audioSource != null)
+        if (fireSound != null && audioSource != null && IsValidUnityObject(audioSource))
         {
             audioSource.PlayOneShot(fireSound, soundVolume);
         }
@@ -359,11 +411,19 @@ public class DartGunItem : BaseItem
     /// </summary>
     public void ResetState()
     {
-        isCoolingDown = false;
-        cooldownStartTime = 0f;
-        playerCamera = null;
-        audioSource = null;
-
+        ForceReinitialize();
         Debug.Log("DartGun: 状态已重置");
+    }
+
+    /// <summary>
+    /// Unity编辑器中停止播放时调用（仅在编辑器中有效）
+    /// </summary>
+    void OnDisable()
+    {
+        if (Application.isEditor && !Application.isPlaying)
+        {
+            // 编辑器中停止播放时清空运行时状态
+            ForceReinitialize();
+        }
     }
 }
