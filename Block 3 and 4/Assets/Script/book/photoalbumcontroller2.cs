@@ -7,6 +7,7 @@ using TMPro;
 
 /// <summary>
 /// Fixed Photo Book Controller: Auto-adapts to page changes and ensures double-click delete works properly
+/// Font colours have been updated so ALL text now displays in black.
 /// </summary>
 public class FixedPhotoBookController : MonoBehaviour
 {
@@ -270,6 +271,8 @@ public class FixedPhotoBookController : MonoBehaviour
         {
             animalPage.starText = existingText.GetComponent<TMP_Text>();
             LogDebug($"Found existing star text: {animalPage.animalName}_StarText");
+            // Make sure the colour is black even if it existed before
+            animalPage.starText.color = Color.black;
             return;
         }
 
@@ -280,7 +283,7 @@ public class FixedPhotoBookController : MonoBehaviour
         TMP_Text starText = textObj.AddComponent<TMP_Text>();
         starText.text = "0/3";
         starText.fontSize = 36;
-        starText.color = Color.white;
+        starText.color = Color.black; // *** Now BLACK ***
         starText.alignment = TextAlignmentOptions.Center;
 
         RectTransform textRect = textObj.GetComponent<RectTransform>();
@@ -290,7 +293,7 @@ public class FixedPhotoBookController : MonoBehaviour
         textRect.anchoredPosition = starTextOffset;
 
         animalPage.starText = starText;
-        LogDebug($"Created new star text: {animalPage.animalName}_StarText");
+        LogDebug($"Created new star text: {animalPage.animalName}_StarText (black colour)");
     }
 
     void CreatePhotoSlots(AnimalPage animalPage)
@@ -473,11 +476,11 @@ public class FixedPhotoBookController : MonoBehaviour
         animalPage.starText.text = $"{currentStars}/{maxStars}";
 
         if (currentStars == 0)
-            animalPage.starText.color = Color.gray;
+            animalPage.starText.color = Color.black;
         else if (currentStars >= maxStars)
             animalPage.starText.color = Color.yellow;
         else
-            animalPage.starText.color = Color.white;
+            animalPage.starText.color = Color.green;
     }
 
     void UpdateTotalScoreDisplay()
