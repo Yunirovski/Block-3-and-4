@@ -24,7 +24,7 @@ MonoBehaviour:
   firePointHeightOffset: 0
   firePointForwardOffset: 1
   upwardAngle: -10
-  dartLifetime: 7
+  dartLifetime: 4
   cooldownTime: 1
   fireSound: {fileID: 8300000, guid: aa586a2a5aed3c1498501abfea857313, type: 3}
   soundVolume: 0.8
