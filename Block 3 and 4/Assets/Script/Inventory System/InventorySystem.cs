@@ -278,8 +278,8 @@ public class InventorySystem : MonoBehaviour
         var pm = ProgressionManager.Instance;
         return new[]
         {
-        pm != null && pm.HasCamera,            // 0 Camera
-        true,                                  // 1 Food (always available)
+        true,
+        pm != null && pm.HasCamera,            // 1                                // 1 Food (always available)
         pm != null && pm.HasGrapple,           // 2 Grapple
         pm != null && pm.HasSkateboard,        // 3 Skateboard
         pm != null && pm.HasDartGun,           // 4 Dart Gun
