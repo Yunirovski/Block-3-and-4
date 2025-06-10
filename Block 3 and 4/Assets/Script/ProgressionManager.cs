@@ -322,7 +322,7 @@ public class ProgressionManager : MonoBehaviour
     void UnlockCamera()
     {
         HasCamera = true;
-        RegisterItemWithInventory(cameraItem, 0); // Camera is slot 0
+        RegisterItemWithInventory(cameraItem, 1); // Camera is slot 0
         ShowPopup($"Camera unlocked! Press E to equip");
         OnItemUnlocked?.Invoke("Camera");
         if (isInitialized && enableAutoSave) SaveProgress();
