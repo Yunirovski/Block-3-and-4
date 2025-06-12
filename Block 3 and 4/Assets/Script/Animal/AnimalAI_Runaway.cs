@@ -17,48 +17,48 @@ public class AnimalBehavior : MonoBehaviour
     public float forcedEscapeDuration = 10f;
 
     [Header("NavMesh Settings")]
-    [Tooltip("NavMesh Agent停止距离")]
-    public float stoppingDistance = 0.5f; // 减小默认停止距离
-    [Tooltip("NavMesh采样距离")]
+    [Tooltip("NavMesh Agent stopping distance")]
+    public float stoppingDistance = 0.5f; // Reduced default stopping distance
+    [Tooltip("NavMesh sampling distance")]
     public float sampleDistance = 5f;
-    [Tooltip("是否自动旋转（建议关闭，使用自定义旋转）")]
+    [Tooltip("Use agent auto-rotation (suggest disabling for custom rotation)")]
     public bool useAgentRotation = false;
-    [Tooltip("食物交互的检测距离")]
+    [Tooltip("Detection distance for food interaction")]
     public float foodInteractionDistance = 2.5f;
-    [Tooltip("强制设置NavMeshAgent半径（0=自动）")]
+    [Tooltip("Force setting NavMeshAgent radius (0 = auto)")]
     public float forceAgentRadius = 0f;
 
     [Header("Food Interaction Settings")]
-    [Tooltip("动物性格决定靠近/回避玩家的方式")]
+    [Tooltip("Animal temperament determines how it approaches/avoids the player")]
     public Temperament temperament = Temperament.Neutral;
-    [Tooltip("动物可以侦测食物的半径")]
+    [Tooltip("Detection radius for finding food")]
     public float foodDetectionRadius = 20f;
-    [Tooltip("Fearful/Hostile 判定玩家距离的阈值")]
+    [Tooltip("Distance threshold for Fearful/Hostile temperament to judge player proximity")]
     public float playerSafeDistance = 15f;
-    [Tooltip("吃食物的持续时间（秒）")]
+    [Tooltip("Duration of eating food (seconds)")]
     public float eatDuration = 5f;
-    [Tooltip("吃完后保持冷静的时间（秒）")]
+    [Tooltip("Calm period after eating (seconds)")]
     public float graceDuration = 10f;
 
     [Header("Model Settings")]
     public Vector3 modelRotationOffset;
 
-    // —— 昏迷状态 —— 
+    // — Stun state —
     private bool isStunned = false;
     private float stunTimer = 0f;
 
-    // —— 吸引状态 —— 
+    // — Attracted state —
     private bool isAttracted = false;
     private float attractTimer = 0f;
     private Transform attractTarget = null;
 
-    // —— 食物交互状态 —— 
+    // — Food interaction state —
     private enum FoodState { Idle, Approaching, Eating, Grace }
     private FoodState foodState = FoodState.Idle;
     private Transform targetFood = null;
     private float foodTimer = 0f;
 
-    // —— 逃跑/漫游状态 —— 
+    // — Roaming/Escaping state —
     private Vector3 wanderCenter;
     private Vector3 targetPosition;
     private float wanderTimer;
@@ -72,21 +72,21 @@ public class AnimalBehavior : MonoBehaviour
 
     void Start()
     {
-        // 获取或添加NavMeshAgent
+        // Get or add NavMeshAgent
         agent = GetComponent<NavMeshAgent>();
         if (agent == null)
         {
             agent = gameObject.AddComponent<NavMeshAgent>();
-            Debug.Log($"{gameObject.name}: 自动添加NavMeshAgent组件");
+            Debug.Log($"{gameObject.name}: Automatically added NavMeshAgent component");
         }
 
-        // 配置NavMeshAgent
+        // Configure NavMeshAgent
         ConfigureNavMeshAgent();
 
         wanderCenter = transform.position;
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
 
-        // 确保起始位置在NavMesh上
+        // Ensure the start position is on NavMesh
         ValidateStartPosition();
 
         SetNewWanderTarget();
@@ -97,27 +97,27 @@ public class AnimalBehavior : MonoBehaviour
         agent.speed = moveSpeed;
         agent.stoppingDistance = stoppingDistance;
         agent.updateRotation = useAgentRotation;
-        agent.updateUpAxis = true; // 保持在NavMesh表面
+        agent.updateUpAxis = true; // Keep on NavMesh surface
         agent.autoBraking = true;
 
-        // 设置合理的转向速度
+        // Set reasonable turn speed
         agent.angularSpeed = 180f;
         agent.acceleration = 8f;
 
-        // 重要：设置合理的Agent尺寸以避免碰撞问题
+        // Important: Set reasonable agent size to avoid collision issues
         if (forceAgentRadius > 0f)
         {
             agent.radius = forceAgentRadius;
         }
-        else if (agent.radius == 0.5f) // 如果是默认值，调整它
+        else if (agent.radius == 0.5f) // If default, adjust it
         {
             Collider col = GetComponent<Collider>();
             if (col != null)
             {
-                // 根据实际碰撞体设置Agent半径
-                agent.radius = Mathf.Max(col.bounds.size.x, col.bounds.size.z) * 0.4f; // 稍小于实际尺寸
+                // Set agent radius based on actual collider size
+                agent.radius = Mathf.Max(col.bounds.size.x, col.bounds.size.z) * 0.4f; // Slightly smaller than actual
                 agent.height = col.bounds.size.y;
-                Debug.Log($"{gameObject.name}: 设置NavMeshAgent - radius: {agent.radius:F2}, height: {agent.height:F2}");
+                Debug.Log($"{gameObject.name}: Set NavMeshAgent - radius: {agent.radius:F2}, height: {agent.height:F2}");
             }
         }
     }
@@ -127,47 +127,47 @@ public class AnimalBehavior : MonoBehaviour
         NavMeshHit hit;
         if (!NavMesh.SamplePosition(transform.position, out hit, sampleDistance, NavMesh.AllAreas))
         {
-            Debug.LogWarning($"{gameObject.name}: 不在NavMesh上，尝试寻找最近的NavMesh位置");
+            Debug.LogWarning($"{gameObject.name}: Not on NavMesh, trying to find nearest NavMesh position");
 
-            // 尝试在更大范围内找到NavMesh
+            // Try to find NavMesh in larger radius
             if (NavMesh.SamplePosition(transform.position, out hit, sampleDistance * 3, NavMesh.AllAreas))
             {
                 transform.position = hit.position;
-                Debug.Log($"{gameObject.name}: 移动到最近的NavMesh位置 {hit.position}");
+                Debug.Log($"{gameObject.name}: Moved to nearest NavMesh position {hit.position}");
             }
             else
             {
-                Debug.LogError($"{gameObject.name}: 无法找到有效的NavMesh位置！请检查NavMesh烘焙");
+                Debug.LogError($"{gameObject.name}: Could not find a valid NavMesh position! Check NavMesh baking");
             }
         }
     }
 
     void Update()
     {
-        // 检查Agent是否有效
+        // Check if Agent is valid
         if (agent == null || !agent.isOnNavMesh)
         {
-            Debug.LogWarning($"{gameObject.name}: NavMeshAgent无效或不在NavMesh上");
+            Debug.LogWarning($"{gameObject.name}: NavMeshAgent is invalid or not on NavMesh");
             return;
         }
 
-        // 1) 昏迷中：只计时
+        // 1) If stunned: only count down timer
         if (isStunned)
         {
             stunTimer -= Time.deltaTime;
             if (stunTimer <= 0f)
             {
                 isStunned = false;
-                agent.isStopped = false; // 恢复移动
+                agent.isStopped = false; // Resume movement
             }
             else
             {
-                agent.isStopped = true; // 停止移动
+                agent.isStopped = true; // Stop movement
             }
             return;
         }
 
-        // 2) 吸引中：移动向attractTarget
+        // 2) If attracted: move toward attractTarget
         if (isAttracted)
         {
             attractTimer -= Time.deltaTime;
@@ -185,14 +185,14 @@ public class AnimalBehavior : MonoBehaviour
             return;
         }
 
-        // 3) 食物交互优先级高于逃跑和漫游
+        // 3) Food interaction has higher priority than escape or wander
         HandleFoodInteraction();
         if (foodState != FoodState.Idle)
         {
             return;
         }
 
-        // 4) 逃跑优先：更新逃跑计时
+        // 4) Escape logic: update cooldown
         if (escapeCooldown > 0f) escapeCooldown -= Time.deltaTime;
         if (isEscaping || escapeCooldown > 0f)
         {
@@ -200,7 +200,7 @@ public class AnimalBehavior : MonoBehaviour
             return;
         }
 
-        // 5) 漫游/返回
+        // 5) Roaming or returning
         float distToCenter = Vector3.Distance(transform.position, wanderCenter);
         if (distToCenter > wanderRadius)
         {
@@ -224,16 +224,16 @@ public class AnimalBehavior : MonoBehaviour
         }
     }
 
-    #region NavMesh移动系统
+    #region NavMesh Movement System
 
     /// <summary>
-    /// 使用NavMesh移动到指定位置
+    /// Move to target position using NavMesh
     /// </summary>
     private bool MoveToPosition(Vector3 targetPos, float speed)
     {
         if (agent == null || !agent.isOnNavMesh) return false;
 
-        // 寻找最近的有效NavMesh位置
+        // Find nearest valid NavMesh position
         NavMeshHit hit;
         if (NavMesh.SamplePosition(targetPos, out hit, sampleDistance, NavMesh.AllAreas))
         {
@@ -244,20 +244,20 @@ public class AnimalBehavior : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"{gameObject.name}: 无法在目标位置 {targetPos} 找到有效的NavMesh");
+            Debug.LogWarning($"{gameObject.name}: Could not find valid NavMesh near target {targetPos}");
             return false;
         }
     }
 
     /// <summary>
-    /// 处理动物旋转（如果不使用Agent自动旋转）
+    /// Handle rotation if agent rotation is disabled
     /// </summary>
     private void HandleRotation(Vector3 targetPos)
     {
         if (useAgentRotation) return;
 
         Vector3 direction = (targetPos - transform.position);
-        direction.y = 0; // 只在水平面旋转
+        direction.y = 0; // Horizontal only
 
         if (direction.sqrMagnitude > 0.001f)
         {
@@ -268,24 +268,24 @@ public class AnimalBehavior : MonoBehaviour
     }
 
     /// <summary>
-    /// 检查是否到达目标位置
+    /// Check if agent reached its destination
     /// </summary>
     private bool HasReachedDestination()
     {
         if (agent == null || !agent.hasPath || agent.pathPending) return false;
 
-        // 更宽松的到达判断
+        // Looser check
         return agent.remainingDistance <= agent.stoppingDistance + 0.1f;
     }
 
     /// <summary>
-    /// 获取随机的NavMesh位置
+    /// Get a random NavMesh position within a radius
     /// </summary>
     private bool GetRandomNavMeshPosition(Vector3 center, float radius, out Vector3 result)
     {
         result = Vector3.zero;
 
-        for (int i = 0; i < 10; i++) // 最多尝试10次
+        for (int i = 0; i < 10; i++) // Try up to 10 times
         {
             Vector2 randomCircle = Random.insideUnitCircle * radius;
             Vector3 randomPoint = center + new Vector3(randomCircle.x, 0, randomCircle.y);
@@ -302,8 +302,7 @@ public class AnimalBehavior : MonoBehaviour
     }
 
     #endregion
-
-    #region 食物交互逻辑
+    #region Food Interaction Logic
 
     private void HandleFoodInteraction()
     {
@@ -331,7 +330,7 @@ public class AnimalBehavior : MonoBehaviour
                     wanderCenter = transform.position;
                     SetNewWanderTarget();
 
-                    // ✅ 修复：确保完全恢复正常状态
+                    // ✅ Fix: ensure completely back to normal
                     if (agent != null)
                     {
                         agent.isStopped = false;
@@ -351,7 +350,7 @@ public class AnimalBehavior : MonoBehaviour
             if (food == null) continue;
 
             float distToPlayer = Vector3.Distance(transform.position,
-                                                player != null ? player.position : Camera.main.transform.position);
+                                                  player != null ? player.position : Camera.main.transform.position);
 
             bool shouldApproach = false;
             switch (temperament)
@@ -384,7 +383,7 @@ public class AnimalBehavior : MonoBehaviour
         escapeCooldown = 0f;
         isReturning = false;
 
-        Debug.Log($"{gameObject.name} 开始向食物移动");
+        Debug.Log($"{gameObject.name} started moving toward food");
     }
 
     private void MoveTowardsFood()
@@ -395,21 +394,19 @@ public class AnimalBehavior : MonoBehaviour
             return;
         }
 
-        // 设置更小的停止距离以便接近食物
+        // Use a smaller stopping distance to approach food more closely
         float originalStopDistance = agent.stoppingDistance;
-        agent.stoppingDistance = 0.1f; // 更小的停止距离
+        agent.stoppingDistance = 0.1f;
 
         MoveToPosition(targetFood.position, moveSpeed);
         HandleRotation(targetFood.position);
 
-        // 检查是否到达食物 - 考虑碰撞体积
         float distanceToFood = Vector3.Distance(transform.position, targetFood.position);
 
-        // 考虑动物和食物的碰撞体积
         float animalRadius = agent.radius;
         Collider foodCollider = targetFood.GetComponent<Collider>();
         float foodRadius = foodCollider != null ? foodCollider.bounds.size.magnitude * 0.5f : 0.5f;
-        float totalRadius = animalRadius + foodRadius + 0.5f; // 添加额外缓冲
+        float totalRadius = animalRadius + foodRadius + 0.5f; // Extra buffer
 
         bool nearFood = distanceToFood <= totalRadius;
         bool reachedDestination = HasReachedDestination();
@@ -420,23 +417,23 @@ public class AnimalBehavior : MonoBehaviour
         {
             foodState = FoodState.Eating;
             foodTimer = eatDuration;
-            agent.isStopped = true; // 停止移动开始吃
-            agent.stoppingDistance = originalStopDistance; // 恢复原始停止距离
+            agent.isStopped = true;
+            agent.stoppingDistance = originalStopDistance;
 
             if (targetFood != null)
             {
                 Destroy(targetFood.gameObject);
                 targetFood = null;
-                Debug.Log($"{gameObject.name} 开始吃食物 - 距离: {distanceToFood:F2}m, 需要距离: {totalRadius:F2}m, " +
-                         $"动物半径: {animalRadius:F2}m, 食物半径: {foodRadius:F2}m, " +
-                         $"到达目标: {reachedDestination}, 停止移动: {stoppedMoving}, 卡住: {stuckNearFood}");
+                Debug.Log($"{gameObject.name} started eating - Distance: {distanceToFood:F2}m, Required: {totalRadius:F2}m, " +
+                          $"Animal Radius: {animalRadius:F2}m, Food Radius: {foodRadius:F2}m, " +
+                          $"Reached: {reachedDestination}, Stopped: {stoppedMoving}, Stuck: {stuckNearFood}");
             }
         }
 
-        // 如果长时间无法到达食物，放弃
+        // Give up if the food is too far
         if (!nearFood && !reachedDestination && Vector3.Distance(transform.position, targetFood.position) > foodDetectionRadius)
         {
-            Debug.LogWarning($"{gameObject.name} 食物太远，放弃追踪");
+            Debug.LogWarning($"{gameObject.name} food too far, giving up");
             foodState = FoodState.Idle;
             agent.stoppingDistance = originalStopDistance;
         }
@@ -444,7 +441,7 @@ public class AnimalBehavior : MonoBehaviour
 
     #endregion
 
-    /// <summary>外部调用：令动物进入昏迷</summary>
+    /// <summary>External call: make the animal stunned</summary>
     public void Stun(float duration)
     {
         isStunned = true;
@@ -461,7 +458,7 @@ public class AnimalBehavior : MonoBehaviour
         if (agent != null) agent.isStopped = true;
     }
 
-    /// <summary>外部调用：令动物被法杖吸引</summary>
+    /// <summary>External call: attract the animal using a wand</summary>
     public void Attract(Transform target, float duration)
     {
         if (target == null || duration <= 0f) return;
@@ -516,9 +513,9 @@ public class AnimalBehavior : MonoBehaviour
         }
         else
         {
-            // 如果找不到有效位置，延长当前的等待时间
+            // If no valid position found, extend wait time
             wanderTimer = Random.Range(minWanderTime, maxWanderTime);
-            Debug.LogWarning($"{gameObject.name}: 无法找到有效的漫游目标");
+            Debug.LogWarning($"{gameObject.name}: Could not find valid wander target");
         }
     }
 
@@ -549,7 +546,7 @@ public class AnimalBehavior : MonoBehaviour
         Vector3 escapeDirection = (transform.position - player.position).normalized;
         Vector3 escapeTarget = transform.position + escapeDirection * safeDistance;
 
-        // 尝试找到逃跑目标的有效NavMesh位置
+        // Try to find a valid NavMesh position for escape
         Vector3 validEscapeTarget;
         if (GetRandomNavMeshPosition(escapeTarget, sampleDistance, out validEscapeTarget))
         {
@@ -577,7 +574,7 @@ public class AnimalBehavior : MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, foodDetectionRadius);
 
-        // 显示NavMesh路径
+        // Show NavMesh path
         if (Application.isPlaying && agent != null && agent.hasPath)
         {
             Gizmos.color = Color.blue;
@@ -603,5 +600,5 @@ public class AnimalBehavior : MonoBehaviour
     }
 }
 
-/// <summary>动物性格枚举</summary>
+/// <summary>Animal temperament enum</summary>
 public enum Temperament { Neutral, Fearful, Hostile }
